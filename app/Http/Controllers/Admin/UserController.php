@@ -54,8 +54,8 @@ class UserController extends Controller
             'roles' => [
                 'admin' => 'Administrator',
                 'penagih' => 'Penagih/Collector',
-                'teknisi' => 'Teknisi',
-                'cs' => 'Customer Service',
+                'technician' => 'Teknisi',
+                'finance' => 'Finance',
             ],
         ]);
     }
@@ -71,8 +71,8 @@ class UserController extends Controller
             'roles' => [
                 'admin' => 'Administrator',
                 'penagih' => 'Penagih/Collector',
-                'teknisi' => 'Teknisi',
-                'cs' => 'Customer Service',
+                'technician' => 'Teknisi',
+                'finance' => 'Finance',
             ],
         ]);
     }
@@ -87,7 +87,7 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
             'password' => ['required', Password::defaults()],
-            'role' => 'required|in:admin,penagih,teknisi,cs',
+            'role' => 'required|in:admin,penagih,technician,finance',
             'area_id' => 'nullable|exists:areas,id',
             'is_active' => 'boolean',
         ]);
@@ -148,8 +148,8 @@ class UserController extends Controller
             'roles' => [
                 'admin' => 'Administrator',
                 'penagih' => 'Penagih/Collector',
-                'teknisi' => 'Teknisi',
-                'cs' => 'Customer Service',
+                'technician' => 'Teknisi',
+                'finance' => 'Finance',
             ],
         ]);
     }
@@ -164,7 +164,7 @@ class UserController extends Controller
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'phone' => 'nullable|string|max:20',
             'password' => ['nullable', Password::defaults()],
-            'role' => 'required|in:admin,penagih,teknisi,cs',
+            'role' => 'required|in:admin,penagih,technician,finance',
             'area_id' => 'nullable|exists:areas,id',
             'is_active' => 'boolean',
         ]);

@@ -11,7 +11,7 @@ use App\Http\Controllers\Collector\ReportController;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'role:collector'])->prefix('collector')->name('collector.')->group(function () {
+Route::middleware(['auth', 'role:penagih'])->prefix('collector')->name('collector.')->group(function () {
 
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');

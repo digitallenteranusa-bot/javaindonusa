@@ -37,8 +37,8 @@ const roleClass = (role) => {
     const classes = {
         admin: 'bg-purple-100 text-purple-700',
         penagih: 'bg-blue-100 text-blue-700',
-        teknisi: 'bg-orange-100 text-orange-700',
-        cs: 'bg-green-100 text-green-700',
+        technician: 'bg-orange-100 text-orange-700',
+        finance: 'bg-green-100 text-green-700',
     }
     return classes[role] || 'bg-gray-100 text-gray-700'
 }
@@ -47,8 +47,8 @@ const roleLabel = (role) => {
     const labels = {
         admin: 'Administrator',
         penagih: 'Penagih/Collector',
-        teknisi: 'Teknisi',
-        cs: 'Customer Service',
+        technician: 'Teknisi',
+        finance: 'Finance',
     }
     return labels[role] || role
 }

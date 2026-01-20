@@ -46,7 +46,8 @@ class User extends Authenticatable
     // ================================================================
 
     const ROLE_ADMIN = 'admin';
-    const ROLE_COLLECTOR = 'collector';
+    const ROLE_COLLECTOR = 'penagih';  // Changed from 'collector' to 'penagih'
+    const ROLE_PENAGIH = 'penagih';    // Alias for clarity
     const ROLE_TECHNICIAN = 'technician';
     const ROLE_FINANCE = 'finance';
 

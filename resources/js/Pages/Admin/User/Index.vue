@@ -47,8 +47,8 @@ const roleClass = (role) => {
     const classes = {
         admin: 'bg-purple-100 text-purple-700',
         penagih: 'bg-blue-100 text-blue-700',
-        teknisi: 'bg-orange-100 text-orange-700',
-        cs: 'bg-green-100 text-green-700',
+        technician: 'bg-orange-100 text-orange-700',
+        finance: 'bg-green-100 text-green-700',
     }
     return classes[role] || 'bg-gray-100 text-gray-700'
 }
@@ -92,9 +92,9 @@ const roleClass = (role) => {
                 </p>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-4">
-                <p class="text-gray-500 text-xs">Teknisi & CS</p>
+                <p class="text-gray-500 text-xs">Teknisi & Finance</p>
                 <p class="text-2xl font-bold text-orange-600">
-                    {{ users.data?.filter(u => ['teknisi', 'cs'].includes(u.role)).length || 0 }}
+                    {{ users.data?.filter(u => ['technician', 'finance'].includes(u.role)).length || 0 }}
                 </p>
             </div>
         </div>

@@ -199,11 +199,11 @@ const showAreaField = computed(() => form.role === 'penagih')
                     <p v-else-if="form.role === 'penagih'">
                         <strong>Penagih/Collector:</strong> Menagih pembayaran, input pengeluaran, setoran harian
                     </p>
-                    <p v-else-if="form.role === 'teknisi'">
+                    <p v-else-if="form.role === 'technician'">
                         <strong>Teknisi:</strong> Manajemen router, troubleshooting pelanggan
                     </p>
-                    <p v-else-if="form.role === 'cs'">
-                        <strong>Customer Service:</strong> Melihat data pelanggan, menerima keluhan
+                    <p v-else-if="form.role === 'finance'">
+                        <strong>Finance:</strong> Akses laporan keuangan dan pembayaran
                     </p>
                 </div>
             </div>

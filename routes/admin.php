@@ -228,8 +228,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->name('reports.areas');
     Route::get('/reports/daily-trend', [ReportController::class, 'dailyTrend'])
         ->name('reports.daily-trend');
-    Route::get('/reports/export', [ReportController::class, 'export'])
-        ->name('reports.export');
+    Route::get('/reports/collectors/export', [ReportController::class, 'exportCollectorPerformance'])
+        ->name('reports.collectors.export');
 
     // ================================================================
     // AUDIT LOG

@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Admin\ReportService;
+use App\Exports\CollectorReportExport;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
@@ -95,16 +97,17 @@ class ReportController extends Controller
     }
 
     /**
-     * Export report to Excel (placeholder)
+     * Export collector performance report to Excel
      */
-    public function export(Request $request)
+    public function exportCollectorPerformance(Request $request)
     {
-        $type = $request->get('type', 'revenue');
-        $year = $request->get('year', now()->year);
-        $month = $request->get('month');
+        $year = (int) $request->get('year', now()->year);
+        $month = (int) $request->get('month', now()->month);
 
-        // TODO: Implement Excel export using Laravel Excel package
-        return back()->with('info', 'Fitur export akan segera tersedia');
+        $monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        $fileName = "Laporan_Penagih_{$monthNames[$month]}_{$year}.xlsx";
+
+        return Excel::download(new CollectorReportExport($month, $year), $fileName);
     }
 
     /**

@@ -7,8 +7,8 @@ use App\Models\Invoice;
 use App\Models\DebtHistory;
 use App\Models\Setting;
 use App\Models\BillingLog;
-use App\Jobs\Customer\IsolateCustomerJob;
-use App\Services\Router\MikrotikService;
+use App\Jobs\IsolateCustomerJob;
+use App\Services\Mikrotik\MikrotikService;
 use App\Services\Notification\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -79,13 +79,11 @@ class DebtIsolationService
         }
 
         // Log hasil proses
-        BillingLog::create([
-            'log_type' => 'invoice_generated',
-            'status' => empty($results['errors']) ? 'success' : 'partial',
-            'title' => 'Proses Penambahan Hutang Bulanan',
-            'description' => "Periode {$periodMonth}/{$periodYear}",
-            'metadata' => $results,
-        ]);
+        BillingLog::logSystem(
+            BillingLog::ACTION_BILLING_RUN,
+            "Proses penambahan hutang bulanan periode {$periodMonth}/{$periodYear}",
+            $results
+        );
 
         return $results;
     }
@@ -245,21 +243,11 @@ class DebtIsolationService
             $accessOpened = $this->checkAndOpenAccess($customer);
 
             // 6. Log aktivitas
-            BillingLog::create([
-                'customer_id' => $customer->id,
-                'log_type' => 'payment_received',
-                'status' => 'success',
-                'title' => 'Pembayaran Diterima',
-                'description' => "Rp " . number_format($amount, 0, ',', '.'),
-                'metadata' => [
-                    'payment_id' => $payment->id,
-                    'method' => $paymentMethod,
-                    'collector_id' => $collectorId,
-                    'allocations' => $allocations,
-                    'access_opened' => $accessOpened,
-                ],
-                'performed_by' => auth()->id(),
-            ]);
+            BillingLog::logPayment(
+                $payment,
+                BillingLog::ACTION_PAYMENT_RECEIVED,
+                "Pembayaran Rp " . number_format($amount, 0, ',', '.') . " dari {$customer->name}"
+            );
 
             $customer->refresh();
 
@@ -318,8 +306,8 @@ class DebtIsolationService
                 );
 
                 if ($shouldIsolate['isolate']) {
-                    // Dispatch job isolir
-                    IsolateCustomerJob::dispatch($customer, $shouldIsolate['reason']);
+                    // Dispatch job isolir (parameter: customerId, sendNotification)
+                    IsolateCustomerJob::dispatch($customer->id, true);
                     $results['isolated']++;
                 } else {
                     if ($shouldIsolate['reason'] === 'rapel_customer') {
@@ -352,7 +340,10 @@ class DebtIsolationService
         $now = Carbon::now();
 
         // 1. CEK PENGECUALIAN: Pelanggan dengan kebiasaan bayar rapel
-        if ($customer->payment_behavior === 'rapel') {
+        // Cek via is_rapel (legacy) atau payment_behavior (new)
+        $isRapelCustomer = $customer->is_rapel || $customer->payment_behavior === 'rapel';
+
+        if ($isRapelCustomer) {
             $rapelMonths = $customer->rapel_months ?: 3; // Default 3 bulan
 
             // Hitung jumlah invoice belum bayar
@@ -372,7 +363,7 @@ class DebtIsolationService
 
         // 2. CEK PENGECUALIAN: Ada pembayaran dalam 30 hari terakhir
         if ($customer->last_payment_date) {
-            $daysSincePayment = Carbon::parse($customer->last_payment_date)->diffInDays($now);
+            $daysSincePayment = $customer->last_payment_date->diffInDays($now);
 
             if ($daysSincePayment <= 30) {
                 return [
@@ -466,27 +457,30 @@ class DebtIsolationService
             // 1. Koneksi ke Mikrotik
             $this->mikrotik->connect($customer->router);
 
+            // Tentukan tipe koneksi (default pppoe jika tidak diset)
+            $connectionType = $customer->connection_type ?? 'pppoe';
+
             // 2. Tambahkan ke address list ISOLIR
-            if ($customer->connection_type === 'pppoe') {
+            // Untuk semua tipe, gunakan IP address
+            $ipAddress = $customer->static_ip ?? $customer->ip_address;
+            if ($ipAddress) {
                 $result = $this->mikrotik->addToAddressList(
-                    $customer->pppoe_username,
+                    $ipAddress,
                     'ISOLIR',
                     "Auto isolir: {$reason}"
                 );
             } else {
-                $result = $this->mikrotik->addIpToAddressList(
-                    $customer->static_ip,
-                    'ISOLIR',
-                    "Auto isolir: {$reason}"
-                );
+                $result = ['success' => true, 'message' => 'No IP to isolate'];
             }
 
-            // 3. Ubah profile ke isolated (bandwidth minimal)
-            if ($customer->connection_type === 'pppoe') {
-                $this->mikrotik->changeUserProfile(
+            // 3. Ubah profile ke isolated (bandwidth minimal) dan disconnect
+            if ($connectionType === 'pppoe' && $customer->pppoe_username) {
+                $this->mikrotik->changePPPoEProfile(
                     $customer->pppoe_username,
-                    config('mikrotik.profiles.isolated')
+                    config('mikrotik.isolation.profile', 'isolir')
                 );
+                // Disconnect session agar reconnect dengan profile baru
+                $this->mikrotik->disconnectPPPoE($customer->pppoe_username);
             }
 
             // 4. Update status customer
@@ -499,17 +493,11 @@ class DebtIsolationService
             $this->notification->sendIsolationNotice($customer, $reason);
 
             // 6. Log aktivitas
-            BillingLog::create([
-                'customer_id' => $customer->id,
-                'log_type' => 'isolation_executed',
-                'status' => 'success',
-                'title' => 'Pelanggan Diisolir',
-                'description' => $reason,
-                'metadata' => [
-                    'router_id' => $customer->router_id,
-                    'mikrotik_result' => $result,
-                ],
-            ]);
+            BillingLog::logCustomer(
+                $customer,
+                BillingLog::ACTION_CUSTOMER_ISOLATED,
+                "Pelanggan diisolir: {$reason}"
+            );
 
             return [
                 'success' => true,
@@ -517,13 +505,11 @@ class DebtIsolationService
             ];
 
         } catch (\Exception $e) {
-            BillingLog::create([
-                'customer_id' => $customer->id,
-                'log_type' => 'system_error',
-                'status' => 'failed',
-                'title' => 'Gagal Isolir Pelanggan',
-                'description' => $e->getMessage(),
-            ]);
+            BillingLog::logCustomer(
+                $customer,
+                BillingLog::ACTION_CUSTOMER_ISOLATED,
+                "Gagal isolir: " . $e->getMessage()
+            );
 
             throw $e;
         }
@@ -570,17 +556,19 @@ class DebtIsolationService
             // 1. Koneksi ke Mikrotik
             $this->mikrotik->connect($customer->router);
 
+            // Tentukan tipe koneksi (default pppoe jika tidak diset)
+            $connectionType = $customer->connection_type ?? 'pppoe';
+
             // 2. Hapus dari address list ISOLIR
-            if ($customer->connection_type === 'pppoe') {
-                $this->mikrotik->removeFromAddressList($customer->pppoe_username, 'ISOLIR');
-            } else {
-                $this->mikrotik->removeIpFromAddressList($customer->static_ip, 'ISOLIR');
+            $ipAddress = $customer->static_ip ?? $customer->ip_address;
+            if ($ipAddress) {
+                $this->mikrotik->removeFromAddressList($ipAddress, 'ISOLIR');
             }
 
             // 3. Kembalikan profile normal
-            if ($customer->connection_type === 'pppoe' && $customer->package) {
-                $profileName = 'pkg-' . strtolower($customer->package->code);
-                $this->mikrotik->changeUserProfile($customer->pppoe_username, $profileName);
+            if ($connectionType === 'pppoe' && $customer->package && $customer->pppoe_username) {
+                $profileName = $customer->package->mikrotik_profile ?? 'default';
+                $this->mikrotik->changePPPoEProfile($customer->pppoe_username, $profileName);
             }
 
             // 4. Update status customer
@@ -593,24 +581,20 @@ class DebtIsolationService
             $this->notification->sendAccessOpenedNotice($customer);
 
             // 6. Log aktivitas
-            BillingLog::create([
-                'customer_id' => $customer->id,
-                'log_type' => 'isolation_opened',
-                'status' => 'success',
-                'title' => 'Akses Dibuka',
-                'description' => 'Isolir dibuka setelah pembayaran',
-            ]);
+            BillingLog::logCustomer(
+                $customer,
+                BillingLog::ACTION_CUSTOMER_REOPENED,
+                'Isolir dibuka setelah pembayaran'
+            );
 
             return true;
 
         } catch (\Exception $e) {
-            BillingLog::create([
-                'customer_id' => $customer->id,
-                'log_type' => 'system_error',
-                'status' => 'failed',
-                'title' => 'Gagal Buka Akses',
-                'description' => $e->getMessage(),
-            ]);
+            BillingLog::logCustomer(
+                $customer,
+                BillingLog::ACTION_CUSTOMER_REOPENED,
+                "Gagal buka akses: " . $e->getMessage()
+            );
 
             return false;
         }

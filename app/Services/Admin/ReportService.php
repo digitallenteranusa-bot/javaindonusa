@@ -122,7 +122,7 @@ class ReportService
 
         $collectors = User::where('role', 'penagih')
             ->where('is_active', true)
-            ->withCount(['customers' => function ($q) {
+            ->withCount(['assignedCustomers' => function ($q) {
                 $q->where('status', 'active');
             }])
             ->get();
@@ -150,7 +150,7 @@ class ReportService
             $performance[] = [
                 'id' => $collector->id,
                 'name' => $collector->name,
-                'customers_count' => $collector->customers_count,
+                'customers_count' => $collector->assigned_customers_count,
                 'total_billable' => $totalBillable,
                 'total_collected' => $totalCollected,
                 'collection_rate' => $totalBillable > 0

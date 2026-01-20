@@ -54,12 +54,12 @@ class UpdateService
 
             // Save check result
             Setting::updateOrCreate(
-                ['key' => 'last_update_check'],
+                ['group' => 'system', 'key' => 'last_update_check'],
                 ['value' => now()->toDateTimeString()]
             );
 
             Setting::updateOrCreate(
-                ['key' => 'latest_version'],
+                ['group' => 'system', 'key' => 'latest_version'],
                 ['value' => $latestVersion]
             );
 
@@ -194,7 +194,7 @@ class UpdateService
 
             // Save backup info
             Setting::updateOrCreate(
-                ['key' => 'last_backup'],
+                ['group' => 'system', 'key' => 'last_backup'],
                 ['value' => json_encode([
                     'file' => $backupName,
                     'path' => $backupFile,
@@ -265,7 +265,7 @@ class UpdateService
             // Update version in settings
             $newVersion = config('app.version', '1.0.0');
             Setting::updateOrCreate(
-                ['key' => 'last_update'],
+                ['group' => 'system', 'key' => 'last_update'],
                 ['value' => json_encode([
                     'version' => $newVersion,
                     'installed_at' => now()->toDateTimeString(),

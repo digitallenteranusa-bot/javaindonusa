@@ -120,6 +120,28 @@ class MikrotikService
     }
 
     /**
+     * Get router identity name
+     */
+    public function getIdentity(): string
+    {
+        $this->ensureConnected();
+
+        $identity = $this->client->command('/system/identity/print');
+        return $identity[0]['name'] ?? 'Unknown';
+    }
+
+    /**
+     * Get router resources
+     */
+    public function getResources(): array
+    {
+        $this->ensureConnected();
+
+        $result = $this->client->command('/system/resource/print');
+        return $result[0] ?? [];
+    }
+
+    /**
      * Update router status in database
      */
     public function updateRouterStatus(Router $router): void

@@ -29,7 +29,7 @@ class CollectorReportExport implements FromCollection, WithHeadings, WithMapping
         $startDate = Carbon::create($this->year, $this->month, 1)->startOfMonth();
         $endDate = Carbon::create($this->year, $this->month, 1)->endOfMonth();
 
-        $collectors = User::where('role', 'collector')
+        $collectors = User::where('role', 'penagih')
             ->where('is_active', true)
             ->get();
 
@@ -43,7 +43,7 @@ class CollectorReportExport implements FromCollection, WithHeadings, WithMapping
 
             $result->push((object) [
                 'name' => $collector->name,
-                'customers_count' => $collector->customers()->where('status', 'active')->count(),
+                'customers_count' => $collector->assignedCustomers()->where('status', 'active')->count(),
                 'total_collected' => $payments->sum('amount'),
                 'cash_collected' => $payments->where('payment_method', 'cash')->sum('amount'),
                 'transfer_collected' => $payments->where('payment_method', 'transfer')->sum('amount'),

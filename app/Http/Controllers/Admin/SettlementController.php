@@ -45,7 +45,7 @@ class SettlementController extends Controller
 
         // Stats
         $pendingCount = Settlement::where('status', 'pending')->count();
-        $pendingAmount = Settlement::where('status', 'pending')->sum('settlement_amount');
+        $pendingAmount = Settlement::where('status', 'pending')->sum('expected_amount');
 
         return Inertia::render('Admin/Settlement/Index', [
             'settlements' => $settlements,
@@ -68,7 +68,7 @@ class SettlementController extends Controller
 
         return Inertia::render('Admin/Settlement/Pending', [
             'settlements' => $settlements,
-            'totalAmount' => $settlements->sum('settlement_amount'),
+            'totalAmount' => $settlements->sum('expected_amount'),
         ]);
     }
 
@@ -112,7 +112,7 @@ class SettlementController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $difference = $validated['actual_amount'] - $settlement->settlement_amount;
+        $difference = $validated['actual_amount'] - $settlement->expected_amount;
 
         $settlement->update([
             'status' => 'verified',
@@ -204,7 +204,7 @@ class SettlementController extends Controller
 
         $summary = [
             'date' => $date,
-            'total_expected' => $settlements->sum('settlement_amount'),
+            'total_expected' => $settlements->sum('expected_amount'),
             'total_actual' => $settlements->sum('actual_amount'),
             'total_difference' => $settlements->sum('difference'),
             'verified_count' => $settlements->where('status', 'verified')->count(),

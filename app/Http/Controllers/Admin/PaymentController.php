@@ -96,7 +96,7 @@ class PaymentController extends Controller
         ];
 
         // Get collectors for filter dropdown
-        $collectors = User::where('role', 'collector')
+        $collectors = User::where('role', 'penagih')
             ->orderBy('name')
             ->get(['id', 'name']);
 

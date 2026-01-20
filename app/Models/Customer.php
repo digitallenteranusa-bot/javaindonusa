@@ -45,6 +45,10 @@ class Customer extends Model
         'is_rapel',
         'rapel_amount',
         'rapel_months',
+        'payment_behavior',
+        'last_payment_date',
+        'connection_type',
+        'static_ip',
         'notes',
         'latitude',
         'longitude',
@@ -61,6 +65,7 @@ class Customer extends Model
             'rapel_amount' => 'decimal:2',
             'rapel_months' => 'integer',
             'is_rapel' => 'boolean',
+            'last_payment_date' => 'datetime',
             'latitude' => 'decimal:8',
             'longitude' => 'decimal:8',
         ];

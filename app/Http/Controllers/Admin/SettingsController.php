@@ -46,7 +46,7 @@ class SettingsController extends Controller
 
         foreach ($validated as $key => $value) {
             Setting::updateOrCreate(
-                ['key' => $key],
+                ['group' => 'billing', 'key' => $key],
                 ['value' => $value]
             );
         }
@@ -99,7 +99,7 @@ class SettingsController extends Controller
 
         foreach ($validated as $key => $value) {
             Setting::updateOrCreate(
-                ['key' => $key],
+                ['group' => 'notification', 'key' => $key],
                 ['value' => is_bool($value) ? ($value ? '1' : '0') : $value]
             );
         }
@@ -121,7 +121,7 @@ class SettingsController extends Controller
 
         foreach ($validated as $key => $value) {
             Setting::updateOrCreate(
-                ['key' => $key],
+                ['group' => 'system', 'key' => $key],
                 ['value' => is_bool($value) ? ($value ? '1' : '0') : $value]
             );
         }
@@ -151,7 +151,7 @@ class SettingsController extends Controller
             }
 
             Setting::updateOrCreate(
-                ['key' => $key],
+                ['group' => 'system', 'key' => $key],
                 ['value' => is_bool($value) ? ($value ? '1' : '0') : $value]
             );
         }

@@ -158,7 +158,7 @@ sudo mysql -u root -p
 
 ```sql
 CREATE DATABASE billing_isp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'billing_user'@'localhost' IDENTIFIED BY 'password_yang_kuat';
+CREATE USER 'root'@'localhost' IDENTIFIED BY 'password_yang_kuat';
 GRANT ALL PRIVILEGES ON billing_isp.* TO 'billing_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
@@ -395,8 +395,16 @@ sudo systemctl restart apache2
 Setelah instalasi, akses aplikasi dan login dengan:
 
 - **URL**: `https://billing.domain.com/login`
-- **Email**: `admin@admin.com`
+- **Email**: `admin@javaindonusa.net`
 - **Password**: `password`
+
+**Akun Lainnya (seeder default):**
+
+| Role | Email | Password |
+|------|-------|----------|
+| Super Admin | `admin@javaindonusa.net` | `password` |
+| Finance | `finance@javaindonusa.net` | `password` |
+| Collector | `budi@javaindonusa.net` | `password` |
 
 > **PENTING**: Segera ganti password setelah login!
 

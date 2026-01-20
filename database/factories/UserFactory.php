@@ -36,7 +36,14 @@ class UserFactory extends Factory
     public function collector(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => 'collector',
+            'role' => 'penagih',
+        ]);
+    }
+
+    public function penagih(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'penagih',
         ]);
     }
 

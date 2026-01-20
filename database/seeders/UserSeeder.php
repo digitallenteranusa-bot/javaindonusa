@@ -72,7 +72,7 @@ class UserSeeder extends Seeder
                 'email' => $collector['email'],
                 'phone' => $collector['phone'],
                 'password' => Hash::make('password'),
-                'role' => 'collector',
+                'role' => 'penagih',
                 'commission_rate' => $collector['commission_rate'],
                 'is_active' => true,
             ]);

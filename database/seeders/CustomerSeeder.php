@@ -20,7 +20,7 @@ class CustomerSeeder extends Seeder
         $packages = Package::all();
         $areas = Area::whereNotNull('parent_id')->get(); // Sub-areas only
         $routers = Router::all();
-        $collectors = User::where('role', 'collector')->get();
+        $collectors = User::where('role', 'penagih')->get();
 
         // Indonesian names for realistic data
         $firstNames = ['Andi', 'Budi', 'Citra', 'Dewi', 'Eka', 'Fajar', 'Gita', 'Hadi', 'Indra', 'Joko',

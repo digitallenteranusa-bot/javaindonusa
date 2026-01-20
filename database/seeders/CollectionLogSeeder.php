@@ -16,7 +16,7 @@ class CollectionLogSeeder extends Seeder
      */
     public function run(): void
     {
-        $collectors = User::where('role', 'collector')->get();
+        $collectors = User::where('role', 'penagih')->get();
         $customersWithDebt = Customer::where('total_debt', '>', 0)->get();
 
         $actionTypes = [

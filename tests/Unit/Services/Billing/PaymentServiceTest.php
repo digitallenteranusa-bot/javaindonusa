@@ -87,7 +87,7 @@ class PaymentServiceTest extends TestCase
     {
         // Arrange
         $customer = Customer::factory()->create(['total_debt' => 150000]);
-        $collector = User::factory()->create(['role' => 'collector']);
+        $collector = User::factory()->create(['role' => 'penagih']);
 
         Invoice::factory()->create([
             'customer_id' => $customer->id,
@@ -426,7 +426,7 @@ class PaymentServiceTest extends TestCase
     {
         // Arrange
         $customer = Customer::factory()->create();
-        $collector = User::factory()->create(['role' => 'collector']);
+        $collector = User::factory()->create(['role' => 'penagih']);
 
         Payment::factory()->create([
             'customer_id' => $customer->id,
@@ -472,7 +472,7 @@ class PaymentServiceTest extends TestCase
     public function it_calculates_daily_collection_summary_for_collector()
     {
         // Arrange
-        $collector = User::factory()->create(['role' => 'collector']);
+        $collector = User::factory()->create(['role' => 'penagih']);
         $customer = Customer::factory()->create();
 
         Payment::factory()->create([
@@ -494,7 +494,7 @@ class PaymentServiceTest extends TestCase
         ]);
 
         // Payment from different collector (should not be counted)
-        $otherCollector = User::factory()->create(['role' => 'collector']);
+        $otherCollector = User::factory()->create(['role' => 'penagih']);
         Payment::factory()->create([
             'customer_id' => $customer->id,
             'collector_id' => $otherCollector->id,

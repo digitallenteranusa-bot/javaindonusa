@@ -22,7 +22,7 @@ class PaymentSeeder extends Seeder
             ->with('customer')
             ->get();
 
-        $collectors = User::where('role', 'collector')->get();
+        $collectors = User::where('role', 'penagih')->get();
         $admin = User::where('role', 'admin')->first();
 
         $paymentMethods = ['cash', 'cash', 'cash', 'transfer', 'transfer']; // 60% cash, 40% transfer

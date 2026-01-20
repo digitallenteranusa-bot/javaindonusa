@@ -15,7 +15,7 @@ class AreaSeeder extends Seeder
     public function run(): void
     {
         // Get collectors
-        $collectors = User::where('role', 'collector')->get();
+        $collectors = User::where('role', 'penagih')->get();
         $routers = Router::all();
 
         // Parent areas (main regions)

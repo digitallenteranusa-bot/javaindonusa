@@ -46,7 +46,7 @@ class PaymentFactory extends Factory
     public function byCollector(User $collector = null): static
     {
         return $this->state(fn (array $attributes) => [
-            'collector_id' => $collector?->id ?? User::factory()->create(['role' => 'collector'])->id,
+            'collector_id' => $collector?->id ?? User::factory()->create(['role' => 'penagih'])->id,
             'payment_channel' => 'collector',
         ]);
     }

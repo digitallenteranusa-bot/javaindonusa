@@ -200,7 +200,7 @@ class UserController extends Controller
 
         // Check if user has associated data
         if ($user->role === 'penagih') {
-            if ($user->collections()->exists()) {
+            if ($user->collectedPayments()->exists()) {
                 return back()->with('error', 'User memiliki riwayat penagihan, tidak dapat dihapus');
             }
             if ($user->assignedCustomers()->exists()) {

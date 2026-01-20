@@ -430,21 +430,33 @@ class DashboardService
      */
     protected function getRecentActivities(int $limit = 20): array
     {
-        return BillingLog::with(['customer:id,customer_id,name', 'performedBy:id,name'])
+        return BillingLog::with(['loggable', 'performedBy:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get()
-            ->map(fn($log) => [
-                'id' => $log->id,
-                'type' => $log->log_type,
-                'status' => $log->status,
-                'title' => $log->title,
-                'description' => $log->description,
-                'customer' => $log->customer?->name,
-                'customer_id' => $log->customer?->customer_id,
-                'performed_by' => $log->performedBy?->name,
-                'created_at' => $log->created_at->diffForHumans(),
-            ])
+            ->map(function ($log) {
+                // Check if loggable is a Customer
+                $isCustomer = $log->loggable_type === 'App\\Models\\Customer';
+                $customerName = null;
+                $customerId = null;
+
+                if ($isCustomer && $log->loggable) {
+                    $customerName = $log->loggable->name;
+                    $customerId = $log->loggable->customer_id;
+                }
+
+                return [
+                    'id' => $log->id,
+                    'type' => $log->action,
+                    'action' => $log->action,
+                    'action_label' => $log->action_label,
+                    'description' => $log->description,
+                    'customer' => $customerName,
+                    'customer_id' => $customerId,
+                    'performed_by' => $log->performedBy?->name,
+                    'created_at' => $log->created_at->diffForHumans(),
+                ];
+            })
             ->toArray();
     }
 

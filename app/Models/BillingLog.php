@@ -72,6 +72,14 @@ class BillingLog extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Alias for user relationship (performed by)
+     */
+    public function performedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     // ================================================================
     // SCOPES
     // ================================================================

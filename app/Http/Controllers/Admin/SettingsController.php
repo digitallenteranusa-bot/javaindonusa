@@ -1,0 +1,408 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Setting;
+use App\Models\IspInfo;
+use App\Models\User;
+use App\Models\Customer;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Services\Admin\UpdateService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+
+class SettingsController extends Controller
+{
+    /**
+     * Display settings page
+     */
+    public function index()
+    {
+        $settings = Setting::pluck('value', 'key')->toArray();
+        $ispInfo = IspInfo::first();
+
+        return Inertia::render('Admin/Settings/Index', [
+            'settings' => $settings,
+            'ispInfo' => $ispInfo,
+        ]);
+    }
+
+    /**
+     * Update general settings
+     */
+    public function updateGeneral(Request $request)
+    {
+        $validated = $request->validate([
+            'billing_due_days' => 'required|integer|min:1|max:30',
+            'billing_grace_days' => 'required|integer|min:0|max:30',
+            'isolation_threshold_months' => 'required|integer|min:1|max:12',
+            'rapel_tolerance_months' => 'required|integer|min:1|max:12',
+            'recent_payment_days' => 'required|integer|min:1|max:90',
+        ]);
+
+        foreach ($validated as $key => $value) {
+            Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => $value]
+            );
+        }
+
+        return back()->with('success', 'Pengaturan billing berhasil disimpan');
+    }
+
+    /**
+     * Update ISP info
+     */
+    public function updateIspInfo(Request $request)
+    {
+        $validated = $request->validate([
+            'company_name' => 'required|string|max:255',
+            'tagline' => 'nullable|string|max:255',
+            'address' => 'nullable|string',
+            'phone' => 'required|string|max:20',
+            'email' => 'nullable|email',
+            'website' => 'nullable|url',
+            'operational_hours' => 'nullable|string|max:100',
+            'bank_accounts' => 'nullable|array',
+            'bank_accounts.*.bank' => 'required|string',
+            'bank_accounts.*.account' => 'required|string',
+            'bank_accounts.*.name' => 'required|string',
+        ]);
+
+        $ispInfo = IspInfo::first();
+        if ($ispInfo) {
+            $ispInfo->update($validated);
+        } else {
+            IspInfo::create($validated);
+        }
+
+        return back()->with('success', 'Informasi ISP berhasil disimpan');
+    }
+
+    /**
+     * Update notification settings
+     */
+    public function updateNotification(Request $request)
+    {
+        $validated = $request->validate([
+            'whatsapp_enabled' => 'boolean',
+            'sms_enabled' => 'boolean',
+            'reminder_days_before' => 'required|integer|min:1|max:14',
+            'reminder_template' => 'nullable|string',
+            'overdue_template' => 'nullable|string',
+            'isolation_template' => 'nullable|string',
+        ]);
+
+        foreach ($validated as $key => $value) {
+            Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => is_bool($value) ? ($value ? '1' : '0') : $value]
+            );
+        }
+
+        return back()->with('success', 'Pengaturan notifikasi berhasil disimpan');
+    }
+
+    /**
+     * Update Mikrotik settings
+     */
+    public function updateMikrotik(Request $request)
+    {
+        $validated = $request->validate([
+            'mikrotik_auto_isolate' => 'boolean',
+            'mikrotik_auto_reopen' => 'boolean',
+            'isolation_profile' => 'nullable|string|max:50',
+            'isolation_address_list' => 'nullable|string|max:50',
+        ]);
+
+        foreach ($validated as $key => $value) {
+            Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => is_bool($value) ? ($value ? '1' : '0') : $value]
+            );
+        }
+
+        return back()->with('success', 'Pengaturan Mikrotik berhasil disimpan');
+    }
+
+    /**
+     * Update GenieACS settings
+     */
+    public function updateGenieacs(Request $request)
+    {
+        $validated = $request->validate([
+            'genieacs_enabled' => 'boolean',
+            'genieacs_nbi_url' => 'nullable|url',
+            'genieacs_ui_url' => 'nullable|url',
+            'genieacs_fs_url' => 'nullable|url',
+            'genieacs_username' => 'nullable|string|max:100',
+            'genieacs_password' => 'nullable|string|max:100',
+            'genieacs_sync_interval' => 'required|integer|min:5|max:60',
+        ]);
+
+        foreach ($validated as $key => $value) {
+            // Skip empty password
+            if ($key === 'genieacs_password' && empty($value)) {
+                continue;
+            }
+
+            Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => is_bool($value) ? ($value ? '1' : '0') : $value]
+            );
+        }
+
+        return back()->with('success', 'Pengaturan GenieACS berhasil disimpan');
+    }
+
+    /**
+     * Display system info page
+     */
+    public function system()
+    {
+        $appVersion = config('app.version', '1.0.0');
+
+        // Get system statistics
+        $stats = [
+            'total_customers' => Customer::count(),
+            'active_customers' => Customer::where('status', 'active')->count(),
+            'total_users' => User::count(),
+            'total_invoices' => Invoice::count(),
+            'total_payments' => Payment::count(),
+            'database_size' => $this->getDatabaseSize(),
+        ];
+
+        // Get PHP & Laravel info
+        $systemInfo = [
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'server_os' => PHP_OS,
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+            'timezone' => config('app.timezone'),
+            'max_upload' => ini_get('upload_max_filesize'),
+            'memory_limit' => ini_get('memory_limit'),
+            'server_time' => now()->format('Y-m-d H:i:s'),
+            'server_time_formatted' => now()->translatedFormat('l, d F Y - H:i:s'),
+            'uptime' => $this->getServerUptime(),
+        ];
+
+        // Get update info (stored in settings)
+        $updateInfo = [
+            'current_version' => $appVersion,
+            'last_check' => Setting::where('key', 'last_update_check')->value('value'),
+            'latest_version' => Setting::where('key', 'latest_version')->value('value'),
+            'update_available' => false,
+        ];
+
+        $latestVersion = $updateInfo['latest_version'];
+        if ($latestVersion && version_compare($latestVersion, $appVersion, '>')) {
+            $updateInfo['update_available'] = true;
+        }
+
+        return Inertia::render('Admin/System/Index', [
+            'appVersion' => $appVersion,
+            'stats' => $stats,
+            'systemInfo' => $systemInfo,
+            'updateInfo' => $updateInfo,
+        ]);
+    }
+
+    /**
+     * Check for updates
+     */
+    public function checkUpdate(UpdateService $updateService)
+    {
+        $result = $updateService->checkForUpdates();
+
+        if ($result['success']) {
+            if ($result['update_available']) {
+                return back()->with('info', "Update tersedia: v{$result['latest_version']}");
+            } else {
+                return back()->with('success', 'Aplikasi sudah versi terbaru');
+            }
+        }
+
+        return back()->with('error', $result['error'] ?? 'Gagal mengecek update');
+    }
+
+    /**
+     * Create backup before update
+     */
+    public function createBackup(UpdateService $updateService)
+    {
+        $result = $updateService->createBackup();
+
+        if ($result['success']) {
+            return back()->with('success', "Backup berhasil dibuat: {$result['backup_file']} ({$result['backup_size']})");
+        }
+
+        return back()->with('error', $result['error'] ?? 'Gagal membuat backup');
+    }
+
+    /**
+     * Install update from uploaded file
+     */
+    public function installUpdate(Request $request, UpdateService $updateService)
+    {
+        $request->validate([
+            'update_file' => 'required|file|mimes:zip|max:102400', // Max 100MB
+        ]);
+
+        // Create backup first
+        $backupResult = $updateService->createBackup();
+        if (!$backupResult['success']) {
+            return back()->with('error', 'Gagal membuat backup sebelum update');
+        }
+
+        // Install update
+        $result = $updateService->installFromUpload($request->file('update_file'));
+
+        if ($result['success']) {
+            return back()->with('success', "Update berhasil diinstall. Versi baru: {$result['new_version']}");
+        }
+
+        return back()->with('error', $result['error'] ?? 'Gagal menginstall update');
+    }
+
+    /**
+     * Download and install update from server
+     */
+    public function downloadAndInstall(Request $request, UpdateService $updateService)
+    {
+        $request->validate([
+            'download_url' => 'required|url',
+        ]);
+
+        // Create backup first
+        $backupResult = $updateService->createBackup();
+        if (!$backupResult['success']) {
+            return back()->with('error', 'Gagal membuat backup sebelum update');
+        }
+
+        // Download update
+        $downloadResult = $updateService->downloadUpdate($request->download_url);
+        if (!$downloadResult['success']) {
+            return back()->with('error', $downloadResult['error'] ?? 'Gagal download update');
+        }
+
+        // Install update
+        $result = $updateService->installUpdate($downloadResult['file_path']);
+
+        if ($result['success']) {
+            return back()->with('success', "Update berhasil diinstall. Versi baru: {$result['new_version']}");
+        }
+
+        return back()->with('error', $result['error'] ?? 'Gagal menginstall update');
+    }
+
+    /**
+     * Get list of backups
+     */
+    public function getBackups(UpdateService $updateService)
+    {
+        return response()->json([
+            'backups' => $updateService->getBackups(),
+        ]);
+    }
+
+    /**
+     * Restore from backup
+     */
+    public function restoreBackup(Request $request, UpdateService $updateService)
+    {
+        $request->validate([
+            'backup_file' => 'required|string',
+        ]);
+
+        $result = $updateService->restoreBackup($request->backup_file);
+
+        if ($result['success']) {
+            return back()->with('success', 'Restore berhasil dilakukan');
+        }
+
+        return back()->with('error', $result['error'] ?? 'Gagal restore backup');
+    }
+
+    /**
+     * Delete a backup
+     */
+    public function deleteBackup(Request $request, UpdateService $updateService)
+    {
+        $request->validate([
+            'backup_file' => 'required|string',
+        ]);
+
+        if ($updateService->deleteBackup($request->backup_file)) {
+            return back()->with('success', 'Backup berhasil dihapus');
+        }
+
+        return back()->with('error', 'Gagal menghapus backup');
+    }
+
+    /**
+     * Clear application cache
+     */
+    public function clearCache()
+    {
+        try {
+            Artisan::call('cache:clear');
+            Artisan::call('config:clear');
+            Artisan::call('view:clear');
+            Artisan::call('route:clear');
+
+            return back()->with('success', 'Cache berhasil dibersihkan');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal membersihkan cache: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get database size
+     */
+    protected function getDatabaseSize(): string
+    {
+        try {
+            $dbName = config('database.connections.mysql.database');
+            $result = DB::select("
+                SELECT
+                    ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb
+                FROM information_schema.tables
+                WHERE table_schema = ?
+            ", [$dbName]);
+
+            return ($result[0]->size_mb ?? 0) . ' MB';
+        } catch (\Exception $e) {
+            return 'N/A';
+        }
+    }
+
+    /**
+     * Get server uptime
+     */
+    protected function getServerUptime(): string
+    {
+        try {
+            if (PHP_OS_FAMILY === 'Windows') {
+                // Windows
+                $uptime = shell_exec('net stats workstation | find "Statistics since"');
+                if ($uptime) {
+                    return trim(str_replace('Statistics since', 'Sejak', $uptime));
+                }
+                return 'N/A';
+            } else {
+                // Linux/Unix
+                $uptime = shell_exec('uptime -p');
+                if ($uptime) {
+                    return trim($uptime);
+                }
+                return 'N/A';
+            }
+        } catch (\Exception $e) {
+            return 'N/A';
+        }
+    }
+}

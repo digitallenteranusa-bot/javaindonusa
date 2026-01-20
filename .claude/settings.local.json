@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Get-ChildItem -Recurse -Force | Select-Object FullName | head -100\")",
+      "Bash(dir:*)",
+      "Bash(php -l:*)",
+      "Skill(init)",
+      "mcp__ide__getDiagnostics",
+      "Bash(grep:*)",
+      "Bash(ls -la \"D:\\\\SOURCE CODE\\\\java indonusa\\\\app\"\" | grep -E \"^d \")",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(xargs ls:*)"
+    ]
+  }
+}

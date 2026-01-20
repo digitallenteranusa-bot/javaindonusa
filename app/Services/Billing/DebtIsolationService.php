@@ -1,0 +1,659 @@
+<?php
+
+namespace App\Services\Billing;
+
+use App\Models\Customer;
+use App\Models\Invoice;
+use App\Models\DebtHistory;
+use App\Models\Setting;
+use App\Models\BillingLog;
+use App\Jobs\Customer\IsolateCustomerJob;
+use App\Services\Router\MikrotikService;
+use App\Services\Notification\NotificationService;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
+
+class DebtIsolationService
+{
+    protected MikrotikService $mikrotik;
+    protected NotificationService $notification;
+    protected DebtService $debtService;
+
+    public function __construct(
+        MikrotikService $mikrotik,
+        NotificationService $notification,
+        DebtService $debtService
+    ) {
+        $this->mikrotik = $mikrotik;
+        $this->notification = $notification;
+        $this->debtService = $debtService;
+    }
+
+    // ================================================================
+    // LOGIKA PENAMBAHAN HUTANG SETIAP TANGGAL 1
+    // ================================================================
+
+    /**
+     * Proses penambahan hutang bulanan untuk semua pelanggan
+     * Dijalankan setiap tanggal 1 via scheduler
+     */
+    public function processMonthlyDebtAddition(): array
+    {
+        $now = Carbon::now();
+        $periodMonth = $now->month;
+        $periodYear = $now->year;
+
+        $results = [
+            'processed' => 0,
+            'debt_added' => 0,
+            'skipped_paid' => 0,
+            'skipped_terminated' => 0,
+            'errors' => [],
+        ];
+
+        // Ambil semua pelanggan aktif dan terisolir
+        $customers = Customer::whereIn('status', ['active', 'isolated'])
+            ->whereNull('deleted_at')
+            ->with('package')
+            ->get();
+
+        foreach ($customers as $customer) {
+            try {
+                $result = $this->addMonthlyDebtForCustomer($customer, $periodMonth, $periodYear);
+
+                if ($result['added']) {
+                    $results['debt_added']++;
+                } else {
+                    $results['skipped_paid']++;
+                }
+
+                $results['processed']++;
+
+            } catch (\Exception $e) {
+                $results['errors'][] = [
+                    'customer_id' => $customer->customer_id,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        // Log hasil proses
+        BillingLog::create([
+            'log_type' => 'invoice_generated',
+            'status' => empty($results['errors']) ? 'success' : 'partial',
+            'title' => 'Proses Penambahan Hutang Bulanan',
+            'description' => "Periode {$periodMonth}/{$periodYear}",
+            'metadata' => $results,
+        ]);
+
+        return $results;
+    }
+
+    /**
+     * Tambah hutang bulanan untuk satu pelanggan
+     */
+    public function addMonthlyDebtForCustomer(
+        Customer $customer,
+        int $periodMonth,
+        int $periodYear
+    ): array {
+        // Cek apakah invoice bulan ini sudah ada
+        $existingInvoice = Invoice::where('customer_id', $customer->id)
+            ->where('period_year', $periodYear)
+            ->where('period_month', $periodMonth)
+            ->first();
+
+        if ($existingInvoice) {
+            // Invoice sudah ada, cek status
+            if ($existingInvoice->status === 'paid') {
+                return ['added' => false, 'reason' => 'already_paid'];
+            }
+            // Invoice ada tapi belum bayar, tidak perlu tambah lagi
+            return ['added' => false, 'reason' => 'invoice_exists'];
+        }
+
+        // Buat invoice baru dan tambahkan ke hutang
+        return DB::transaction(function () use ($customer, $periodMonth, $periodYear) {
+            $package = $customer->package;
+            $amount = $package->price;
+
+            // Hitung periode
+            $periodStart = Carbon::create($periodYear, $periodMonth, 1)->startOfMonth();
+            $periodEnd = $periodStart->copy()->endOfMonth();
+            $dueDays = Setting::getValue('billing', 'due_days', 20);
+            $dueDate = $periodStart->copy()->addDays($dueDays);
+
+            // Generate invoice
+            $invoice = Invoice::create([
+                'invoice_number' => $this->generateInvoiceNumber($periodYear, $periodMonth),
+                'customer_id' => $customer->id,
+                'period_month' => $periodMonth,
+                'period_year' => $periodYear,
+                'package_name' => $package->name,
+                'package_price' => $amount,
+                'additional_charges' => 0,
+                'discount' => 0,
+                'total_amount' => $amount,
+                'paid_amount' => 0,
+                'remaining_amount' => $amount,
+                'status' => 'pending',
+                'due_date' => $dueDate,
+            ]);
+
+            // Tambahkan ke total hutang pelanggan
+            $this->debtService->addDebt(
+                $customer,
+                $amount,
+                'invoice_added',
+                'invoice',
+                $invoice->id,
+                "Tagihan {$package->name} periode {$periodMonth}/{$periodYear}"
+            );
+
+            return [
+                'added' => true,
+                'invoice_id' => $invoice->id,
+                'amount' => $amount,
+            ];
+        });
+    }
+
+    // ================================================================
+    // LOGIKA PEMBAYARAN & PENGURANGAN HUTANG
+    // ================================================================
+
+    /**
+     * Proses pembayaran (partial/full) dan kurangi hutang
+     */
+    public function processPayment(
+        Customer $customer,
+        float $amount,
+        string $paymentMethod = 'cash',
+        ?int $collectorId = null,
+        ?string $transferProof = null,
+        ?string $notes = null
+    ): array {
+        return DB::transaction(function () use (
+            $customer, $amount, $paymentMethod, $collectorId, $transferProof, $notes
+        ) {
+            $previousDebt = $customer->total_debt;
+            $allocations = [];
+            $remainingPayment = $amount;
+
+            // 1. Alokasi ke invoice tertua (FIFO)
+            $unpaidInvoices = Invoice::where('customer_id', $customer->id)
+                ->whereIn('status', ['pending', 'partial', 'overdue'])
+                ->orderBy('period_year', 'asc')
+                ->orderBy('period_month', 'asc')
+                ->get();
+
+            foreach ($unpaidInvoices as $invoice) {
+                if ($remainingPayment <= 0) break;
+
+                $payForInvoice = min($remainingPayment, $invoice->remaining_amount);
+                $newPaidAmount = $invoice->paid_amount + $payForInvoice;
+                $newRemaining = $invoice->total_amount - $newPaidAmount;
+
+                // Update invoice
+                $invoice->update([
+                    'paid_amount' => $newPaidAmount,
+                    'remaining_amount' => max(0, $newRemaining),
+                    'status' => $newRemaining <= 0 ? 'paid' : 'partial',
+                    'paid_at' => $newRemaining <= 0 ? now() : null,
+                ]);
+
+                $allocations[] = [
+                    'invoice_id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'amount' => $payForInvoice,
+                    'status' => $newRemaining <= 0 ? 'paid' : 'partial',
+                ];
+
+                $remainingPayment -= $payForInvoice;
+            }
+
+            // 2. Buat record pembayaran
+            $payment = \App\Models\Payment::create([
+                'payment_number' => $this->generatePaymentNumber(),
+                'customer_id' => $customer->id,
+                'amount' => $amount,
+                'payment_method' => $paymentMethod,
+                'payment_channel' => $paymentMethod === 'transfer' ? 'bank_transfer' : null,
+                'transfer_proof' => $transferProof,
+                'allocated_to_invoice' => $amount - $remainingPayment,
+                'allocated_to_debt' => $remainingPayment,
+                'collector_id' => $collectorId,
+                'received_by' => auth()->id(),
+                'notes' => $notes,
+            ]);
+
+            // 3. Kurangi total hutang
+            $this->debtService->reduceDebt(
+                $customer,
+                $amount,
+                'payment_received',
+                'payment',
+                $payment->id,
+                "Pembayaran {$payment->payment_number}"
+            );
+
+            // 4. Update tanggal pembayaran terakhir
+            $customer->update(['last_payment_date' => now()]);
+
+            // 5. Cek dan buka isolir jika memenuhi syarat
+            $accessOpened = $this->checkAndOpenAccess($customer);
+
+            // 6. Log aktivitas
+            BillingLog::create([
+                'customer_id' => $customer->id,
+                'log_type' => 'payment_received',
+                'status' => 'success',
+                'title' => 'Pembayaran Diterima',
+                'description' => "Rp " . number_format($amount, 0, ',', '.'),
+                'metadata' => [
+                    'payment_id' => $payment->id,
+                    'method' => $paymentMethod,
+                    'collector_id' => $collectorId,
+                    'allocations' => $allocations,
+                    'access_opened' => $accessOpened,
+                ],
+                'performed_by' => auth()->id(),
+            ]);
+
+            $customer->refresh();
+
+            return [
+                'success' => true,
+                'payment' => $payment,
+                'previous_debt' => $previousDebt,
+                'new_debt' => $customer->total_debt,
+                'allocations' => $allocations,
+                'access_opened' => $accessOpened,
+            ];
+        });
+    }
+
+    // ================================================================
+    // LOGIKA ISOLIR OTOMATIS
+    // ================================================================
+
+    /**
+     * Cek dan proses isolir untuk semua pelanggan
+     * Dijalankan setiap hari via scheduler
+     */
+    public function checkAndProcessIsolation(): array
+    {
+        $overdueMonths = Setting::getValue('isolation', 'overdue_months', 2);
+        $graceDays = Setting::getValue('isolation', 'grace_days_after_due', 7);
+
+        $results = [
+            'checked' => 0,
+            'isolated' => 0,
+            'skipped_rapel' => 0,
+            'skipped_recent_payment' => 0,
+            'errors' => [],
+        ];
+
+        // Ambil pelanggan aktif dengan hutang
+        $customers = Customer::where('status', 'active')
+            ->where('total_debt', '>', 0)
+            ->whereNull('deleted_at')
+            ->with(['invoices' => function ($query) {
+                $query->whereIn('status', ['pending', 'partial', 'overdue'])
+                    ->orderBy('period_year', 'asc')
+                    ->orderBy('period_month', 'asc');
+            }])
+            ->get();
+
+        foreach ($customers as $customer) {
+            try {
+                $results['checked']++;
+
+                // Cek apakah harus diisolir
+                $shouldIsolate = $this->shouldIsolateCustomer(
+                    $customer,
+                    $overdueMonths,
+                    $graceDays
+                );
+
+                if ($shouldIsolate['isolate']) {
+                    // Dispatch job isolir
+                    IsolateCustomerJob::dispatch($customer, $shouldIsolate['reason']);
+                    $results['isolated']++;
+                } else {
+                    if ($shouldIsolate['reason'] === 'rapel_customer') {
+                        $results['skipped_rapel']++;
+                    } elseif ($shouldIsolate['reason'] === 'recent_payment') {
+                        $results['skipped_recent_payment']++;
+                    }
+                }
+
+            } catch (\Exception $e) {
+                $results['errors'][] = [
+                    'customer_id' => $customer->customer_id,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Tentukan apakah pelanggan harus diisolir
+     * Dengan pengecualian untuk pelanggan rapel
+     */
+    public function shouldIsolateCustomer(
+        Customer $customer,
+        int $overdueMonths = 2,
+        int $graceDays = 7
+    ): array {
+        $now = Carbon::now();
+
+        // 1. CEK PENGECUALIAN: Pelanggan dengan kebiasaan bayar rapel
+        if ($customer->payment_behavior === 'rapel') {
+            $rapelMonths = $customer->rapel_months ?: 3; // Default 3 bulan
+
+            // Hitung jumlah invoice belum bayar
+            $unpaidCount = $customer->invoices
+                ->whereIn('status', ['pending', 'partial', 'overdue'])
+                ->count();
+
+            // Jika masih dalam batas rapel, jangan isolir
+            if ($unpaidCount <= $rapelMonths) {
+                return [
+                    'isolate' => false,
+                    'reason' => 'rapel_customer',
+                    'message' => "Pelanggan rapel, hutang {$unpaidCount} bulan (batas: {$rapelMonths})",
+                ];
+            }
+        }
+
+        // 2. CEK PENGECUALIAN: Ada pembayaran dalam 30 hari terakhir
+        if ($customer->last_payment_date) {
+            $daysSincePayment = Carbon::parse($customer->last_payment_date)->diffInDays($now);
+
+            if ($daysSincePayment <= 30) {
+                return [
+                    'isolate' => false,
+                    'reason' => 'recent_payment',
+                    'message' => "Ada pembayaran {$daysSincePayment} hari lalu",
+                ];
+            }
+        }
+
+        // 3. Hitung invoice overdue yang melewati grace period
+        $overdueInvoices = $customer->invoices->filter(function ($invoice) use ($now, $graceDays) {
+            if (!in_array($invoice->status, ['pending', 'partial', 'overdue'])) {
+                return false;
+            }
+
+            $dueDate = Carbon::parse($invoice->due_date);
+            $gracePeriodEnd = $dueDate->copy()->addDays($graceDays);
+
+            return $now->isAfter($gracePeriodEnd);
+        });
+
+        // 4. Cek apakah ada invoice berturut-turut yang overdue
+        $consecutiveOverdue = $this->countConsecutiveOverdueMonths($overdueInvoices);
+
+        if ($consecutiveOverdue >= $overdueMonths) {
+            return [
+                'isolate' => true,
+                'reason' => "Tunggakan {$consecutiveOverdue} bulan berturut-turut",
+                'overdue_months' => $consecutiveOverdue,
+            ];
+        }
+
+        return [
+            'isolate' => false,
+            'reason' => 'not_overdue_enough',
+            'overdue_months' => $consecutiveOverdue,
+        ];
+    }
+
+    /**
+     * Hitung bulan berturut-turut yang overdue
+     */
+    protected function countConsecutiveOverdueMonths(Collection $invoices): int
+    {
+        if ($invoices->isEmpty()) {
+            return 0;
+        }
+
+        // Urutkan berdasarkan periode terbaru
+        $sorted = $invoices->sortByDesc(function ($invoice) {
+            return $invoice->period_year * 100 + $invoice->period_month;
+        });
+
+        $consecutive = 0;
+        $previousPeriod = null;
+
+        foreach ($sorted as $invoice) {
+            $currentPeriod = Carbon::create($invoice->period_year, $invoice->period_month, 1);
+
+            if ($previousPeriod === null) {
+                $consecutive = 1;
+                $previousPeriod = $currentPeriod;
+                continue;
+            }
+
+            // Cek apakah bulan sebelumnya
+            $expectedPrevious = $previousPeriod->copy()->subMonth();
+
+            if ($currentPeriod->isSameMonth($expectedPrevious)) {
+                $consecutive++;
+                $previousPeriod = $currentPeriod;
+            } else {
+                break; // Tidak berturut-turut
+            }
+        }
+
+        return $consecutive;
+    }
+
+    // ================================================================
+    // EKSEKUSI ISOLIR KE MIKROTIK
+    // ================================================================
+
+    /**
+     * Isolir pelanggan - pindahkan ke Address List ISOLIR
+     */
+    public function isolateCustomer(Customer $customer, string $reason): array
+    {
+        try {
+            // 1. Koneksi ke Mikrotik
+            $this->mikrotik->connect($customer->router);
+
+            // 2. Tambahkan ke address list ISOLIR
+            if ($customer->connection_type === 'pppoe') {
+                $result = $this->mikrotik->addToAddressList(
+                    $customer->pppoe_username,
+                    'ISOLIR',
+                    "Auto isolir: {$reason}"
+                );
+            } else {
+                $result = $this->mikrotik->addIpToAddressList(
+                    $customer->static_ip,
+                    'ISOLIR',
+                    "Auto isolir: {$reason}"
+                );
+            }
+
+            // 3. Ubah profile ke isolated (bandwidth minimal)
+            if ($customer->connection_type === 'pppoe') {
+                $this->mikrotik->changeUserProfile(
+                    $customer->pppoe_username,
+                    config('mikrotik.profiles.isolated')
+                );
+            }
+
+            // 4. Update status customer
+            $customer->update([
+                'status' => 'isolated',
+                'isolation_reason' => $reason,
+            ]);
+
+            // 5. Kirim notifikasi
+            $this->notification->sendIsolationNotice($customer, $reason);
+
+            // 6. Log aktivitas
+            BillingLog::create([
+                'customer_id' => $customer->id,
+                'log_type' => 'isolation_executed',
+                'status' => 'success',
+                'title' => 'Pelanggan Diisolir',
+                'description' => $reason,
+                'metadata' => [
+                    'router_id' => $customer->router_id,
+                    'mikrotik_result' => $result,
+                ],
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Pelanggan berhasil diisolir',
+            ];
+
+        } catch (\Exception $e) {
+            BillingLog::create([
+                'customer_id' => $customer->id,
+                'log_type' => 'system_error',
+                'status' => 'failed',
+                'title' => 'Gagal Isolir Pelanggan',
+                'description' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    // ================================================================
+    // BUKA AKSES ISOLIR
+    // ================================================================
+
+    /**
+     * Cek dan buka akses jika memenuhi syarat
+     */
+    public function checkAndOpenAccess(Customer $customer): bool
+    {
+        // Hanya proses jika status isolated
+        if ($customer->status !== 'isolated') {
+            return false;
+        }
+
+        // Cek apakah masih ada invoice overdue
+        $hasOverdue = Invoice::where('customer_id', $customer->id)
+            ->whereIn('status', ['overdue'])
+            ->exists();
+
+        // Cek apakah ada pembayaran dalam 24 jam terakhir
+        $hasRecentPayment = \App\Models\Payment::where('customer_id', $customer->id)
+            ->where('created_at', '>=', now()->subDay())
+            ->exists();
+
+        // Buka akses jika tidak ada overdue ATAU ada pembayaran baru
+        if (!$hasOverdue || $hasRecentPayment) {
+            return $this->openAccess($customer);
+        }
+
+        return false;
+    }
+
+    /**
+     * Buka akses pelanggan
+     */
+    public function openAccess(Customer $customer): bool
+    {
+        try {
+            // 1. Koneksi ke Mikrotik
+            $this->mikrotik->connect($customer->router);
+
+            // 2. Hapus dari address list ISOLIR
+            if ($customer->connection_type === 'pppoe') {
+                $this->mikrotik->removeFromAddressList($customer->pppoe_username, 'ISOLIR');
+            } else {
+                $this->mikrotik->removeIpFromAddressList($customer->static_ip, 'ISOLIR');
+            }
+
+            // 3. Kembalikan profile normal
+            if ($customer->connection_type === 'pppoe' && $customer->package) {
+                $profileName = 'pkg-' . strtolower($customer->package->code);
+                $this->mikrotik->changeUserProfile($customer->pppoe_username, $profileName);
+            }
+
+            // 4. Update status customer
+            $customer->update([
+                'status' => 'active',
+                'isolation_reason' => null,
+            ]);
+
+            // 5. Kirim notifikasi
+            $this->notification->sendAccessOpenedNotice($customer);
+
+            // 6. Log aktivitas
+            BillingLog::create([
+                'customer_id' => $customer->id,
+                'log_type' => 'isolation_opened',
+                'status' => 'success',
+                'title' => 'Akses Dibuka',
+                'description' => 'Isolir dibuka setelah pembayaran',
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            BillingLog::create([
+                'customer_id' => $customer->id,
+                'log_type' => 'system_error',
+                'status' => 'failed',
+                'title' => 'Gagal Buka Akses',
+                'description' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    // ================================================================
+    // HELPER METHODS
+    // ================================================================
+
+    protected function generateInvoiceNumber(int $year, int $month): string
+    {
+        $prefix = Setting::getValue('billing', 'invoice_prefix', 'INV');
+        $periodCode = sprintf('%04d%02d', $year, $month);
+
+        $lastInvoice = Invoice::where('period_year', $year)
+            ->where('period_month', $month)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $sequence = 1;
+        if ($lastInvoice) {
+            preg_match('/(\d+)$/', $lastInvoice->invoice_number, $matches);
+            $sequence = intval($matches[1] ?? 0) + 1;
+        }
+
+        return sprintf('%s-%s-%05d', $prefix, $periodCode, $sequence);
+    }
+
+    protected function generatePaymentNumber(): string
+    {
+        $prefix = Setting::getValue('billing', 'payment_prefix', 'PAY');
+        $dateCode = now()->format('Ymd');
+
+        $lastPayment = \App\Models\Payment::whereDate('created_at', today())
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $sequence = 1;
+        if ($lastPayment) {
+            preg_match('/(\d+)$/', $lastPayment->payment_number, $matches);
+            $sequence = intval($matches[1] ?? 0) + 1;
+        }
+
+        return sprintf('%s-%s-%05d', $prefix, $dateCode, $sequence);
+    }
+}

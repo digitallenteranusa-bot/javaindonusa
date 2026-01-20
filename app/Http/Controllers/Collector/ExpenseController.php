@@ -1,0 +1,173 @@
+<?php
+
+namespace App\Http\Controllers\Collector;
+
+use App\Http\Controllers\Controller;
+use App\Services\Collector\ExpenseService;
+use App\Services\Collector\CollectorService;
+use App\Models\Expense;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Carbon\Carbon;
+
+class ExpenseController extends Controller
+{
+    protected ExpenseService $expenseService;
+    protected CollectorService $collectorService;
+
+    public function __construct(
+        ExpenseService $expenseService,
+        CollectorService $collectorService
+    ) {
+        $this->expenseService = $expenseService;
+        $this->collectorService = $collectorService;
+    }
+
+    /**
+     * Daftar pengeluaran penagih
+     */
+    public function index(Request $request)
+    {
+        $collector = auth()->user();
+
+        $startDate = $request->get('start_date')
+            ? Carbon::parse($request->get('start_date'))
+            : Carbon::now()->startOfMonth();
+
+        $endDate = $request->get('end_date')
+            ? Carbon::parse($request->get('end_date'))
+            : Carbon::now()->endOfMonth();
+
+        $expenses = $this->expenseService->getExpenseHistory(
+            $collector,
+            $startDate,
+            $endDate
+        );
+
+        $summary = $this->expenseService->getMonthlyExpenseSummary($collector);
+
+        // Settlement info
+        $settlement = $this->collectorService->calculateFinalSettlement(
+            $collector,
+            $startDate,
+            $endDate
+        );
+
+        return Inertia::render('Collector/Expenses', [
+            'expenses' => $expenses,
+            'summary' => $summary,
+            'settlement' => $settlement,
+            'filters' => [
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $endDate->toDateString(),
+            ],
+            'categories' => [
+                'fuel' => 'Bensin',
+                'food' => 'Makan',
+                'transport' => 'Transport',
+                'phone_credit' => 'Pulsa',
+                'parking' => 'Parkir',
+                'other' => 'Lainnya',
+            ],
+        ]);
+    }
+
+    /**
+     * Tambah pengeluaran
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1000',
+            'category' => 'required|in:fuel,food,transport,phone_credit,parking,other',
+            'description' => 'required|string|max:255',
+            'receipt_photo' => 'nullable|image|max:5120', // Max 5MB
+            'expense_date' => 'nullable|date',
+        ]);
+
+        $collector = auth()->user();
+
+        try {
+            // Upload foto nota jika ada
+            $receiptPath = null;
+            if ($request->hasFile('receipt_photo')) {
+                $receiptPath = $this->expenseService->uploadReceipt(
+                    $collector,
+                    $request->file('receipt_photo')
+                );
+            }
+
+            $expense = $this->expenseService->createExpense(
+                $collector,
+                $request->amount,
+                $request->category,
+                $request->description,
+                $receiptPath,
+                $request->expense_date ? Carbon::parse($request->expense_date) : null
+            );
+
+            return back()->with('success', 'Pengeluaran berhasil dicatat');
+
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Ringkasan setoran
+     */
+    public function settlement(Request $request)
+    {
+        $collector = auth()->user();
+
+        $date = $request->get('date')
+            ? Carbon::parse($request->get('date'))
+            : Carbon::today();
+
+        // Ringkasan harian
+        $dailySummary = $this->collectorService->getDailySummary($collector, $date);
+
+        // Histori settlement
+        $settlementHistory = $this->expenseService->getSettlementHistory($collector);
+
+        return Inertia::render('Collector/Settlement', [
+            'dailySummary' => $dailySummary,
+            'settlementHistory' => $settlementHistory,
+            'date' => $date->toDateString(),
+        ]);
+    }
+
+    /**
+     * Request settlement (setor ke kantor)
+     */
+    public function requestSettlement(Request $request)
+    {
+        $request->validate([
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+            'actual_amount' => 'required|numeric|min:0',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $collector = auth()->user();
+
+        try {
+            $settlement = $this->expenseService->createSettlement(
+                $collector,
+                Carbon::parse($request->period_start),
+                Carbon::parse($request->period_end),
+                $request->actual_amount,
+                null,
+                $request->notes
+            );
+
+            return back()->with('success', [
+                'message' => 'Request settlement berhasil dibuat',
+                'settlement' => $settlement,
+            ]);
+
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+}

@@ -1,0 +1,310 @@
+<?php
+
+namespace App\Services\Notification\Channels;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+class WhatsAppChannel
+{
+    protected string $driver;
+    protected string $apiKey;
+    protected string $baseUrl;
+    protected ?string $sender;
+
+    public function __construct()
+    {
+        $this->driver = config('notification.whatsapp.driver', 'fonnte');
+        $this->apiKey = config('notification.whatsapp.api_key', '');
+        $this->sender = config('notification.whatsapp.sender');
+
+        $this->baseUrl = match ($this->driver) {
+            'fonnte' => 'https://api.fonnte.com',
+            'wablas' => 'https://pati.wablas.com',
+            'dripsender' => 'https://api.dripsender.id',
+            'waapi' => 'https://api.whatsapp.com',
+            'manual' => '',
+            default => '',
+        };
+    }
+
+    /**
+     * Send WhatsApp message
+     */
+    public function send(string $phone, string $message, array $options = []): array
+    {
+        if ($this->driver === 'manual') {
+            return $this->generateManualUrl($phone, $message);
+        }
+
+        if (empty($this->apiKey)) {
+            Log::warning('WhatsApp API key not configured');
+            return ['success' => false, 'message' => 'API key not configured'];
+        }
+
+        return match ($this->driver) {
+            'fonnte' => $this->sendViaFonnte($phone, $message, $options),
+            'wablas' => $this->sendViaWablas($phone, $message, $options),
+            'dripsender' => $this->sendViaDripsender($phone, $message, $options),
+            default => ['success' => false, 'message' => 'Unknown driver'],
+        };
+    }
+
+    /**
+     * Send via Fonnte API
+     * Documentation: https://fonnte.com/api
+     */
+    protected function sendViaFonnte(string $phone, string $message, array $options = []): array
+    {
+        try {
+            $payload = [
+                'target' => $phone,
+                'message' => $message,
+                'countryCode' => '62',
+            ];
+
+            // Add optional parameters
+            if (!empty($options['delay'])) {
+                $payload['delay'] = $options['delay'];
+            }
+
+            if (!empty($options['schedule'])) {
+                $payload['schedule'] = $options['schedule'];
+            }
+
+            // Send image if provided
+            if (!empty($options['image'])) {
+                $payload['url'] = $options['image'];
+            }
+
+            // Send document if provided
+            if (!empty($options['document'])) {
+                $payload['file'] = $options['document'];
+                $payload['filename'] = $options['filename'] ?? 'document.pdf';
+            }
+
+            $response = Http::withHeaders([
+                'Authorization' => $this->apiKey,
+            ])->post($this->baseUrl . '/send', $payload);
+
+            $data = $response->json();
+
+            if ($response->successful() && ($data['status'] ?? false)) {
+                return [
+                    'success' => true,
+                    'message' => 'Message sent via Fonnte',
+                    'message_id' => $data['id'] ?? null,
+                    'response' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $data['reason'] ?? 'Failed to send message',
+                'response' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Fonnte API error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send via Wablas API
+     * Documentation: https://wablas.com/documentation
+     */
+    protected function sendViaWablas(string $phone, string $message, array $options = []): array
+    {
+        try {
+            $payload = [
+                'phone' => $phone,
+                'message' => $message,
+            ];
+
+            // Add optional parameters
+            if (!empty($options['image'])) {
+                $payload['image'] = $options['image'];
+            }
+
+            if (!empty($options['document'])) {
+                $payload['document'] = $options['document'];
+            }
+
+            $response = Http::withHeaders([
+                'Authorization' => $this->apiKey,
+            ])->post($this->baseUrl . '/api/send-message', $payload);
+
+            $data = $response->json();
+
+            if ($response->successful() && ($data['status'] ?? false)) {
+                return [
+                    'success' => true,
+                    'message' => 'Message sent via Wablas',
+                    'message_id' => $data['data']['id'] ?? null,
+                    'response' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $data['message'] ?? 'Failed to send message',
+                'response' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Wablas API error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send via Dripsender API
+     * Documentation: https://dripsender.id/docs
+     */
+    protected function sendViaDripsender(string $phone, string $message, array $options = []): array
+    {
+        try {
+            $payload = [
+                'api_key' => $this->apiKey,
+                'phone' => $phone,
+                'text' => $message,
+            ];
+
+            if (!empty($options['image'])) {
+                $payload['media_url'] = $options['image'];
+            }
+
+            $response = Http::post($this->baseUrl . '/api/v1/send', $payload);
+
+            $data = $response->json();
+
+            if ($response->successful() && ($data['success'] ?? false)) {
+                return [
+                    'success' => true,
+                    'message' => 'Message sent via Dripsender',
+                    'message_id' => $data['message_id'] ?? null,
+                    'response' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $data['message'] ?? 'Failed to send message',
+                'response' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Dripsender API error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Generate manual WhatsApp URL (wa.me link)
+     * For cases where automatic sending is not available
+     */
+    protected function generateManualUrl(string $phone, string $message): array
+    {
+        $url = "https://wa.me/{$phone}?text=" . urlencode($message);
+
+        return [
+            'success' => true,
+            'message' => 'Manual URL generated',
+            'url' => $url,
+            'manual' => true,
+        ];
+    }
+
+    /**
+     * Send bulk messages
+     */
+    public function sendBulk(array $recipients, string $message, array $options = []): array
+    {
+        $results = ['success' => 0, 'failed' => 0, 'errors' => []];
+
+        foreach ($recipients as $phone) {
+            $result = $this->send($phone, $message, $options);
+
+            if ($result['success']) {
+                $results['success']++;
+            } else {
+                $results['failed']++;
+                $results['errors'][] = [
+                    'phone' => $phone,
+                    'error' => $result['message'],
+                ];
+            }
+
+            // Add delay between messages to avoid rate limiting
+            usleep(100000); // 100ms delay
+        }
+
+        return $results;
+    }
+
+    /**
+     * Check API connection status
+     */
+    public function checkStatus(): array
+    {
+        if ($this->driver === 'manual') {
+            return ['success' => true, 'status' => 'Manual mode - no API check needed'];
+        }
+
+        if (empty($this->apiKey)) {
+            return ['success' => false, 'status' => 'API key not configured'];
+        }
+
+        try {
+            $endpoint = match ($this->driver) {
+                'fonnte' => $this->baseUrl . '/device',
+                'wablas' => $this->baseUrl . '/api/device/info',
+                'dripsender' => $this->baseUrl . '/api/v1/status',
+                default => '',
+            };
+
+            if (empty($endpoint)) {
+                return ['success' => false, 'status' => 'Unknown driver'];
+            }
+
+            $response = Http::withHeaders([
+                'Authorization' => $this->apiKey,
+            ])->get($endpoint);
+
+            return [
+                'success' => $response->successful(),
+                'status' => $response->successful() ? 'Connected' : 'Connection failed',
+                'response' => $response->json(),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'status' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get available driver options
+     */
+    public static function getAvailableDrivers(): array
+    {
+        return [
+            'fonnte' => [
+                'name' => 'Fonnte',
+                'website' => 'https://fonnte.com',
+                'description' => 'WhatsApp Gateway populer di Indonesia',
+            ],
+            'wablas' => [
+                'name' => 'Wablas',
+                'website' => 'https://wablas.com',
+                'description' => 'WhatsApp Business API Gateway',
+            ],
+            'dripsender' => [
+                'name' => 'Dripsender',
+                'website' => 'https://dripsender.id',
+                'description' => 'WhatsApp Marketing Automation',
+            ],
+            'manual' => [
+                'name' => 'Manual (wa.me)',
+                'website' => '',
+                'description' => 'Generate wa.me links only (no auto send)',
+            ],
+        ];
+    }
+}

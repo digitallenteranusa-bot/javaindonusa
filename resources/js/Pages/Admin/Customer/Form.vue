@@ -52,10 +52,19 @@ const onAreaChange = () => {
 
 // Submit form
 const submit = () => {
+    const options = {
+        onError: (errors) => {
+            console.error('Form errors:', errors)
+        },
+        onSuccess: () => {
+            console.log('Form submitted successfully')
+        },
+    }
+
     if (isEdit.value) {
-        form.put(`/admin/customers/${props.customer.id}`)
+        form.put(`/admin/customers/${props.customer.id}`, options)
     } else {
-        form.post('/admin/customers')
+        form.post('/admin/customers', options)
     }
 }
 </script>
@@ -78,6 +87,14 @@ const submit = () => {
         </template>
 
         <form @submit.prevent="submit" class="space-y-6">
+            <!-- Form Errors -->
+            <div v-if="Object.keys(form.errors).length > 0" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 class="text-red-800 font-medium mb-2">Terdapat kesalahan:</h3>
+                <ul class="list-disc list-inside text-red-600 text-sm">
+                    <li v-for="(error, field) in form.errors" :key="field">{{ error }}</li>
+                </ul>
+            </div>
+
             <!-- Data Pribadi -->
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <h2 class="text-lg font-semibold mb-4">Data Pribadi</h2>

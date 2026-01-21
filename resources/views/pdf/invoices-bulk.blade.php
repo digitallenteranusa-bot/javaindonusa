@@ -11,28 +11,27 @@
         }
         body {
             font-family: 'DejaVu Sans', sans-serif;
-            font-size: 12px;
-            line-height: 1.5;
+            font-size: 10px;
+            line-height: 1.3;
             color: #333;
         }
         .invoice-page {
-            padding: 20px 30px;
+            padding: 8px 15px;
             page-break-after: always;
         }
         .invoice-page:last-child {
             page-break-after: avoid;
         }
         @page {
-            margin: 10mm;
-        }
-        .header {
-            margin-bottom: 15px;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 10px;
+            margin: 5mm;
+            size: A4;
         }
         .header-table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 8px;
         }
         .header-table td {
             border: none;
@@ -40,94 +39,100 @@
             vertical-align: top;
         }
         .company-info h1 {
-            font-size: 24px;
+            font-size: 18px;
             color: #2563eb;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
         }
         .company-info p {
             color: #666;
-            font-size: 11px;
+            font-size: 9px;
+            line-height: 1.4;
         }
         .invoice-info {
             text-align: right;
         }
         .invoice-info h2 {
-            font-size: 28px;
+            font-size: 20px;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
         .invoice-info p {
-            font-size: 11px;
+            font-size: 9px;
             color: #666;
         }
         .invoice-number {
             font-family: monospace;
-            font-size: 14px;
+            font-size: 11px;
             font-weight: bold;
             color: #2563eb;
         }
         .section-title {
-            font-size: 11px;
+            font-size: 9px;
             color: #666;
             text-transform: uppercase;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
             font-weight: bold;
         }
         .customer-name {
-            font-size: 16px;
+            font-size: 12px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 8px;
         }
         th {
             background-color: #2563eb;
             color: white;
-            padding: 12px;
+            padding: 6px 8px;
             text-align: left;
-            font-size: 11px;
+            font-size: 9px;
             text-transform: uppercase;
         }
         td {
-            padding: 12px;
+            padding: 6px 8px;
             border-bottom: 1px solid #eee;
+            font-size: 10px;
         }
         .text-right {
             text-align: right;
         }
+        .info-table td {
+            border: none;
+            padding: 2px 8px;
+            font-size: 10px;
+        }
         .total-section {
-            width: 300px;
+            width: 250px;
             margin-left: auto;
         }
-        .total-row {
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .total-row-table {
+        .total-table {
             width: 100%;
             border-collapse: collapse;
         }
-        .total-row-table td {
+        .total-table td {
+            padding: 4px 0;
             border: none;
-            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 10px;
         }
-        .grand-total td {
+        .total-table .grand-total td {
             border-top: 2px solid #333;
-            font-size: 16px;
+            border-bottom: none;
+            font-size: 12px;
             font-weight: bold;
-            padding-top: 15px;
+            padding-top: 8px;
         }
         .outstanding {
             color: #dc2626;
         }
         .status-badge {
             display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 8px;
             font-weight: bold;
             text-transform: uppercase;
         }
@@ -136,29 +141,32 @@
         .status-overdue { background: #fee2e2; color: #dc2626; }
         .status-partial { background: #dbeafe; color: #2563eb; }
         .footer {
-            margin-top: 20px;
-            padding-top: 10px;
+            margin-top: 10px;
+            padding-top: 6px;
             border-top: 1px solid #eee;
             text-align: center;
             color: #666;
-            font-size: 10px;
+            font-size: 8px;
         }
         .payment-info {
             background: #f8fafc;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
         }
         .payment-info h3 {
-            font-size: 14px;
-            margin-bottom: 15px;
+            font-size: 10px;
+            margin-bottom: 6px;
             color: #333;
         }
         .bank-account {
-            margin-bottom: 10px;
-            padding: 10px;
+            display: inline-block;
+            margin-right: 15px;
+            margin-bottom: 4px;
+            padding: 4px 8px;
             background: white;
             border-radius: 4px;
+            font-size: 9px;
         }
         .bank-name {
             font-weight: bold;
@@ -170,43 +178,38 @@
     @foreach($invoices as $invoice)
     <div class="invoice-page">
         <!-- Header -->
-        <div class="header">
-            <table class="header-table">
-                <tr>
-                    <td style="width: 60%;">
-                        <div class="company-info">
-                            <h1>{{ $ispInfo->company_name ?? 'Java Indonusa' }}</h1>
-                            <p>{{ $ispInfo->address ?? '' }}</p>
-                            <p>Telp: {{ $ispInfo->phone ?? '' }}</p>
-                            <p>{{ $ispInfo->email ?? '' }}</p>
-                        </div>
-                    </td>
-                    <td style="width: 40%;">
-                        <div class="invoice-info">
-                            <h2>INVOICE</h2>
-                            <p class="invoice-number">{{ $invoice->invoice_number }}</p>
-                            <p>Tanggal: {{ $invoice->created_at->format('d F Y') }}</p>
-                            <p>Jatuh Tempo: {{ $invoice->due_date->format('d F Y') }}</p>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-        </div>
+        <table class="header-table">
+            <tr>
+                <td style="width: 60%;">
+                    <div class="company-info">
+                        <h1>{{ $ispInfo->company_name ?? 'Java Indonusa' }}</h1>
+                        <p>{{ $ispInfo->address ?? '' }}</p>
+                        <p>Telp: {{ $ispInfo->phone ?? '' }} | {{ $ispInfo->email ?? '' }}</p>
+                    </div>
+                </td>
+                <td style="width: 40%;">
+                    <div class="invoice-info">
+                        <h2>INVOICE</h2>
+                        <p class="invoice-number">{{ $invoice->invoice_number }}</p>
+                        <p>Tanggal: {{ $invoice->created_at->format('d/m/Y') }}</p>
+                        <p>Jatuh Tempo: {{ $invoice->due_date->format('d/m/Y') }}</p>
+                    </div>
+                </td>
+            </tr>
+        </table>
 
         <!-- Customer & Invoice Details -->
-        <table style="margin-bottom: 30px;">
+        <table class="info-table" style="margin-bottom: 10px;">
             <tr>
-                <td style="width: 50%; vertical-align: top; border: none; padding-left: 0;">
+                <td style="width: 50%; vertical-align: top; padding-left: 0;">
                     <p class="section-title">Tagihan Kepada</p>
                     <p class="customer-name">{{ $invoice->customer->name }}</p>
-                    <p>ID: {{ $invoice->customer->customer_id }}</p>
+                    <p>ID: {{ $invoice->customer->customer_id }} | Telp: {{ $invoice->customer->phone }}</p>
                     <p>{{ $invoice->customer->address }}</p>
-                    <p>Telp: {{ $invoice->customer->phone }}</p>
                 </td>
-                <td style="width: 50%; vertical-align: top; border: none; text-align: right; padding-right: 0;">
+                <td style="width: 50%; vertical-align: top; text-align: right; padding-right: 0;">
                     <p class="section-title">Detail Invoice</p>
-                    <p>Periode: {{ $invoice->period_month }}/{{ $invoice->period_year }}</p>
-                    <p>Paket: {{ $invoice->package_name }}</p>
+                    <p>Periode: {{ $invoice->period_month }}/{{ $invoice->period_year }} | Paket: {{ $invoice->package_name }}</p>
                     <p>
                         Status:
                         <span class="status-badge status-{{ $invoice->status }}">
@@ -228,14 +231,14 @@
             <thead>
                 <tr>
                     <th>Deskripsi</th>
-                    <th class="text-right">Jumlah</th>
+                    <th class="text-right" style="width: 120px;">Jumlah</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>
-                        <strong>{{ $invoice->package_name }}</strong><br>
-                        <small style="color: #666;">Layanan Internet Periode {{ $invoice->period_month }}/{{ $invoice->period_year }}</small>
+                        <strong>{{ $invoice->package_name }}</strong>
+                        <span style="color: #666;"> - Layanan Internet Periode {{ $invoice->period_month }}/{{ $invoice->period_year }}</span>
                     </td>
                     <td class="text-right">Rp {{ number_format($invoice->package_price, 0, ',', '.') }}</td>
                 </tr>
@@ -256,7 +259,7 @@
 
         <!-- Totals -->
         <div class="total-section">
-            <table class="total-row-table">
+            <table class="total-table">
                 <tr>
                     <td>Subtotal</td>
                     <td class="text-right">Rp {{ number_format($invoice->total_amount, 0, ',', '.') }}</td>
@@ -277,12 +280,12 @@
         <!-- Payment Info -->
         @if($invoice->status !== 'paid' && isset($ispInfo->bank_accounts) && is_array($ispInfo->bank_accounts) && count($ispInfo->bank_accounts) > 0)
         <div class="payment-info">
-            <h3>Informasi Pembayaran</h3>
+            <h3>Informasi Pembayaran:</h3>
             @foreach($ispInfo->bank_accounts as $bank)
             <div class="bank-account">
-                <span class="bank-name">{{ $bank['bank'] ?? '' }}</span><br>
-                <span style="font-family: monospace; font-size: 14px;">{{ $bank['account'] ?? '' }}</span><br>
-                <small>a.n {{ $bank['name'] ?? '' }}</small>
+                <span class="bank-name">{{ $bank['bank'] ?? '' }}</span> -
+                <span style="font-family: monospace;">{{ $bank['account'] ?? '' }}</span>
+                (a.n {{ $bank['name'] ?? '' }})
             </div>
             @endforeach
         </div>
@@ -291,8 +294,8 @@
         <!-- Footer -->
         <div class="footer">
             <p>Terima kasih atas kepercayaan Anda menggunakan layanan kami.</p>
-            <p>{{ $ispInfo->company_name ?? 'Java Indonusa' }} - {{ $ispInfo->tagline ?? '' }}</p>
-            <p style="margin-top: 10px; font-size: 9px;">Dokumen ini digenerate secara otomatis dan sah tanpa tanda tangan.</p>
+            <p>{{ $ispInfo->company_name ?? 'Java Indonusa' }} {{ $ispInfo->tagline ? '- ' . $ispInfo->tagline : '' }}</p>
+            <p style="margin-top: 4px; font-size: 7px;">Dokumen ini digenerate secara otomatis dan sah tanpa tanda tangan.</p>
         </div>
     </div>
     @endforeach

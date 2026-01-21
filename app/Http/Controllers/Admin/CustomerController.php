@@ -111,6 +111,15 @@ class CustomerController extends Controller
      */
     public function store(Request $request)
     {
+        // Convert empty strings to null for optional fields
+        $request->merge([
+            'ip_address' => $request->ip_address ?: null,
+            'email' => $request->email ?: null,
+            'latitude' => $request->latitude ?: null,
+            'longitude' => $request->longitude ?: null,
+            'collector_id' => $request->collector_id ?: null,
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'address' => 'required|string|max:500',
@@ -196,6 +205,15 @@ class CustomerController extends Controller
      */
     public function update(Request $request, Customer $customer)
     {
+        // Convert empty strings to null for optional fields
+        $request->merge([
+            'ip_address' => $request->ip_address ?: null,
+            'email' => $request->email ?: null,
+            'latitude' => $request->latitude ?: null,
+            'longitude' => $request->longitude ?: null,
+            'collector_id' => $request->collector_id ?: null,
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'address' => 'required|string|max:500',

@@ -217,7 +217,7 @@ class DebtIsolationService
                 'customer_id' => $customer->id,
                 'amount' => $amount,
                 'payment_method' => $paymentMethod,
-                'payment_channel' => $paymentMethod === 'transfer' ? 'bank_transfer' : null,
+                'payment_channel' => $paymentMethod === 'transfer' ? 'bank' : 'office',
                 'transfer_proof' => $transferProof,
                 'allocated_to_invoice' => $amount - $remainingPayment,
                 'allocated_to_debt' => $remainingPayment,

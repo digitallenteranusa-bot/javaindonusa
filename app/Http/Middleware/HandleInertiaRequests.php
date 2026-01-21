@@ -58,16 +58,31 @@ class HandleInertiaRequests extends Middleware
     {
         try {
             $isp = IspInfo::getCached();
-            return $isp ? [
-                'name' => $isp->company_name,
-                'tagline' => $isp->tagline,
-                'logo' => $isp->logo_url,
-                'phone' => $isp->phone_primary,
-                'email' => $isp->email,
-            ] : [
+            if ($isp) {
+                // Generate initials from company name (e.g., "Java Indonusa" -> "JI")
+                $words = explode(' ', $isp->company_name ?? 'ISP');
+                $initials = '';
+                foreach (array_slice($words, 0, 2) as $word) {
+                    $initials .= strtoupper(substr($word, 0, 1));
+                }
+
+                return [
+                    'name' => $isp->company_name,
+                    'tagline' => $isp->tagline,
+                    'logo' => $isp->logo_url,
+                    'favicon' => $isp->favicon_url,
+                    'initials' => $initials,
+                    'phone' => $isp->phone_primary,
+                    'email' => $isp->email,
+                ];
+            }
+
+            return [
                 'name' => config('app.name'),
                 'tagline' => 'ISP Billing System',
                 'logo' => null,
+                'favicon' => null,
+                'initials' => 'ISP',
                 'phone' => null,
                 'email' => null,
             ];
@@ -76,6 +91,8 @@ class HandleInertiaRequests extends Middleware
                 'name' => config('app.name'),
                 'tagline' => 'ISP Billing System',
                 'logo' => null,
+                'favicon' => null,
+                'initials' => 'ISP',
                 'phone' => null,
                 'email' => null,
             ];

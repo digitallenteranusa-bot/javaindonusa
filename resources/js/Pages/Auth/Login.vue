@@ -25,10 +25,19 @@ const submit = () => {
         <div class="w-full max-w-md">
             <!-- Logo Section -->
             <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-4">
-                    <svg class="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                    </svg>
+                <!-- Logo: tampilkan gambar jika ada, atau icon default -->
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-4 overflow-hidden">
+                    <img
+                        v-if="page.props.isp?.logo"
+                        :src="page.props.isp.logo"
+                        :alt="page.props.isp?.name || 'Logo'"
+                        class="w-full h-full object-contain p-2"
+                    >
+                    <div v-else class="flex items-center justify-center w-full h-full">
+                        <span class="text-2xl font-bold text-blue-600">
+                            {{ page.props.isp?.initials || 'ISP' }}
+                        </span>
+                    </div>
                 </div>
                 <h1 class="text-2xl font-bold text-white">
                     {{ page.props.isp?.name || 'ISP Billing System' }}

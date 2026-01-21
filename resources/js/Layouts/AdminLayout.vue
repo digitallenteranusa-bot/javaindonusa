@@ -117,11 +117,19 @@ const getIcon = (name) => ({
             <!-- Logo -->
             <div class="flex h-16 items-center justify-between px-4 bg-gray-800">
                 <Link href="/admin" class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <span class="text-white font-bold text-lg">JI</span>
+                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center overflow-hidden">
+                        <img
+                            v-if="page.props.isp?.logo"
+                            :src="page.props.isp.logo"
+                            :alt="page.props.isp?.name || 'Logo'"
+                            class="w-full h-full object-contain p-1"
+                        >
+                        <span v-else class="text-white font-bold text-lg">
+                            {{ page.props.isp?.initials || 'ISP' }}
+                        </span>
                     </div>
-                    <span v-if="sidebarOpen" class="text-white font-semibold text-lg">
-                        Java Indonusa
+                    <span v-if="sidebarOpen" class="text-white font-semibold text-lg truncate max-w-[160px]">
+                        {{ page.props.isp?.name || 'ISP Billing' }}
                     </span>
                 </Link>
                 <button

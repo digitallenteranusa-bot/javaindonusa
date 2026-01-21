@@ -75,8 +75,16 @@ class CustomerController extends Controller
             });
         }
 
-        // Sort
+        // Sort - validate sort field to prevent SQL errors
+        $allowedSortFields = ['created_at', 'name', 'customer_id', 'total_debt', 'status', 'join_date'];
         $sortField = $request->get('sort', 'created_at');
+        // Map 'debt' to 'total_debt' for compatibility
+        if ($sortField === 'debt') {
+            $sortField = 'total_debt';
+        }
+        if (!in_array($sortField, $allowedSortFields)) {
+            $sortField = 'created_at';
+        }
         $sortDirection = $request->get('direction', 'desc');
         $query->orderBy($sortField, $sortDirection);
 

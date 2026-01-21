@@ -274,7 +274,7 @@ class CustomerPortalService
     /**
      * Info ISP (rekening, kontak, dll)
      */
-    protected function getIspInfo(): array
+    public function getIspInfo(): array
     {
         $info = IspInfo::first();
 

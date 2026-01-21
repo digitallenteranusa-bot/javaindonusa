@@ -485,7 +485,7 @@ class DashboardService
                 'type' => 'warning',
                 'title' => 'Pelanggan Akan Diisolir',
                 'message' => "{$willBeIsolated} pelanggan memiliki hutang 2 bulan atau lebih",
-                'action_url' => '/customers?filter=will_isolate',
+                'action_url' => '/admin/customers?will_isolate=1',
             ];
         }
 
@@ -499,7 +499,7 @@ class DashboardService
                 'type' => 'danger',
                 'title' => 'Invoice Overdue',
                 'message' => "{$overdueInvoices} invoice sudah lewat jatuh tempo lebih dari 7 hari",
-                'action_url' => '/invoices?filter=overdue',
+                'action_url' => '/admin/invoices?status=overdue',
             ];
         }
 
@@ -511,7 +511,7 @@ class DashboardService
                 'type' => 'info',
                 'title' => 'Pengeluaran Perlu Verifikasi',
                 'message' => "{$pendingExpenses} pengeluaran penagih menunggu verifikasi",
-                'action_url' => '/admin/expenses/pending',
+                'action_url' => '/admin/expenses?status=pending',
             ];
         }
 
@@ -523,7 +523,7 @@ class DashboardService
                 'type' => 'info',
                 'title' => 'Setoran Perlu Verifikasi',
                 'message' => "{$pendingSettlements} setoran penagih menunggu verifikasi",
-                'action_url' => '/admin/settlements/pending',
+                'action_url' => '/admin/settlements?status=pending',
             ];
         }
 
@@ -540,7 +540,7 @@ class DashboardService
                 'type' => 'danger',
                 'title' => 'Router Tidak Merespons',
                 'message' => "{$offlineRouters} router tidak merespons lebih dari 1 jam",
-                'action_url' => '/routers?filter=offline',
+                'action_url' => '/admin/routers?status=offline',
             ];
         }
 

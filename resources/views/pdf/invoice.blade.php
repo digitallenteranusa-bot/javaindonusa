@@ -16,14 +16,18 @@
             color: #333;
         }
         .container {
-            padding: 30px;
+            padding: 20px 30px;
+            max-height: 100%;
+        }
+        @page {
+            margin: 10mm;
         }
         .header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             border-bottom: 2px solid #2563eb;
-            padding-bottom: 20px;
+            padding-bottom: 10px;
         }
         .company-info h1 {
             font-size: 24px;
@@ -125,8 +129,8 @@
         .status-overdue { background: #fee2e2; color: #dc2626; }
         .status-partial { background: #dbeafe; color: #2563eb; }
         .footer {
-            margin-top: 40px;
-            padding-top: 20px;
+            margin-top: 20px;
+            padding-top: 10px;
             border-top: 1px solid #eee;
             text-align: center;
             color: #666;
@@ -134,9 +138,9 @@
         }
         .payment-info {
             background: #f8fafc;
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
-            margin-top: 30px;
+            margin-top: 15px;
         }
         .payment-info h3 {
             font-size: 14px;

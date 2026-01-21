@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Inertia\Inertia;
 
 class CheckRole
 {
@@ -32,8 +33,13 @@ class CheckRole
             return $next($request);
         }
 
-        // Finance bisa akses admin routes
-        if ($userRole === 'finance' && in_array('admin', $roles)) {
+        // Finance bisa akses admin routes dan finance routes
+        if ($userRole === 'finance' && (in_array('admin', $roles) || in_array('finance', $roles))) {
+            return $next($request);
+        }
+
+        // Technician bisa akses admin routes (read-only) dan technician routes
+        if ($userRole === 'technician' && (in_array('admin', $roles) || in_array('technician', $roles))) {
             return $next($request);
         }
 
@@ -42,7 +48,15 @@ class CheckRole
             return $next($request);
         }
 
-        // Jika tidak memiliki akses
-        abort(403, 'Anda tidak memiliki akses ke halaman ini.');
+        // Redirect berdasarkan role user daripada 403
+        $redirectRoute = match($userRole) {
+            'penagih' => 'collector.dashboard',
+            'technician' => 'admin.dashboard',
+            'finance' => 'admin.dashboard',
+            default => 'login',
+        };
+
+        return redirect()->route($redirectRoute)
+            ->with('error', 'Anda tidak memiliki akses ke halaman tersebut.');
     }
 }

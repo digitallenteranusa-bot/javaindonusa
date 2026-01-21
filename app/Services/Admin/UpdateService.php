@@ -192,16 +192,13 @@ class UpdateService
 
             $zip->close();
 
-            // Save backup info
-            Setting::updateOrCreate(
-                ['group' => 'system', 'key' => 'last_backup'],
-                ['value' => json_encode([
-                    'file' => $backupName,
-                    'path' => $backupFile,
-                    'created_at' => now()->toDateTimeString(),
-                    'size' => File::size($backupFile),
-                ])]
-            );
+            // Save backup info using Setting::setValue helper
+            Setting::setValue('system', 'last_backup', [
+                'file' => $backupName,
+                'path' => $backupFile,
+                'created_at' => now()->toDateTimeString(),
+                'size' => File::size($backupFile),
+            ], 'array');
 
             return [
                 'success' => true,

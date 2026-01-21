@@ -38,7 +38,7 @@ class PaymentService
                 'payment_number' => $this->generatePaymentNumber(),
                 'amount' => $amount,
                 'payment_method' => $paymentMethod,
-                'payment_channel' => $collector ? 'collector' : 'admin',
+                'payment_channel' => $collector ? 'collector' : 'office',
                 'collector_id' => $collector?->id,
                 'received_by' => $receivedBy?->id ?? auth()->id(),
                 'transfer_proof' => $transferProof,

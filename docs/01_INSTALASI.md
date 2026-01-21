@@ -1039,5 +1039,126 @@ Jika mengalami kendala dalam instalasi:
 
 ---
 
+## Quick Reference Commands (Linux)
+
+### Perintah Sehari-hari
+
+```bash
+# === NAVIGASI ===
+cd /var/www/billing                    # Masuk ke folder project
+
+# === UPDATE CODE ===
+git pull origin main                   # Tarik update terbaru
+composer install --no-dev              # Install dependencies PHP
+npm install && npm run build           # Install & build frontend
+php artisan migrate --force            # Jalankan migrasi database
+
+# === CLEAR CACHE ===
+php artisan cache:clear                # Hapus cache aplikasi
+php artisan config:clear               # Hapus cache config
+php artisan route:clear                # Hapus cache route
+php artisan view:clear                 # Hapus cache view
+php artisan optimize:clear             # Hapus SEMUA cache
+
+# === REBUILD CACHE ===
+php artisan config:cache               # Cache config
+php artisan route:cache                # Cache route
+php artisan view:cache                 # Cache view
+php artisan optimize                   # Optimize semua
+
+# === SERVICE MANAGEMENT ===
+sudo systemctl restart php8.2-fpm      # Restart PHP
+sudo systemctl restart nginx           # Restart Nginx
+sudo systemctl restart billing-worker  # Restart Queue Worker
+sudo systemctl restart mysql           # Restart MySQL
+sudo systemctl restart redis-server    # Restart Redis
+
+# Restart semua sekaligus
+sudo systemctl restart php8.2-fpm nginx billing-worker
+
+# === CEK STATUS SERVICE ===
+sudo systemctl status php8.2-fpm
+sudo systemctl status nginx
+sudo systemctl status billing-worker
+sudo systemctl status mysql
+sudo systemctl status redis-server
+
+# === LOG ===
+tail -f /var/www/billing/storage/logs/laravel.log    # Log Laravel (realtime)
+tail -100 /var/www/billing/storage/logs/laravel.log  # 100 baris terakhir
+tail -f /var/log/nginx/billing_error.log             # Log Nginx error
+tail -f /var/log/billing-worker.log                  # Log Queue Worker
+
+# === DATABASE ===
+php artisan migrate --force            # Jalankan migrasi
+php artisan migrate:status             # Cek status migrasi
+php artisan db:seed --force            # Jalankan seeder
+php artisan migrate:fresh --seed --force  # Reset database (HAPUS SEMUA DATA!)
+
+# Backup database
+mysqldump -u billing_user -p billing_javaindonusa > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Restore database
+mysql -u billing_user -p billing_javaindonusa < backup_file.sql
+
+# === QUEUE ===
+php artisan queue:work --once          # Proses 1 job (untuk testing)
+php artisan queue:restart              # Restart queue worker
+php artisan queue:failed               # Lihat job yang gagal
+php artisan queue:retry all            # Retry semua job gagal
+
+# === SCHEDULER ===
+php artisan schedule:list              # Lihat jadwal task
+php artisan schedule:run               # Jalankan scheduler manual
+
+# === ARTISAN COMMANDS (BILLING) ===
+php artisan billing:generate-invoices  # Generate invoice bulanan
+php artisan billing:check-overdue      # Cek & proses isolir
+php artisan billing:send-reminders     # Kirim reminder tagihan
+php artisan mikrotik:status            # Cek koneksi Mikrotik
+
+# === PERMISSION (jika ada error) ===
+sudo chown -R www-data:www-data /var/www/billing/storage
+sudo chown -R www-data:www-data /var/www/billing/bootstrap/cache
+sudo chmod -R 775 /var/www/billing/storage
+sudo chmod -R 775 /var/www/billing/bootstrap/cache
+
+# === MONITORING ===
+df -h                                  # Cek disk usage
+free -m                                # Cek memory usage
+top                                    # Cek CPU & memory (realtime)
+htop                                   # Cek CPU & memory (lebih bagus)
+```
+
+### Script Update Lengkap (Copy-Paste)
+
+```bash
+# Update aplikasi dari Git (jalankan setelah ada update)
+cd /var/www/billing && \
+git pull origin main && \
+composer install --no-dev --optimize-autoloader && \
+npm install && npm run build && \
+php artisan migrate --force && \
+php artisan optimize:clear && \
+php artisan optimize && \
+sudo systemctl restart billing-worker && \
+echo "Update selesai!"
+```
+
+### Script Troubleshooting (Jika Ada Error)
+
+```bash
+# Reset semua cache dan permission
+cd /var/www/billing && \
+php artisan optimize:clear && \
+sudo chown -R www-data:www-data storage bootstrap/cache && \
+sudo chmod -R 775 storage bootstrap/cache && \
+php artisan optimize && \
+sudo systemctl restart php8.2-fpm nginx billing-worker && \
+echo "Reset selesai!"
+```
+
+---
+
 *Dokumen ini dibuat untuk ISP Billing System Java Indonusa v1.0*
 *Terakhir diperbarui: Januari 2026*

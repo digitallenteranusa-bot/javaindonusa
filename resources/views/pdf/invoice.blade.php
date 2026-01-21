@@ -19,7 +19,7 @@
             padding: 8px 15px;
         }
         @page {
-            margin: 5mm;
+            margin: 10mm;
             size: A4;
         }
         .header-table {

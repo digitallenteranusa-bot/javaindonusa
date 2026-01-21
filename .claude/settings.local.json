@@ -10,7 +10,17 @@
       "Bash(ls -la \"D:\\\\SOURCE CODE\\\\java indonusa\\\\app\"\" | grep -E \"^d \")",
       "Bash(find:*)",
       "Bash(wc:*)",
-      "Bash(xargs ls:*)"
+      "Bash(xargs ls:*)",
+      "Bash(composer install:*)",
+      "Bash(cmd //c:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix multiple bugs and add missing configurations\n\n- Fix Settings::updateOrCreate missing ''group'' field in UpdateService and SettingsController\n- Fix role inconsistency: ''collector'' changed to ''penagih'' in CollectorReportExport and PaymentController\n- Add missing getIdentity\\(\\) and getResources\\(\\) methods to MikrotikService\n- Fix namespace imports in DebtIsolationService and RouterController\n- Fix settlement_amount column to expected_amount in SettlementController\n- Fix User->customers\\(\\) to User->assignedCustomers\\(\\) in ReportService\n- Add missing config files: cors, filesystems, hashing, mail, sanctum, services, view\n- Add migrations for missing customer fields and routers.last_sync_at\n- Update Customer model with payment_behavior, last_payment_date, connection_type, static_ip\n- Fix vite.config.js to include CSS in build\n- Update installation docs with correct login credentials\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(php artisan:*)"
     ]
   }
 }

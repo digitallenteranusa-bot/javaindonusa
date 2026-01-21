@@ -16,14 +16,14 @@
             color: #333;
         }
         .invoice-page {
-            padding: 8px 15px;
+            padding: 0;
             page-break-after: always;
         }
         .invoice-page:last-child {
             page-break-after: avoid;
         }
         @page {
-            margin: 10mm;
+            margin: 15mm 20mm;
             size: A4;
         }
         .header-table {

@@ -12,10 +12,27 @@ use Carbon\Carbon;
 class PaymentSeeder extends Seeder
 {
     /**
+     * Counter untuk generate payment number yang unik
+     */
+    private static int $paymentCounter = 0;
+
+    /**
+     * Generate unique payment number untuk seeder
+     */
+    private function generateUniquePaymentNumber(Carbon $date): string
+    {
+        self::$paymentCounter++;
+        return 'PAY-' . $date->format('Ymd') . '-' . str_pad(self::$paymentCounter, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Run the database seeds.
      */
     public function run(): void
     {
+        // Reset counter
+        self::$paymentCounter = 0;
+
         // Get paid and partial invoices
         $paidInvoices = Invoice::whereIn('status', ['paid', 'partial'])
             ->where('paid_amount', '>', 0)
@@ -53,7 +70,7 @@ class PaymentSeeder extends Seeder
             }
 
             Payment::create([
-                'payment_number' => 'PAY-' . $paymentDate->format('Ymd') . '-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT),
+                'payment_number' => $this->generateUniquePaymentNumber($paymentDate),
                 'customer_id' => $customer->id,
                 'invoice_id' => $invoice->id,
                 'collector_id' => $channel === 'collector' ? $collector->id : null,
@@ -91,7 +108,7 @@ class PaymentSeeder extends Seeder
             $amount = $customer->package->price * rand(1, 2);
 
             Payment::create([
-                'payment_number' => Payment::generatePaymentNumber(),
+                'payment_number' => $this->generateUniquePaymentNumber($paymentDate),
                 'customer_id' => $customer->id,
                 'collector_id' => $collector->id,
                 'amount' => $amount,

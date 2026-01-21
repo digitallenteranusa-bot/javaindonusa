@@ -44,26 +44,28 @@ Panduan instalasi sistem billing ISP untuk pengembangan di Windows menggunakan L
 
 ### 2.2 Verifikasi Komponen Laragon
 
-Buka Laragon, klik **Menu > Tools > Quick settings**, pastikan:
+Buka Laragon, klik kanan pada window Laragon > **Tools** > **Quick settings**, pastikan:
 - **PHP**: 8.2.x atau lebih tinggi
 - **MySQL**: 8.0.x
-- **Redis**: Aktif (jika tidak ada, lihat langkah 2.3)
 
-### 2.3 Install Redis untuk Windows (Jika Belum Ada)
+### 2.3 Install Redis untuk Windows (Opsional)
 
-**Opsi A: Menggunakan Laragon Redis Addon**
-1. Buka Laragon
-2. Klik kanan pada area kosong > **Tools > Quick add > redis**
+Laragon versi standar tidak menyertakan Redis. Anda bisa:
 
-**Opsi B: Install Manual**
-1. Download Redis dari: https://github.com/microsoftarchive/redis/releases
-2. Extract ke `C:\laragon\bin\redis`
-3. Restart Laragon
+**Opsi A: Tidak menggunakan Redis (Lebih Mudah)**
+
+Ubah file `.env` nanti untuk menggunakan file-based cache (lihat bagian Konfigurasi Environment).
+
+**Opsi B: Install Redis Manual**
+1. Download Redis dari: https://github.com/tporadowski/redis/releases
+2. Download file `.msi` atau `.zip`
+3. Install atau extract ke `C:\laragon\bin\redis`
+4. Restart Laragon
 
 ### 2.4 Pastikan PHP Extensions Aktif
 
 1. Buka Laragon
-2. Klik **Menu > PHP > Extensions**
+2. Klik kanan pada window Laragon > **PHP** > **Extensions**
 3. Pastikan extensions berikut aktif (tercentang):
    - curl
    - fileinfo
@@ -72,10 +74,12 @@ Buka Laragon, klik **Menu > Tools > Quick settings**, pastikan:
    - mysqli
    - openssl
    - pdo_mysql
-   - redis
    - zip
    - intl
-   - bcmath
+
+> **Catatan:** Extension `redis` dan `bcmath` mungkin tidak tersedia di daftar.
+> - Jika **redis tidak ada**: Ubah `.env` untuk tidak menggunakan Redis (lihat bagian Troubleshooting)
+> - Jika **bcmath tidak ada**: Biasanya sudah termasuk dalam PHP default Laragon, tidak perlu diaktifkan manual
 
 ---
 
@@ -85,7 +89,7 @@ Buka Laragon, klik **Menu > Tools > Quick settings**, pastikan:
 
 **Opsi A: Clone dari Git (Direkomendasikan)**
 
-Buka **Terminal** (Laragon > Menu > Terminal) atau Command Prompt:
+Buka **Terminal** (Klik kanan Laragon > **Terminal**) atau Command Prompt:
 
 ```cmd
 cd C:\laragon\www
@@ -161,18 +165,22 @@ DB_PASSWORD=
 
 #-------------------------------------------------
 # CACHE & SESSION
+# Pilih salah satu opsi di bawah:
 #-------------------------------------------------
-CACHE_STORE=redis
-SESSION_DRIVER=redis
-QUEUE_CONNECTION=redis
 
-#-------------------------------------------------
-# REDIS
-#-------------------------------------------------
-REDIS_HOST=127.0.0.1
-REDIS_PASSWORD=null
-REDIS_PORT=6379
-REDIS_CLIENT=phpredis
+# OPSI 1: Jika TIDAK menggunakan Redis (Direkomendasikan untuk pemula)
+CACHE_STORE=file
+SESSION_DRIVER=file
+QUEUE_CONNECTION=sync
+
+# OPSI 2: Jika menggunakan Redis (perlu install Redis terlebih dahulu)
+# CACHE_STORE=redis
+# SESSION_DRIVER=redis
+# QUEUE_CONNECTION=redis
+# REDIS_HOST=127.0.0.1
+# REDIS_PASSWORD=null
+# REDIS_PORT=6379
+# REDIS_CLIENT=phpredis
 
 #-------------------------------------------------
 # BILLING (Opsional - gunakan default)
@@ -196,9 +204,10 @@ LOG_LEVEL=debug
 ```
 
 **Catatan Penting:**
-- `DB_PASSWORD=` kosong (default Laragon)
+- `DB_PASSWORD=` kosong (default Laragon MySQL)
 - `APP_DEBUG=true` untuk development
-- `APP_URL=http://billing.test` (akan diatur otomatis oleh Laragon)
+- `APP_URL=http://billing.test` (otomatis dibuat oleh Laragon)
+- Gunakan **OPSI 1** (tanpa Redis) jika Anda pemula atau tidak ingin install Redis
 
 ---
 
@@ -209,24 +218,29 @@ LOG_LEVEL=debug
 **Opsi A: Via HeidiSQL (GUI - Direkomendasikan)**
 
 1. Buka Laragon
-2. Klik kanan > **Database** > **Open HeidiSQL**
-3. Login (user: `root`, password: kosong)
-4. Klik kanan pada panel kiri > **Create new** > **Database**
+2. Klik kanan pada window Laragon > **MySQL** > **HeidiSQL**
+3. Klik **Open** untuk connect (user: `root`, password: kosong)
+4. Klik kanan pada panel kiri (nama server) > **Create new** > **Database**
 5. Nama database: `billing_javaindonusa`
-6. Collation: `utf8mb4_unicode_ci`
-7. Klik **OK**
+6. Klik **OK**
 
-**Opsi B: Via Terminal**
+> **Catatan:** Collation akan otomatis menggunakan default MySQL (utf8mb4). Tidak perlu diubah.
+
+**Opsi B: Via Terminal Laragon**
+
+1. Klik kanan pada window Laragon > **MySQL** > **Console**
+2. Jalankan perintah berikut:
+
+```sql
+CREATE DATABASE billing_javaindonusa;
+EXIT;
+```
+
+**Opsi C: Via Command Prompt**
 
 ```cmd
 cd C:\laragon\www\billing
-
-# Login ke MySQL
-mysql -u root
-
-# Di dalam MySQL prompt:
-CREATE DATABASE billing_javaindonusa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-EXIT;
+mysql -u root -e "CREATE DATABASE billing_javaindonusa"
 ```
 
 ### 5.2 Jalankan Migrasi
@@ -314,9 +328,11 @@ Laragon otomatis membuat virtual host. Akses di browser:
 
 Queue worker diperlukan untuk memproses job async (notifikasi, isolasi, dll).
 
-### 8.1 Menjalankan Queue Worker (Development)
+> **Catatan:** Jika Anda menggunakan `QUEUE_CONNECTION=sync` di file `.env`, langkah ini **tidak diperlukan**. Job akan diproses langsung tanpa queue.
 
-Buka Terminal baru di Laragon dan jalankan:
+### 8.1 Menjalankan Queue Worker (Jika menggunakan Redis)
+
+Buka Terminal baru di Laragon (Klik kanan > **Terminal**) dan jalankan:
 
 ```cmd
 cd C:\laragon\www\billing

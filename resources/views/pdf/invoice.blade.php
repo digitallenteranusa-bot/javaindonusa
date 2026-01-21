@@ -16,10 +16,10 @@
             color: #333;
         }
         .container {
-            padding: 0;
+            padding: 10px 25px;
         }
         @page {
-            margin: 15mm 20mm;
+            margin: 10mm;
             size: A4;
         }
         .header-table {

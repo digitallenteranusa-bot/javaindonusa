@@ -39,9 +39,8 @@ class CustomerSeeder extends Seeder
             'Jl. Merdeka', 'Jl. Sudirman', 'Jl. Thamrin', 'Jl. Gatot Subroto', 'Jl. Ahmad Yani',
             'Jl. Diponegoro', 'Jl. Imam Bonjol', 'Jl. Hayam Wuruk'];
 
-        // Generate 200 customers
-        $customerCount = 200;
-        $statuses = ['active', 'active', 'active', 'active', 'isolated']; // 80% active, 20% isolated
+        // Generate 10 customers (sample data - mudah dihapus)
+        $customerCount = 10;
 
         for ($i = 1; $i <= $customerCount; $i++) {
             $firstName = $firstNames[array_rand($firstNames)];
@@ -58,31 +57,13 @@ class CustomerSeeder extends Seeder
             $rt = str_pad(rand(1, 15), 2, '0', STR_PAD_LEFT);
             $rw = str_pad(rand(1, 10), 2, '0', STR_PAD_LEFT);
 
-            $status = $statuses[array_rand($statuses)];
-            $joinDate = Carbon::now()->subDays(rand(30, 730)); // Joined 1-24 months ago
-
-            // Determine debt based on status
+            // Semua pelanggan aktif tanpa hutang agar mudah dihapus
+            $status = 'active';
+            $joinDate = Carbon::now()->subDays(rand(30, 365));
             $totalDebt = 0;
             $isRapel = false;
             $rapelAmount = null;
             $rapelMonths = null;
-
-            if ($status === 'isolated') {
-                // Isolated customers have 2-6 months of debt
-                $monthsDebt = rand(2, 6);
-                $totalDebt = $package->price * $monthsDebt;
-            } elseif (rand(1, 100) <= 40) {
-                // 40% of active customers have some debt (1-3 months)
-                $monthsDebt = rand(1, 3);
-                $totalDebt = $package->price * $monthsDebt;
-
-                // 10% of those with debt are rapel customers
-                if (rand(1, 100) <= 10) {
-                    $isRapel = true;
-                    $rapelAmount = round($totalDebt / 6, -3); // Pay in 6 months
-                    $rapelMonths = 6;
-                }
-            }
 
             $phone = '08' . rand(11, 99) . rand(1000000, 9999999);
 

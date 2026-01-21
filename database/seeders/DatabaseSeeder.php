@@ -33,8 +33,8 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Seeding Areas...');
         $this->call(AreaSeeder::class);
 
-        // 6. Customers - 200 customers
-        $this->command->info('Seeding Customers (200 records)...');
+        // 6. Customers - 10 customers (sample data)
+        $this->command->info('Seeding Customers (10 records)...');
         $this->call(CustomerSeeder::class);
 
         // 7. Invoices - Monthly invoices for all customers
@@ -72,7 +72,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('- 5 Routers');
         $this->command->info('- 7 Packages');
         $this->command->info('- 17 Areas (4 main + 13 sub-areas)');
-        $this->command->info('- 200 Customers');
+        $this->command->info('- 10 Customers (sample data - mudah dihapus)');
         $this->command->info('- Invoices for all customers');
         $this->command->info('- Payments and Collection Logs');
         $this->command->info('- Expenses for last 60 days');

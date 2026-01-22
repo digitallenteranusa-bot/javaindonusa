@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
@@ -7,6 +7,11 @@ const user = computed(() => page.props.auth?.user)
 
 const sidebarOpen = ref(true)
 const mobileMenuOpen = ref(false)
+
+// Close mobile menu on route change
+const closeMobileMenu = () => {
+    mobileMenuOpen.value = false
+}
 
 // Menu Groups
 const mainNavigation = [
@@ -117,6 +122,9 @@ const icons = {
     },
     shield: {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>`
+    },
+    close: {
+        template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`
     }
 }
 
@@ -127,10 +135,147 @@ const getIcon = (name) => ({
 
 <template>
     <div class="min-h-screen bg-gray-100">
-        <!-- Sidebar -->
+        <!-- Mobile Sidebar Overlay -->
+        <Transition
+            enter-active-class="transition-opacity ease-linear duration-300"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity ease-linear duration-300"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="mobileMenuOpen"
+                class="fixed inset-0 z-50 lg:hidden"
+            >
+                <div class="fixed inset-0 bg-gray-900/80" @click="mobileMenuOpen = false"></div>
+            </div>
+        </Transition>
+
+        <!-- Mobile Sidebar -->
+        <Transition
+            enter-active-class="transition ease-in-out duration-300 transform"
+            enter-from-class="-translate-x-full"
+            enter-to-class="translate-x-0"
+            leave-active-class="transition ease-in-out duration-300 transform"
+            leave-from-class="translate-x-0"
+            leave-to-class="-translate-x-full"
+        >
+            <aside
+                v-if="mobileMenuOpen"
+                class="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-gray-900 lg:hidden"
+            >
+                <!-- Logo with Close Button -->
+                <div class="flex h-16 items-center justify-between px-4 bg-gray-800">
+                    <Link href="/admin" class="flex items-center gap-3" @click="closeMobileMenu">
+                        <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center overflow-hidden">
+                            <img
+                                v-if="page.props.isp?.logo"
+                                :src="page.props.isp.logo"
+                                :alt="page.props.isp?.name || 'Logo'"
+                                class="w-full h-full object-contain p-1"
+                            >
+                            <span v-else class="text-white font-bold text-lg">
+                                {{ page.props.isp?.initials || 'ISP' }}
+                            </span>
+                        </div>
+                        <span class="text-white font-semibold text-lg truncate max-w-[160px]">
+                            {{ page.props.isp?.name || 'ISP Billing' }}
+                        </span>
+                    </Link>
+                    <button
+                        @click="mobileMenuOpen = false"
+                        class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-700"
+                    >
+                        <component :is="getIcon('close')" class="w-6 h-6" />
+                    </button>
+                </div>
+
+                <!-- Mobile Navigation -->
+                <nav class="flex-1 overflow-y-auto py-4 px-3">
+                    <!-- Main -->
+                    <div class="mb-4">
+                        <p class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Menu Utama</p>
+                        <ul class="space-y-1">
+                            <li v-for="item in mainNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Billing -->
+                    <div class="mb-4">
+                        <p class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Billing</p>
+                        <ul class="space-y-1">
+                            <li v-for="item in billingNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Master Data -->
+                    <div class="mb-4">
+                        <p class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Master Data</p>
+                        <ul class="space-y-1">
+                            <li v-for="item in masterNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- System -->
+                    <div class="mb-4">
+                        <p class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sistem</p>
+                        <ul class="space-y-1">
+                            <li v-for="item in systemNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+
+                <!-- Mobile User Menu -->
+                <div class="border-t border-gray-700 p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                            <span class="text-white font-medium">{{ user?.name?.charAt(0) || 'A' }}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-white text-sm font-medium truncate">{{ user?.name || 'Admin' }}</p>
+                            <p class="text-gray-400 text-xs truncate">{{ user?.email }}</p>
+                        </div>
+                    </div>
+                    <Link
+                        href="/logout"
+                        method="post"
+                        as="button"
+                        class="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Logout
+                    </Link>
+                </div>
+            </aside>
+        </Transition>
+
+        <!-- Desktop Sidebar (hidden on mobile) -->
         <aside
             :class="[
-                'fixed inset-y-0 left-0 z-50 flex flex-col bg-gray-900 transition-all duration-300',
+                'fixed inset-y-0 left-0 z-40 flex-col bg-gray-900 transition-all duration-300 hidden lg:flex',
                 sidebarOpen ? 'w-64' : 'w-20'
             ]"
         >
@@ -154,7 +299,7 @@ const getIcon = (name) => ({
                 </Link>
                 <button
                     @click="toggleSidebar"
-                    class="text-gray-400 hover:text-white lg:block hidden"
+                    class="text-gray-400 hover:text-white"
                 >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -163,7 +308,7 @@ const getIcon = (name) => ({
                 </button>
             </div>
 
-            <!-- Navigation -->
+            <!-- Desktop Navigation -->
             <nav class="flex-1 overflow-y-auto py-4 px-3">
                 <!-- Main -->
                 <div class="mb-4">
@@ -218,7 +363,7 @@ const getIcon = (name) => ({
                 </div>
             </nav>
 
-            <!-- User Menu -->
+            <!-- Desktop User Menu -->
             <div class="border-t border-gray-700 p-4">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
@@ -233,14 +378,14 @@ const getIcon = (name) => ({
         </aside>
 
         <!-- Main Content -->
-        <div :class="['transition-all duration-300', sidebarOpen ? 'lg:ml-64' : 'lg:ml-20']">
+        <div :class="['transition-all duration-300 lg:ml-64', sidebarOpen ? 'lg:ml-64' : 'lg:ml-20']">
             <!-- Top Header -->
-            <header class="sticky top-0 z-40 bg-white border-b border-gray-200">
+            <header class="sticky top-0 z-30 bg-white border-b border-gray-200">
                 <div class="flex items-center justify-between h-16 px-4 lg:px-8">
                     <!-- Mobile Menu Button -->
                     <button
-                        @click="mobileMenuOpen = !mobileMenuOpen"
-                        class="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-900"
+                        @click="mobileMenuOpen = true"
+                        class="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                     >
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -253,7 +398,7 @@ const getIcon = (name) => ({
                     </div>
 
                     <!-- Right Actions -->
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 lg:gap-4">
                         <!-- Notifications -->
                         <button class="p-2 text-gray-500 hover:text-gray-900 relative">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,12 +407,12 @@ const getIcon = (name) => ({
                             <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                         </button>
 
-                        <!-- Logout -->
+                        <!-- Logout (Desktop only) -->
                         <Link
                             href="/logout"
                             method="post"
                             as="button"
-                            class="p-2 text-gray-500 hover:text-gray-900"
+                            class="hidden lg:block p-2 text-gray-500 hover:text-gray-900"
                         >
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -283,27 +428,36 @@ const getIcon = (name) => ({
             </main>
         </div>
 
-        <!-- Mobile Sidebar Overlay -->
-        <div
-            v-if="mobileMenuOpen"
-            class="fixed inset-0 z-40 lg:hidden"
-            @click="mobileMenuOpen = false"
-        >
-            <div class="fixed inset-0 bg-gray-600 bg-opacity-75"></div>
-        </div>
-
         <!-- Flash Messages -->
-        <div
-            v-if="$page.props.flash?.success"
-            class="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg"
+        <Transition
+            enter-active-class="transition ease-out duration-300"
+            enter-from-class="opacity-0 translate-y-2"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-2"
         >
-            {{ $page.props.flash.success }}
-        </div>
-        <div
-            v-if="$page.props.flash?.error"
-            class="fixed bottom-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg"
+            <div
+                v-if="$page.props.flash?.success"
+                class="fixed bottom-4 right-4 left-4 lg:left-auto z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg"
+            >
+                {{ $page.props.flash.success }}
+            </div>
+        </Transition>
+        <Transition
+            enter-active-class="transition ease-out duration-300"
+            enter-from-class="opacity-0 translate-y-2"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-2"
         >
-            {{ $page.props.flash.error }}
-        </div>
+            <div
+                v-if="$page.props.flash?.error"
+                class="fixed bottom-4 right-4 left-4 lg:left-auto z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg"
+            >
+                {{ $page.props.flash.error }}
+            </div>
+        </Transition>
     </div>
 </template>

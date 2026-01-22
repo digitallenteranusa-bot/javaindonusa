@@ -1,11 +1,14 @@
 # Panduan Instalasi ISP Billing System - Java Indonusa
 
-Panduan lengkap instalasi sistem billing ISP untuk server Linux (Ubuntu 22.04/24.04 LTS).
+Panduan lengkap instalasi sistem billing ISP untuk:
+- **Production:** Linux Server (Ubuntu 22.04/24.04 LTS)
+- **Development:** Windows (Laragon)
 
 ---
 
 ## Daftar Isi
 
+### Linux (Production)
 1. [Persyaratan Sistem](#1-persyaratan-sistem)
 2. [Instalasi Dependencies](#2-instalasi-dependencies)
 3. [Setup Project](#3-setup-project)
@@ -19,6 +22,9 @@ Panduan lengkap instalasi sistem billing ISP untuk server Linux (Ubuntu 22.04/24
 11. [Verifikasi & Optimasi](#11-verifikasi--optimasi)
 12. [Login Pertama Kali](#12-login-pertama-kali)
 13. [Troubleshooting](#13-troubleshooting)
+
+### Windows (Development)
+14. [Instalasi Windows (Laragon)](#instalasi-windows-laragon---development)
 
 ---
 
@@ -1157,6 +1163,367 @@ php artisan optimize && \
 sudo systemctl restart php8.2-fpm nginx billing-worker && \
 echo "Reset selesai!"
 ```
+
+---
+
+## Instalasi Windows (Laragon) - Development
+
+Panduan ini untuk environment development di Windows menggunakan Laragon.
+
+### Persyaratan Windows
+
+| Software | Versi | Download |
+|----------|-------|----------|
+| Laragon Full | 6.0+ | [laragon.org](https://laragon.org/download/) |
+| Git | Latest | [git-scm.com](https://git-scm.com/) |
+| Node.js | 18 LTS+ | [nodejs.org](https://nodejs.org/) |
+
+> **Note:** Laragon Full sudah include PHP 8.2+, MySQL 8, Redis, Nginx/Apache, Composer.
+
+### 1. Install Laragon
+
+1. Download **Laragon Full** dari [laragon.org](https://laragon.org/download/)
+2. Install ke `C:\laragon` (default)
+3. Jalankan Laragon dan klik **Start All**
+
+### 2. Konfigurasi PHP (Laragon)
+
+1. Klik kanan Laragon > **PHP** > Pilih **php-8.2.x** atau lebih tinggi
+2. Buka **Menu > PHP > php.ini** dan ubah:
+
+```ini
+upload_max_filesize = 50M
+post_max_size = 50M
+memory_limit = 512M
+max_execution_time = 300
+date.timezone = Asia/Jakarta
+```
+
+3. Aktifkan extension Redis:
+   - Buka `C:\laragon\bin\php\php-8.2.x\php.ini`
+   - Cari dan uncomment: `extension=redis`
+
+### 3. Clone/Setup Project
+
+```cmd
+:: Buka Terminal Laragon (Klik kanan > Terminal)
+
+:: Masuk ke folder www
+cd C:\laragon\www
+
+:: Clone repository
+git clone https://github.com/username/javaindonusa.git billing
+
+:: Atau jika sudah ada di lokasi lain, buat symbolic link
+mklink /D "C:\laragon\www\billing" "D:\SOURCE CODE\java indonusa"
+```
+
+### 4. Install Dependencies
+
+```cmd
+cd C:\laragon\www\billing
+
+:: Install PHP dependencies
+composer install
+
+:: Install Node dependencies
+npm install
+```
+
+### 5. Setup Environment
+
+```cmd
+:: Copy file environment
+copy .env.example .env
+
+:: Generate application key
+php artisan key:generate
+```
+
+Edit file `.env`:
+
+```env
+APP_NAME="Java Indonusa Billing"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://billing.test
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=billing_javaindonusa
+DB_USERNAME=root
+DB_PASSWORD=
+
+CACHE_STORE=redis
+SESSION_DRIVER=redis
+QUEUE_CONNECTION=redis
+
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+```
+
+### 6. Setup Database
+
+1. Buka **HeidiSQL** dari Laragon (Klik kanan > MySQL > HeidiSQL)
+2. Buat database baru: `billing_javaindonusa`
+
+Atau via terminal:
+
+```cmd
+:: Login MySQL (password kosong untuk default Laragon)
+mysql -u root
+
+:: Di MySQL prompt
+CREATE DATABASE billing_javaindonusa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EXIT;
+```
+
+Jalankan migrasi:
+
+```cmd
+cd C:\laragon\www\billing
+php artisan migrate --seed
+```
+
+### 7. Build Frontend
+
+```cmd
+cd C:\laragon\www\billing
+
+:: Development (dengan hot reload)
+npm run dev
+
+:: Atau build untuk production
+npm run build
+```
+
+### 8. Buat Virtual Host (Otomatis)
+
+Laragon otomatis membuat virtual host. Pastikan:
+
+1. Klik kanan Laragon > **Preferences** > **General**
+2. Pastikan **Auto virtual hosts** tercentang
+3. Hostname pattern: `{name}.test`
+
+Restart Laragon, lalu akses: `http://billing.test`
+
+### 9. Menjalankan Queue Worker (Windows)
+
+**Opsi A: Manual di Terminal (Development)**
+
+```cmd
+cd C:\laragon\www\billing
+php artisan queue:work redis --sleep=3 --tries=3
+```
+
+> Biarkan terminal terbuka selama development.
+
+**Opsi B: Menggunakan Windows Task Scheduler (Background)**
+
+1. Buka **Task Scheduler** (Win + R > `taskschd.msc`)
+2. Klik **Create Basic Task**
+3. Nama: `Billing Queue Worker`
+4. Trigger: **When the computer starts**
+5. Action: **Start a program**
+6. Program: `C:\laragon\bin\php\php-8.2.x\php.exe`
+7. Arguments: `C:\laragon\www\billing\artisan queue:work redis --sleep=3 --tries=3`
+8. Start in: `C:\laragon\www\billing`
+
+**Opsi C: Menggunakan NSSM (Recommended untuk Production-like)**
+
+```cmd
+:: Download NSSM dari nssm.cc, extract ke C:\nssm
+
+:: Install sebagai service
+C:\nssm\nssm.exe install BillingWorker "C:\laragon\bin\php\php-8.2.x\php.exe" "C:\laragon\www\billing\artisan queue:work redis --sleep=3 --tries=3"
+
+:: Start service
+net start BillingWorker
+
+:: Stop service
+net stop BillingWorker
+
+:: Remove service
+C:\nssm\nssm.exe remove BillingWorker confirm
+```
+
+### 10. Menjalankan Scheduler (Windows)
+
+**Opsi A: Manual (Development)**
+
+```cmd
+cd C:\laragon\www\billing
+php artisan schedule:work
+```
+
+> Biarkan terminal terbuka, akan jalan setiap menit.
+
+**Opsi B: Windows Task Scheduler**
+
+1. Buka **Task Scheduler**
+2. Klik **Create Task** (bukan Basic Task)
+3. **General tab:**
+   - Nama: `Laravel Scheduler`
+   - Centang: Run whether user is logged on or not
+4. **Triggers tab:**
+   - New > Daily, Repeat task every **1 minute** for **1 day**
+5. **Actions tab:**
+   - Program: `C:\laragon\bin\php\php-8.2.x\php.exe`
+   - Arguments: `C:\laragon\www\billing\artisan schedule:run`
+   - Start in: `C:\laragon\www\billing`
+
+### 11. Quick Reference Commands (Windows)
+
+```cmd
+:: === NAVIGASI ===
+cd C:\laragon\www\billing
+
+:: === UPDATE CODE ===
+git pull origin main
+composer install
+npm install && npm run build
+php artisan migrate
+
+:: === CLEAR CACHE ===
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+php artisan optimize:clear
+
+:: === REBUILD CACHE ===
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan optimize
+
+:: === LARAGON SERVICE ===
+:: Gunakan GUI Laragon untuk Start/Stop/Restart services
+:: Atau via command:
+C:\laragon\laragon.exe reload
+
+:: === LOG ===
+:: Buka file log di:
+:: C:\laragon\www\billing\storage\logs\laravel.log
+
+:: Atau gunakan PowerShell untuk tail:
+Get-Content C:\laragon\www\billing\storage\logs\laravel.log -Tail 50 -Wait
+
+:: === DATABASE ===
+php artisan migrate
+php artisan migrate:status
+php artisan db:seed
+php artisan migrate:fresh --seed
+
+:: Backup database (via mysqldump)
+mysqldump -u root billing_javaindonusa > backup.sql
+
+:: === QUEUE ===
+php artisan queue:work --once
+php artisan queue:restart
+php artisan queue:failed
+php artisan queue:retry all
+
+:: === SCHEDULER ===
+php artisan schedule:list
+php artisan schedule:run
+php artisan schedule:work
+
+:: === ARTISAN COMMANDS (BILLING) ===
+php artisan billing:generate-invoices
+php artisan billing:check-overdue
+php artisan billing:send-reminders
+php artisan mikrotik:status
+```
+
+### Script Update Lengkap (Windows - PowerShell)
+
+```powershell
+# Simpan sebagai update.ps1
+cd C:\laragon\www\billing
+git pull origin main
+composer install --optimize-autoloader
+npm install
+npm run build
+php artisan migrate
+php artisan optimize:clear
+php artisan optimize
+Write-Host "Update selesai!" -ForegroundColor Green
+```
+
+Jalankan dengan:
+```cmd
+powershell -ExecutionPolicy Bypass -File update.ps1
+```
+
+### Script Update (Windows - Batch File)
+
+```batch
+@echo off
+REM Simpan sebagai update.bat
+cd /d C:\laragon\www\billing
+git pull origin main
+call composer install --optimize-autoloader
+call npm install
+call npm run build
+php artisan migrate
+php artisan optimize:clear
+php artisan optimize
+echo Update selesai!
+pause
+```
+
+### Troubleshooting Windows
+
+**Error: Redis connection refused**
+```cmd
+:: Pastikan Redis sudah jalan di Laragon
+:: Klik kanan Laragon > Redis > Start Redis
+
+:: Atau install Redis untuk Windows:
+:: Download dari: https://github.com/microsoftarchive/redis/releases
+```
+
+**Error: php tidak dikenali**
+```cmd
+:: Tambahkan PHP ke PATH
+:: Atau gunakan full path:
+C:\laragon\bin\php\php-8.2.x\php.exe artisan migrate
+```
+
+**Error: npm tidak dikenali**
+```cmd
+:: Install Node.js dari nodejs.org
+:: Restart terminal setelah install
+```
+
+**Error: Permission denied pada storage**
+```cmd
+:: Di Windows biasanya tidak ada masalah permission
+:: Tapi jika ada, coba:
+icacls "C:\laragon\www\billing\storage" /grant Everyone:F /T
+icacls "C:\laragon\www\billing\bootstrap\cache" /grant Everyone:F /T
+```
+
+**Error: Virtual host tidak bisa diakses**
+1. Restart Laragon
+2. Cek file `C:\Windows\System32\drivers\etc\hosts`
+3. Pastikan ada entry: `127.0.0.1 billing.test`
+4. Flush DNS: `ipconfig /flushdns`
+
+### Perbedaan Linux vs Windows
+
+| Aspek | Linux (Production) | Windows (Development) |
+|-------|-------------------|----------------------|
+| Service Manager | systemctl | Laragon GUI / Task Scheduler |
+| Web Server | Nginx | Apache/Nginx (Laragon) |
+| Path | `/var/www/billing` | `C:\laragon\www\billing` |
+| Permission | chmod/chown | icacls (jarang diperlukan) |
+| Queue Worker | systemd service | Terminal / NSSM / Task Scheduler |
+| Scheduler | crontab | Task Scheduler |
+| Log Tail | `tail -f` | `Get-Content -Wait` (PowerShell) |
 
 ---
 

@@ -2,6 +2,29 @@
 import { ref, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import { Line } from 'vue-chartjs'
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+} from 'chart.js'
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+)
 
 const props = defineProps({
     stats: Object,
@@ -31,6 +54,60 @@ const changePeriod = () => {
         preserveState: true,
         preserveScroll: true,
     })
+}
+
+// Revenue Chart Data
+const revenueChartData = computed(() => {
+    const trend = props.stats?.charts?.revenue_trend || []
+    return {
+        labels: trend.map(item => item.month),
+        datasets: [
+            {
+                label: 'Pendapatan',
+                data: trend.map(item => item.revenue),
+                borderColor: '#10B981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+            }
+        ]
+    }
+})
+
+const revenueChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            display: false
+        },
+        tooltip: {
+            callbacks: {
+                label: (context) => {
+                    return new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0,
+                    }).format(context.raw)
+                }
+            }
+        }
+    },
+    scales: {
+        y: {
+            beginAtZero: true,
+            ticks: {
+                callback: (value) => {
+                    if (value >= 1000000) {
+                        return (value / 1000000).toFixed(0) + ' Jt'
+                    }
+                    return value.toLocaleString('id-ID')
+                }
+            }
+        }
+    }
 }
 
 // Overview cards
@@ -144,9 +221,16 @@ const overviewCards = computed(() => [
                     </div>
                 </div>
 
-                <!-- Revenue Trend Chart Placeholder -->
-                <div class="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <p class="text-gray-500">Grafik Pendapatan</p>
+                <!-- Revenue Trend Chart -->
+                <div class="h-64">
+                    <Line
+                        v-if="stats?.charts?.revenue_trend?.length"
+                        :data="revenueChartData"
+                        :options="revenueChartOptions"
+                    />
+                    <div v-else class="h-full bg-gray-100 rounded-lg flex items-center justify-center">
+                        <p class="text-gray-500">Belum ada data pendapatan</p>
+                    </div>
                 </div>
             </div>
 

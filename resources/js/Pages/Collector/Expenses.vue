@@ -5,7 +5,6 @@ import CollectorLayout from '@/Layouts/CollectorLayout.vue'
 
 const props = defineProps({
     expenses: Object,
-    categories: Array,
     dailySummary: Object,
 })
 
@@ -32,7 +31,6 @@ const formatDate = (date) => {
 // New expense modal
 const showExpenseModal = ref(false)
 const form = useForm({
-    category: '',
     amount: '',
     description: '',
     receipt_photo: null,
@@ -49,7 +47,6 @@ const handleReceiptUpload = (event) => {
 
 const submitExpense = () => {
     const formData = new FormData()
-    formData.append('category', form.category)
     formData.append('amount', form.amount)
     formData.append('description', form.description)
     if (form.receipt_photo) {
@@ -74,16 +71,6 @@ const getStatusBadge = (status) => {
     return badges[status] || { class: 'bg-gray-100 text-gray-600', text: status }
 }
 
-// Category icon
-const getCategoryIcon = (category) => {
-    const icons = {
-        transport: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-        meal: 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z',
-        office: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-        other: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4',
-    }
-    return icons[category] || icons.other
-}
 </script>
 
 <template>
@@ -156,14 +143,13 @@ const getCategoryIcon = (category) => {
                         <div class="flex items-start gap-3">
                             <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="getCategoryIcon(expense.category)" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
                                 </svg>
                             </div>
                             <div class="flex-1">
                                 <div class="flex justify-between items-start">
                                     <div>
-                                        <p class="font-semibold text-gray-800 capitalize">{{ expense.category }}</p>
-                                        <p class="text-sm text-gray-600 mt-1">{{ expense.description }}</p>
+                                        <p class="font-semibold text-gray-800">{{ expense.description }}</p>
                                         <p class="text-xs text-gray-400 mt-1">{{ formatDate(expense.created_at) }}</p>
                                     </div>
                                     <div class="text-right">
@@ -240,28 +226,6 @@ const getCategoryIcon = (category) => {
                     </div>
 
                     <form @submit.prevent="submitExpense" class="space-y-4">
-                        <!-- Category -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
-                            <div class="grid grid-cols-4 gap-2">
-                                <button
-                                    v-for="cat in categories"
-                                    :key="cat.value"
-                                    type="button"
-                                    @click="form.category = cat.value"
-                                    :class="[
-                                        'py-2 px-3 rounded-lg border-2 text-xs font-medium transition-colors',
-                                        form.category === cat.value
-                                            ? 'border-blue-500 bg-blue-50 text-blue-600'
-                                            : 'border-gray-200'
-                                    ]"
-                                >
-                                    {{ cat.label }}
-                                </button>
-                            </div>
-                            <p v-if="form.errors.category" class="text-red-500 text-sm mt-1">{{ form.errors.category }}</p>
-                        </div>
-
                         <!-- Amount -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah</label>
@@ -301,7 +265,7 @@ const getCategoryIcon = (category) => {
                         <!-- Submit -->
                         <button
                             type="submit"
-                            :disabled="form.processing || !form.category || !form.amount"
+                            :disabled="form.processing || !form.amount || !form.description"
                             class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50"
                         >
                             {{ form.processing ? 'Menyimpan...' : 'Simpan Belanja' }}

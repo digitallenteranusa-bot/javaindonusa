@@ -214,6 +214,37 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Delete invoice permanently
+     */
+    public function destroy(Request $request, Invoice $invoice)
+    {
+        // Check if invoice has payments
+        if ($invoice->paid_amount > 0) {
+            return back()->with('error', 'Invoice dengan pembayaran tidak dapat dihapus. Gunakan fitur Batalkan terlebih dahulu.');
+        }
+
+        // Check if invoice is already paid
+        if ($invoice->status === 'paid') {
+            return back()->with('error', 'Invoice yang sudah lunas tidak dapat dihapus');
+        }
+
+        // Save customer reference before deletion
+        $customer = $invoice->customer;
+        $invoiceNumber = $invoice->invoice_number;
+
+        // Delete the invoice
+        $invoice->delete();
+
+        // Update customer debt if customer exists
+        if ($customer) {
+            $customer->recalculateTotalDebt();
+        }
+
+        return redirect()->route('admin.invoices.index')
+            ->with('success', "Invoice {$invoiceNumber} berhasil dihapus");
+    }
+
+    /**
      * Update overdue status for all invoices
      */
     public function updateOverdueStatus()

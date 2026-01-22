@@ -57,17 +57,14 @@ class ExpenseController extends Controller
             'expenses' => $expenses,
             'summary' => $summary,
             'settlement' => $settlement,
+            'dailySummary' => [
+                'pending' => $summary['pending_total'] ?? 0,
+                'approved' => $summary['approved_total'] ?? 0,
+                'rejected' => $summary['rejected_total'] ?? 0,
+            ],
             'filters' => [
                 'start_date' => $startDate->toDateString(),
                 'end_date' => $endDate->toDateString(),
-            ],
-            'categories' => [
-                'fuel' => 'Bensin',
-                'food' => 'Makan',
-                'transport' => 'Transport',
-                'phone_credit' => 'Pulsa',
-                'parking' => 'Parkir',
-                'other' => 'Lainnya',
             ],
         ]);
     }
@@ -79,7 +76,6 @@ class ExpenseController extends Controller
     {
         $request->validate([
             'amount' => 'required|numeric|min:1000',
-            'category' => 'required|in:fuel,food,transport,phone_credit,parking,other',
             'description' => 'required|string|max:255',
             'receipt_photo' => 'nullable|image|max:5120', // Max 5MB
             'expense_date' => 'nullable|date',
@@ -100,7 +96,7 @@ class ExpenseController extends Controller
             $expense = $this->expenseService->createExpense(
                 $collector,
                 $request->amount,
-                $request->category,
+                'other', // Default category
                 $request->description,
                 $receiptPath,
                 $request->expense_date ? Carbon::parse($request->expense_date) : null
@@ -127,12 +123,20 @@ class ExpenseController extends Controller
         // Ringkasan harian
         $dailySummary = $this->collectorService->getDailySummary($collector, $date);
 
-        // Histori settlement
-        $settlementHistory = $this->expenseService->getSettlementHistory($collector);
+        // Histori settlement (paginated)
+        $settlements = $this->expenseService->getSettlementHistory($collector);
+
+        // Pending settlement calculation - hari ini
+        $pendingSettlement = $this->collectorService->calculateFinalSettlement(
+            $collector,
+            Carbon::today()->startOfDay(),
+            Carbon::today()->endOfDay()
+        );
 
         return Inertia::render('Collector/Settlement', [
             'dailySummary' => $dailySummary,
-            'settlementHistory' => $settlementHistory,
+            'settlements' => $settlements,
+            'pendingSettlement' => $pendingSettlement,
             'date' => $date->toDateString(),
         ]);
     }

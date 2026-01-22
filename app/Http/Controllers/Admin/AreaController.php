@@ -158,15 +158,23 @@ class AreaController extends Controller
             return back()->with('error', 'Tidak dapat menghapus area yang masih memiliki pelanggan');
         }
 
-        // Check if area has children
-        if ($area->children()->exists()) {
-            return back()->with('error', 'Tidak dapat menghapus area yang memiliki sub-area');
+        // Check if any sub-areas have customers
+        $childrenWithCustomers = $area->children()
+            ->whereHas('customers')
+            ->exists();
+
+        if ($childrenWithCustomers) {
+            return back()->with('error', 'Tidak dapat menghapus area karena sub-area masih memiliki pelanggan');
         }
 
+        // Cascade delete: delete all sub-areas first
+        $area->children()->delete();
+
+        // Delete the area
         $area->delete();
 
         return redirect()->route('admin.areas.index')
-            ->with('success', 'Area berhasil dihapus');
+            ->with('success', 'Area dan sub-area berhasil dihapus');
     }
 
     /**

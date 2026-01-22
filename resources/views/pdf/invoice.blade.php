@@ -198,9 +198,9 @@
             <tr>
                 <td style="width: 50%; vertical-align: top; padding-left: 0;">
                     <p class="section-title">Tagihan Kepada</p>
-                    <p class="customer-name">{{ $invoice->customer->name }}</p>
-                    <p>ID: {{ $invoice->customer->customer_id }} | Telp: {{ $invoice->customer->phone }}</p>
-                    <p>{{ $invoice->customer->address }}</p>
+                    <p class="customer-name">{{ $invoice->customer->name ?? 'Pelanggan Tidak Ditemukan' }}</p>
+                    <p>ID: {{ $invoice->customer->customer_id ?? '-' }} | Telp: {{ $invoice->customer->phone ?? '-' }}</p>
+                    <p>{{ $invoice->customer->address ?? '-' }}</p>
                 </td>
                 <td style="width: 50%; vertical-align: top; text-align: right; padding-right: 0;">
                     <p class="section-title">Detail Invoice</p>

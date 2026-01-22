@@ -28,7 +28,14 @@ class CheckRole
         // Cek apakah user memiliki salah satu role yang diizinkan
         $userRole = $request->user()->role;
 
-        // Admin memiliki akses ke semua
+        // Admin should NOT access collector portal - it's designed for field collectors only
+        // Collector portal shows data specific to assigned customers which admin doesn't have
+        if ($userRole === 'admin' && count($roles) === 1 && in_array('penagih', $roles)) {
+            return redirect()->route('admin.dashboard')
+                ->with('info', 'Portal Penagih hanya untuk penagih lapangan. Gunakan menu Admin untuk mengelola data.');
+        }
+
+        // Admin memiliki akses ke semua (kecuali collector portal di atas)
         if ($userRole === 'admin') {
             return $next($request);
         }

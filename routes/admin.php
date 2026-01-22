@@ -117,6 +117,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->name('invoices.mark-paid');
     Route::post('/invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])
         ->name('invoices.cancel');
+    Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])
+        ->name('invoices.destroy');
     Route::post('/invoices/update-overdue', [InvoiceController::class, 'updateOverdueStatus'])
         ->name('invoices.update-overdue');
     Route::get('/invoices-export', [InvoiceController::class, 'export'])->name('invoices.export');

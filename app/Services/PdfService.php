@@ -15,6 +15,17 @@ class PdfService
     public function generateInvoicePdf(Invoice $invoice)
     {
         $invoice->load(['customer', 'customer.area', 'customer.package']);
+
+        // Create a dummy customer object if customer doesn't exist
+        if (!$invoice->customer) {
+            $invoice->setRelation('customer', new \App\Models\Customer([
+                'name' => 'Pelanggan Tidak Ditemukan',
+                'customer_id' => '-',
+                'phone' => '-',
+                'address' => '-',
+            ]));
+        }
+
         $ispInfo = IspInfo::first();
 
         $pdf = Pdf::loadView('pdf.invoice', [

@@ -18,9 +18,9 @@ class IspInfoSeeder extends Seeder
             'legal_name' => 'PT Java Indonusa Network',
             'npwp' => '12.345.678.9-012.345',
             'nib' => '1234567890123',
-            'phone_primary' => '021-12345678',
-            'phone_secondary' => '021-87654321',
-            'whatsapp_number' => '08123456789',
+            'phone_primary' => '081357971531',
+            'phone_secondary' => '081357971531',
+            'whatsapp_number' => '081357971531',
             'email' => 'info@javaindonusa.net',
             'website' => 'https://javaindonusa.net',
             'address' => 'Jl. Raya Utama No. 123, Kelurahan Sukamaju',
@@ -50,17 +50,17 @@ class IspInfoSeeder extends Seeder
             'ewallet_accounts' => [
                 [
                     'type' => 'Dana',
-                    'number' => '08123456789',
+                    'number' => '081357971531',
                     'name' => 'Java Indonusa',
                 ],
                 [
                     'type' => 'OVO',
-                    'number' => '08123456789',
+                    'number' => '081357971531',
                     'name' => 'Java Indonusa',
                 ],
                 [
                     'type' => 'GoPay',
-                    'number' => '08123456789',
+                    'number' => '081357971531',
                     'name' => 'Java Indonusa',
                 ],
             ],

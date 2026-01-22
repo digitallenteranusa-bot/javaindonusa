@@ -145,4 +145,65 @@ class User extends Authenticatable
     {
         return $this->role === self::ROLE_FINANCE;
     }
+
+    // ================================================================
+    // PERMISSIONS (RBAC)
+    // ================================================================
+
+    /**
+     * Get all permissions for this user's role
+     */
+    public function getPermissions(): array
+    {
+        return Permission::getForRole($this->role);
+    }
+
+    /**
+     * Check if user has a specific permission
+     */
+    public function hasPermission(string $permission): bool
+    {
+        // Admin has all permissions
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return Permission::roleHas($this->role, $permission);
+    }
+
+    /**
+     * Check if user has any of the given permissions
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user has all of the given permissions
+     */
+    public function hasAllPermissions(array $permissions): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        foreach ($permissions as $permission) {
+            if (!$this->hasPermission($permission)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

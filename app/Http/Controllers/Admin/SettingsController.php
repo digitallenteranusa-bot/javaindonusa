@@ -10,9 +10,12 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\Admin\UpdateService;
+use App\Services\Notification\Channels\WhatsAppChannel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class SettingsController extends Controller
@@ -25,10 +28,143 @@ class SettingsController extends Controller
         $settings = Setting::pluck('value', 'key')->toArray();
         $ispInfo = IspInfo::first();
 
+        // Get WhatsApp config
+        $whatsappConfig = [
+            'driver' => $settings['whatsapp_driver'] ?? 'fonnte',
+            'api_key' => !empty($settings['whatsapp_api_key']) ? '********' : '',
+            'sender' => $settings['whatsapp_sender'] ?? '',
+        ];
+
         return Inertia::render('Admin/Settings/Index', [
             'settings' => $settings,
             'ispInfo' => $ispInfo,
+            'whatsappConfig' => $whatsappConfig,
+            'whatsappDrivers' => WhatsAppChannel::getAvailableDrivers(),
+            'logoUrl' => $this->getLogoUrl(),
         ]);
+    }
+
+    /**
+     * Get current logo URL
+     */
+    protected function getLogoUrl(): ?string
+    {
+        $logoPath = Setting::where('key', 'company_logo')->value('value');
+        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
+            return Storage::url($logoPath);
+        }
+        return null;
+    }
+
+    /**
+     * Upload company logo
+     */
+    public function uploadLogo(Request $request)
+    {
+        $request->validate([
+            'logo' => 'required|image|mimes:png,jpg,jpeg,svg|max:2048',
+        ]);
+
+        // Delete old logo if exists
+        $oldLogo = Setting::where('key', 'company_logo')->value('value');
+        if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
+            Storage::disk('public')->delete($oldLogo);
+        }
+
+        // Store new logo
+        $path = $request->file('logo')->store('logos', 'public');
+
+        Setting::updateOrCreate(
+            ['group' => 'branding', 'key' => 'company_logo'],
+            ['value' => $path]
+        );
+
+        return back()->with('success', 'Logo berhasil diupload');
+    }
+
+    /**
+     * Delete company logo
+     */
+    public function deleteLogo()
+    {
+        $logoPath = Setting::where('key', 'company_logo')->value('value');
+        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
+            Storage::disk('public')->delete($logoPath);
+        }
+
+        Setting::where('key', 'company_logo')->delete();
+
+        return back()->with('success', 'Logo berhasil dihapus');
+    }
+
+    /**
+     * Update WhatsApp configuration
+     */
+    public function updateWhatsApp(Request $request)
+    {
+        $validated = $request->validate([
+            'driver' => ['required', Rule::in(array_keys(WhatsAppChannel::getAvailableDrivers()))],
+            'api_key' => 'nullable|string|max:500',
+            'sender' => 'nullable|string|max:20',
+        ]);
+
+        Setting::updateOrCreate(
+            ['group' => 'notification', 'key' => 'whatsapp_driver'],
+            ['value' => $validated['driver']]
+        );
+
+        // Only update API key if provided (not the masked placeholder)
+        if (!empty($validated['api_key']) && $validated['api_key'] !== '********') {
+            Setting::updateOrCreate(
+                ['group' => 'notification', 'key' => 'whatsapp_api_key'],
+                ['value' => $validated['api_key']]
+            );
+        }
+
+        Setting::updateOrCreate(
+            ['group' => 'notification', 'key' => 'whatsapp_sender'],
+            ['value' => $validated['sender'] ?? '']
+        );
+
+        return back()->with('success', 'Konfigurasi WhatsApp berhasil disimpan');
+    }
+
+    /**
+     * Test WhatsApp connection and send test message
+     */
+    public function testWhatsApp(Request $request)
+    {
+        $validated = $request->validate([
+            'phone' => 'required|string|max:20',
+        ]);
+
+        // Format phone number
+        $phone = preg_replace('/[^0-9]/', '', $validated['phone']);
+        if (str_starts_with($phone, '0')) {
+            $phone = '62' . substr($phone, 1);
+        } elseif (!str_starts_with($phone, '62')) {
+            $phone = '62' . $phone;
+        }
+
+        $channel = new WhatsAppChannel();
+        $result = $channel->send($phone, 'Ini adalah pesan tes dari ISP Billing System. Jika Anda menerima pesan ini, konfigurasi WhatsApp sudah benar.');
+
+        if ($result['success']) {
+            return back()->with('success', 'Pesan tes berhasil dikirim');
+        }
+
+        return back()->with('error', 'Gagal mengirim pesan: ' . ($result['message'] ?? 'Unknown error'));
+    }
+
+    /**
+     * Check WhatsApp connection status
+     */
+    public function checkWhatsAppStatus()
+    {
+        $channel = new WhatsAppChannel();
+        $result = $channel->checkStatus();
+
+        return response()->json($result);
     }
 
     /**

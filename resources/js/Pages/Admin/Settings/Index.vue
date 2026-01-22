@@ -1,14 +1,19 @@
 <script setup>
 import { ref } from 'vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 const props = defineProps({
     settings: Object,
     ispInfo: Object,
+    whatsappConfig: Object,
+    whatsappDrivers: Object,
+    logoUrl: String,
 })
 
 const activeTab = ref('billing')
+const testPhone = ref('')
+const testingWa = ref(false)
 
 // Billing settings form
 const billingForm = useForm({
@@ -31,14 +36,20 @@ const ispForm = useForm({
     bank_accounts: props.ispInfo?.bank_accounts || [{ bank: '', account: '', name: '' }],
 })
 
-// Notification form
+// Notification form (removed SMS)
 const notificationForm = useForm({
     whatsapp_enabled: props.settings.whatsapp_enabled === '1',
-    sms_enabled: props.settings.sms_enabled === '1',
     reminder_days_before: props.settings.reminder_days_before || 3,
     reminder_template: props.settings.reminder_template || '',
     overdue_template: props.settings.overdue_template || '',
     isolation_template: props.settings.isolation_template || '',
+})
+
+// WhatsApp config form
+const whatsappForm = useForm({
+    driver: props.whatsappConfig?.driver || 'fonnte',
+    api_key: props.whatsappConfig?.api_key || '',
+    sender: props.whatsappConfig?.sender || '',
 })
 
 // Mikrotik form
@@ -60,6 +71,11 @@ const genieacsForm = useForm({
     genieacs_sync_interval: props.settings.genieacs_sync_interval || 15,
 })
 
+// Logo upload form
+const logoForm = useForm({
+    logo: null,
+})
+
 // Submit handlers
 const saveBilling = () => {
     billingForm.post('/admin/settings/general')
@@ -73,12 +89,51 @@ const saveNotification = () => {
     notificationForm.post('/admin/settings/notification')
 }
 
+const saveWhatsApp = () => {
+    whatsappForm.post('/admin/settings/whatsapp')
+}
+
+const testWhatsApp = () => {
+    if (!testPhone.value) {
+        alert('Masukkan nomor telepon untuk test')
+        return
+    }
+    testingWa.value = true
+    router.post('/admin/settings/whatsapp/test', {
+        phone: testPhone.value,
+    }, {
+        onFinish: () => {
+            testingWa.value = false
+        },
+    })
+}
+
 const saveMikrotik = () => {
     mikrotikForm.post('/admin/settings/mikrotik')
 }
 
 const saveGenieacs = () => {
     genieacsForm.post('/admin/settings/genieacs')
+}
+
+// Logo handlers
+const handleLogoChange = (event) => {
+    logoForm.logo = event.target.files[0]
+}
+
+const uploadLogo = () => {
+    logoForm.post('/admin/settings/upload-logo', {
+        forceFormData: true,
+        onSuccess: () => {
+            logoForm.reset()
+        },
+    })
+}
+
+const deleteLogo = () => {
+    if (confirm('Yakin ingin menghapus logo?')) {
+        router.delete('/admin/settings/delete-logo')
+    }
 }
 
 // Bank accounts
@@ -93,7 +148,9 @@ const removeBankAccount = (index) => {
 const tabs = [
     { id: 'billing', label: 'Billing', icon: 'M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z' },
     { id: 'isp', label: 'Info ISP', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+    { id: 'branding', label: 'Branding', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
     { id: 'notification', label: 'Notifikasi', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+    { id: 'whatsapp', label: 'WhatsApp', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
     { id: 'mikrotik', label: 'Mikrotik', icon: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01' },
     { id: 'genieacs', label: 'GenieACS', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
 ]
@@ -215,60 +272,31 @@ const tabs = [
                         <div class="grid grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Nama Perusahaan *</label>
-                                <input
-                                    v-model="ispForm.company_name"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
+                                <input v-model="ispForm.company_name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Tagline</label>
-                                <input
-                                    v-model="ispForm.tagline"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
+                                <input v-model="ispForm.tagline" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Telepon *</label>
-                                <input
-                                    v-model="ispForm.phone"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
+                                <input v-model="ispForm.phone" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <input
-                                    v-model="ispForm.email"
-                                    type="email"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
+                                <input v-model="ispForm.email" type="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                                <input
-                                    v-model="ispForm.website"
-                                    type="url"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
+                                <input v-model="ispForm.website" type="url" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Jam Operasional</label>
-                                <input
-                                    v-model="ispForm.operational_hours"
-                                    type="text"
-                                    placeholder="08:00 - 17:00"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
+                                <input v-model="ispForm.operational_hours" type="text" placeholder="08:00 - 17:00" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
-                                <textarea
-                                    v-model="ispForm.address"
-                                    rows="2"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                ></textarea>
+                                <textarea v-model="ispForm.address" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
                             </div>
                         </div>
 
@@ -276,47 +304,16 @@ const tabs = [
                         <div>
                             <div class="flex justify-between items-center mb-3">
                                 <label class="block text-sm font-medium text-gray-700">Rekening Bank</label>
-                                <button
-                                    type="button"
-                                    @click="addBankAccount"
-                                    class="text-blue-600 text-sm hover:underline"
-                                >
-                                    + Tambah Rekening
-                                </button>
+                                <button type="button" @click="addBankAccount" class="text-blue-600 text-sm hover:underline">+ Tambah Rekening</button>
                             </div>
-
                             <div class="space-y-3">
-                                <div
-                                    v-for="(account, index) in ispForm.bank_accounts"
-                                    :key="index"
-                                    class="flex gap-3 items-start p-4 bg-gray-50 rounded-lg"
-                                >
+                                <div v-for="(account, index) in ispForm.bank_accounts" :key="index" class="flex gap-3 items-start p-4 bg-gray-50 rounded-lg">
                                     <div class="flex-1 grid grid-cols-3 gap-3">
-                                        <input
-                                            v-model="account.bank"
-                                            type="text"
-                                            placeholder="Nama Bank"
-                                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                                        >
-                                        <input
-                                            v-model="account.account"
-                                            type="text"
-                                            placeholder="No. Rekening"
-                                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                                        >
-                                        <input
-                                            v-model="account.name"
-                                            type="text"
-                                            placeholder="Atas Nama"
-                                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                                        >
+                                        <input v-model="account.bank" type="text" placeholder="Nama Bank" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        <input v-model="account.account" type="text" placeholder="No. Rekening" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        <input v-model="account.name" type="text" placeholder="Atas Nama" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
                                     </div>
-                                    <button
-                                        v-if="ispForm.bank_accounts.length > 1"
-                                        type="button"
-                                        @click="removeBankAccount(index)"
-                                        class="text-red-500 hover:text-red-700"
-                                    >
+                                    <button v-if="ispForm.bank_accounts.length > 1" type="button" @click="removeBankAccount(index)" class="text-red-500 hover:text-red-700">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
@@ -326,15 +323,56 @@ const tabs = [
                         </div>
 
                         <div class="flex justify-end">
-                            <button
-                                type="submit"
-                                :disabled="ispForm.processing"
-                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                            >
+                            <button type="submit" :disabled="ispForm.processing" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                                 {{ ispForm.processing ? 'Menyimpan...' : 'Simpan' }}
                             </button>
                         </div>
                     </form>
+                </div>
+
+                <!-- Branding / Logo -->
+                <div v-if="activeTab === 'branding'" class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold mb-6">Branding & Logo</h2>
+
+                    <div class="space-y-6">
+                        <!-- Current Logo -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-3">Logo Perusahaan</label>
+                            <div class="flex items-start gap-6">
+                                <div class="w-40 h-40 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                                    <img v-if="logoUrl" :src="logoUrl" alt="Logo" class="max-w-full max-h-full object-contain">
+                                    <div v-else class="text-gray-400 text-center">
+                                        <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        <p class="text-sm mt-2">Belum ada logo</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <input type="file" @change="handleLogoChange" accept="image/png,image/jpeg,image/svg+xml" class="block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                    <p class="text-xs text-gray-500">Format: PNG, JPG, SVG. Maksimal 2MB.</p>
+                                    <div class="flex gap-2">
+                                        <button @click="uploadLogo" :disabled="!logoForm.logo || logoForm.processing" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm">
+                                            {{ logoForm.processing ? 'Mengupload...' : 'Upload Logo' }}
+                                        </button>
+                                        <button v-if="logoUrl" @click="deleteLogo" class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm">
+                                            Hapus Logo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                            <p>Logo akan ditampilkan pada:</p>
+                            <ul class="list-disc list-inside mt-1">
+                                <li>Header aplikasi</li>
+                                <li>Invoice PDF</li>
+                                <li>Kwitansi pembayaran</li>
+                                <li>Portal pelanggan</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Notification Settings -->
@@ -344,72 +382,81 @@ const tabs = [
                     <form @submit.prevent="saveNotification" class="space-y-6">
                         <div class="flex gap-6">
                             <label class="flex items-center gap-2">
-                                <input
-                                    v-model="notificationForm.whatsapp_enabled"
-                                    type="checkbox"
-                                    class="w-4 h-4 text-blue-600 rounded"
-                                >
+                                <input v-model="notificationForm.whatsapp_enabled" type="checkbox" class="w-4 h-4 text-blue-600 rounded">
                                 <span>WhatsApp Aktif</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input
-                                    v-model="notificationForm.sms_enabled"
-                                    type="checkbox"
-                                    class="w-4 h-4 text-blue-600 rounded"
-                                >
-                                <span>SMS Aktif</span>
                             </label>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Kirim Pengingat H- (Hari)</label>
-                            <input
-                                v-model="notificationForm.reminder_days_before"
-                                type="number"
-                                min="1"
-                                max="14"
-                                class="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            >
+                            <input v-model="notificationForm.reminder_days_before" type="number" min="1" max="14" class="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Pengingat</label>
-                            <textarea
-                                v-model="notificationForm.reminder_template"
-                                rows="3"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Gunakan {nama}, {nominal}, {jatuh_tempo} sebagai variabel"
-                            ></textarea>
+                            <textarea v-model="notificationForm.reminder_template" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Gunakan {nama}, {nominal}, {jatuh_tempo} sebagai variabel"></textarea>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Overdue</label>
-                            <textarea
-                                v-model="notificationForm.overdue_template"
-                                rows="3"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            ></textarea>
+                            <textarea v-model="notificationForm.overdue_template" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Isolasi</label>
-                            <textarea
-                                v-model="notificationForm.isolation_template"
-                                rows="3"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            ></textarea>
+                            <textarea v-model="notificationForm.isolation_template" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
                         </div>
 
                         <div class="flex justify-end">
-                            <button
-                                type="submit"
-                                :disabled="notificationForm.processing"
-                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                            >
+                            <button type="submit" :disabled="notificationForm.processing" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                                 {{ notificationForm.processing ? 'Menyimpan...' : 'Simpan' }}
                             </button>
                         </div>
                     </form>
+                </div>
+
+                <!-- WhatsApp Config -->
+                <div v-if="activeTab === 'whatsapp'" class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold mb-6">Konfigurasi WhatsApp Gateway</h2>
+
+                    <form @submit.prevent="saveWhatsApp" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Provider / Driver</label>
+                            <select v-model="whatsappForm.driver" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option v-for="(info, driver) in whatsappDrivers" :key="driver" :value="driver">
+                                    {{ info.name }} - {{ info.description }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div v-if="whatsappForm.driver !== 'manual'">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">API Key / Token</label>
+                            <input v-model="whatsappForm.api_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Masukkan API key dari provider">
+                            <p class="text-xs text-gray-500 mt-1">Kosongkan jika tidak ingin mengubah</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nomor Pengirim</label>
+                            <input v-model="whatsappForm.sender" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="628123456789">
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" :disabled="whatsappForm.processing" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                                {{ whatsappForm.processing ? 'Menyimpan...' : 'Simpan Konfigurasi' }}
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Test WhatsApp -->
+                    <div class="mt-8 pt-6 border-t">
+                        <h3 class="font-semibold mb-4">Test Kirim Pesan</h3>
+                        <div class="flex gap-3">
+                            <input v-model="testPhone" type="text" placeholder="Nomor tujuan (08123456789)" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <button @click="testWhatsApp" :disabled="testingWa" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                                {{ testingWa ? 'Mengirim...' : 'Kirim Test' }}
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Mikrotik Settings -->
@@ -419,19 +466,11 @@ const tabs = [
                     <form @submit.prevent="saveMikrotik" class="space-y-6">
                         <div class="flex gap-6">
                             <label class="flex items-center gap-2">
-                                <input
-                                    v-model="mikrotikForm.mikrotik_auto_isolate"
-                                    type="checkbox"
-                                    class="w-4 h-4 text-blue-600 rounded"
-                                >
+                                <input v-model="mikrotikForm.mikrotik_auto_isolate" type="checkbox" class="w-4 h-4 text-blue-600 rounded">
                                 <span>Auto Isolasi</span>
                             </label>
                             <label class="flex items-center gap-2">
-                                <input
-                                    v-model="mikrotikForm.mikrotik_auto_reopen"
-                                    type="checkbox"
-                                    class="w-4 h-4 text-blue-600 rounded"
-                                >
+                                <input v-model="mikrotikForm.mikrotik_auto_reopen" type="checkbox" class="w-4 h-4 text-blue-600 rounded">
                                 <span>Auto Buka Isolasi</span>
                             </label>
                         </div>
@@ -439,37 +478,23 @@ const tabs = [
                         <div class="grid grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Profile Isolasi</label>
-                                <input
-                                    v-model="mikrotikForm.isolation_profile"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="isolated"
-                                >
+                                <input v-model="mikrotikForm.isolation_profile" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="isolated">
                                 <p class="text-xs text-gray-500 mt-1">Nama PPPoE profile untuk pelanggan terisolasi</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Address List Isolasi</label>
-                                <input
-                                    v-model="mikrotikForm.isolation_address_list"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="ISOLIR"
-                                >
+                                <input v-model="mikrotikForm.isolation_address_list" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="ISOLIR">
                                 <p class="text-xs text-gray-500 mt-1">Nama address list untuk IP terisolasi</p>
                             </div>
                         </div>
 
                         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
                             <p class="font-medium">Perhatian:</p>
-                            <p>Pastikan koneksi ke Mikrotik sudah dikonfigurasi di file .env dengan benar.</p>
+                            <p>Pastikan koneksi ke Mikrotik sudah dikonfigurasi di halaman Router.</p>
                         </div>
 
                         <div class="flex justify-end">
-                            <button
-                                type="submit"
-                                :disabled="mikrotikForm.processing"
-                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                            >
+                            <button type="submit" :disabled="mikrotikForm.processing" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                                 {{ mikrotikForm.processing ? 'Menyimpan...' : 'Simpan' }}
                             </button>
                         </div>
@@ -479,18 +504,13 @@ const tabs = [
                 <!-- GenieACS Settings -->
                 <div v-if="activeTab === 'genieacs'" class="bg-white rounded-xl shadow-sm p-6">
                     <div class="flex items-center gap-3 mb-6">
-                        <img src="/img/acs.png" alt="GenieACS" class="w-10 h-10">
                         <h2 class="text-lg font-semibold">Pengaturan GenieACS (TR-069)</h2>
                     </div>
 
                     <form @submit.prevent="saveGenieacs" class="space-y-6">
                         <div class="flex gap-6">
                             <label class="flex items-center gap-2">
-                                <input
-                                    v-model="genieacsForm.genieacs_enabled"
-                                    type="checkbox"
-                                    class="w-4 h-4 text-blue-600 rounded"
-                                >
+                                <input v-model="genieacsForm.genieacs_enabled" type="checkbox" class="w-4 h-4 text-blue-600 rounded">
                                 <span>GenieACS Aktif</span>
                             </label>
                         </div>
@@ -498,74 +518,32 @@ const tabs = [
                         <div class="grid grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">NBI URL</label>
-                                <input
-                                    v-model="genieacsForm.genieacs_nbi_url"
-                                    type="url"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="http://localhost:7557"
-                                >
-                                <p class="text-xs text-gray-500 mt-1">URL NBI API GenieACS</p>
+                                <input v-model="genieacsForm.genieacs_nbi_url" type="url" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="http://localhost:7557">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">UI URL</label>
-                                <input
-                                    v-model="genieacsForm.genieacs_ui_url"
-                                    type="url"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="http://localhost:3000"
-                                >
-                                <p class="text-xs text-gray-500 mt-1">URL Web UI GenieACS</p>
+                                <input v-model="genieacsForm.genieacs_ui_url" type="url" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="http://localhost:3000">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">FS URL</label>
-                                <input
-                                    v-model="genieacsForm.genieacs_fs_url"
-                                    type="url"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="http://localhost:7567"
-                                >
-                                <p class="text-xs text-gray-500 mt-1">URL File Server GenieACS</p>
+                                <input v-model="genieacsForm.genieacs_fs_url" type="url" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="http://localhost:7567">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Interval Sinkronisasi (menit)</label>
-                                <input
-                                    v-model="genieacsForm.genieacs_sync_interval"
-                                    type="number"
-                                    min="5"
-                                    max="60"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
+                                <input v-model="genieacsForm.genieacs_sync_interval" type="number" min="5" max="60" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                                <input
-                                    v-model="genieacsForm.genieacs_username"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
+                                <input v-model="genieacsForm.genieacs_username" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                <input
-                                    v-model="genieacsForm.genieacs_password"
-                                    type="password"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Kosongkan jika tidak ingin mengubah"
-                                >
+                                <input v-model="genieacsForm.genieacs_password" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan jika tidak ingin mengubah">
                             </div>
                         </div>
 
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                            <p class="font-medium">Informasi:</p>
-                            <p>GenieACS digunakan untuk manajemen perangkat CPE (ONT/Router) via protokol TR-069.</p>
-                        </div>
-
                         <div class="flex justify-end">
-                            <button
-                                type="submit"
-                                :disabled="genieacsForm.processing"
-                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                            >
+                            <button type="submit" :disabled="genieacsForm.processing" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                                 {{ genieacsForm.processing ? 'Menyimpan...' : 'Simpan' }}
                             </button>
                         </div>

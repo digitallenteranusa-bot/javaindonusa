@@ -15,6 +15,12 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\DeviceController;
 use App\Http\Controllers\Admin\AdminAuditLogController;
+use App\Http\Controllers\Admin\OdpController;
+use App\Http\Controllers\Admin\OltController;
+use App\Http\Controllers\Admin\RadiusServerController;
+use App\Http\Controllers\Admin\VpnController;
+use App\Http\Controllers\Admin\MappingController;
+use App\Http\Controllers\Admin\RoleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -239,5 +245,70 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/audit-logs/recent', [AdminAuditLogController::class, 'recent'])->name('audit-logs.recent');
     Route::get('/audit-logs/statistics', [AdminAuditLogController::class, 'statistics'])->name('audit-logs.statistics');
     Route::get('/audit-logs/{auditLog}', [AdminAuditLogController::class, 'show'])->name('audit-logs.show');
+
+    // ================================================================
+    // ODP (Optical Distribution Point)
+    // ================================================================
+    Route::resource('odps', OdpController::class);
+    Route::post('/odps/{odp}/toggle-active', [OdpController::class, 'toggleActive'])
+        ->name('odps.toggle-active');
+    Route::get('/odps-select', [OdpController::class, 'getForSelect'])->name('odps.select');
+
+    // ================================================================
+    // OLT (Optical Line Terminal)
+    // ================================================================
+    Route::resource('olts', OltController::class);
+    Route::post('/olts/{olt}/check-connection', [OltController::class, 'checkConnection'])
+        ->name('olts.check-connection');
+    Route::post('/olts/{olt}/update-status', [OltController::class, 'updateStatus'])
+        ->name('olts.update-status');
+
+    // ================================================================
+    // RADIUS SERVER (Placeholder)
+    // ================================================================
+    Route::resource('radius-servers', RadiusServerController::class);
+    Route::post('/radius-servers/{radiusServer}/test-connection', [RadiusServerController::class, 'testConnection'])
+        ->name('radius-servers.test-connection');
+
+    // ================================================================
+    // VPN CONFIG
+    // ================================================================
+    Route::get('/routers/{router}/vpn', [VpnController::class, 'index'])->name('routers.vpn');
+    Route::post('/routers/{router}/vpn/{protocol}/generate', [VpnController::class, 'generate'])
+        ->name('routers.vpn.generate');
+    Route::get('/routers/{router}/vpn/{protocol}/download', [VpnController::class, 'download'])
+        ->name('routers.vpn.download');
+
+    // ================================================================
+    // MAPPING (Customer & ODP Map)
+    // ================================================================
+    Route::get('/mapping', [MappingController::class, 'index'])->name('mapping.index');
+    Route::get('/mapping/customers', [MappingController::class, 'getCustomers'])->name('mapping.customers');
+    Route::get('/mapping/odps', [MappingController::class, 'getOdps'])->name('mapping.odps');
+    Route::post('/mapping/customers/{customer}/location', [MappingController::class, 'updateCustomerLocation'])
+        ->name('mapping.customers.location');
+    Route::post('/mapping/odps/{odp}/location', [MappingController::class, 'updateOdpLocation'])
+        ->name('mapping.odps.location');
+
+    // ================================================================
+    // ROLES & PERMISSIONS
+    // ================================================================
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+    Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+    Route::post('/roles/{role}/reset', [RoleController::class, 'reset'])->name('roles.reset');
+
+    // ================================================================
+    // SETTINGS (Additional)
+    // ================================================================
+    Route::post('/settings/upload-logo', [SettingsController::class, 'uploadLogo'])
+        ->name('settings.upload-logo');
+    Route::delete('/settings/delete-logo', [SettingsController::class, 'deleteLogo'])
+        ->name('settings.delete-logo');
+    Route::post('/settings/whatsapp', [SettingsController::class, 'updateWhatsApp'])
+        ->name('settings.whatsapp');
+    Route::post('/settings/whatsapp/test', [SettingsController::class, 'testWhatsApp'])
+        ->name('settings.whatsapp.test');
+    Route::get('/settings/whatsapp/status', [SettingsController::class, 'checkWhatsAppStatus'])
+        ->name('settings.whatsapp.status');
 
 });

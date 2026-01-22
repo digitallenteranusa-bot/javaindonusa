@@ -17,6 +17,10 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Seeding ISP Info...');
         $this->call(IspInfoSeeder::class);
 
+        // 1.5 Permissions - RBAC permissions
+        $this->command->info('Seeding Permissions...');
+        $this->call(PermissionSeeder::class);
+
         // 2. Users - Admin, Collectors, Technicians
         $this->command->info('Seeding Users...');
         $this->call(UserSeeder::class);
@@ -68,6 +72,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('');
         $this->command->info('Data Summary:');
         $this->command->info('- 1 ISP Info record');
+        $this->command->info('- Permissions & Role defaults');
         $this->command->info('- 9 Users (2 admin, 5 collectors, 2 technicians)');
         $this->command->info('- 5 Routers');
         $this->command->info('- 7 Packages');

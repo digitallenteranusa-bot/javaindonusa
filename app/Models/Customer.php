@@ -27,6 +27,7 @@ class Customer extends Model
         'package_id',
         'area_id',
         'router_id',
+        'odp_id',
         'collector_id',
         'pppoe_username',
         'pppoe_password',
@@ -140,6 +141,11 @@ class Customer extends Model
     public function device(): HasOne
     {
         return $this->hasOne(CustomerDevice::class)->latestOfMany();
+    }
+
+    public function odp(): BelongsTo
+    {
+        return $this->belongsTo(Odp::class);
     }
 
     // ================================================================

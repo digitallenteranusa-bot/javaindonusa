@@ -9,7 +9,6 @@ use App\Models\IspInfo;
 use App\Models\Setting;
 use App\Models\BillingLog;
 use App\Services\Notification\Channels\WhatsAppChannel;
-use App\Services\Notification\Channels\SmsChannel;
 use App\Jobs\SendNotificationJob;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -17,13 +16,11 @@ use Illuminate\Support\Facades\Mail;
 class NotificationService
 {
     protected WhatsAppChannel $whatsapp;
-    protected SmsChannel $sms;
     protected ?IspInfo $ispInfo;
 
-    public function __construct(WhatsAppChannel $whatsapp, SmsChannel $sms)
+    public function __construct(WhatsAppChannel $whatsapp)
     {
         $this->whatsapp = $whatsapp;
-        $this->sms = $sms;
         $this->ispInfo = IspInfo::getCached();
     }
 
@@ -49,32 +46,6 @@ class NotificationService
             return $result;
         } catch (\Exception $e) {
             Log::error('WhatsApp send failed', [
-                'phone' => $phone,
-                'error' => $e->getMessage(),
-            ]);
-
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Send SMS message
-     */
-    public function sendSms(string $phone, string $message): array
-    {
-        try {
-            if (!$this->isSmsEnabled()) {
-                return ['success' => false, 'message' => 'SMS notifications disabled'];
-            }
-
-            $phone = $this->normalizePhone($phone);
-            $result = $this->sms->send($phone, $message);
-
-            $this->logNotification('sms', $phone, $message, $result['success']);
-
-            return $result;
-        } catch (\Exception $e) {
-            Log::error('SMS send failed', [
                 'phone' => $phone,
                 'error' => $e->getMessage(),
             ]);
@@ -139,14 +110,7 @@ class NotificationService
     {
         $message = $this->buildInvoiceMessage($customer, $invoice);
 
-        // Try WhatsApp first, fallback to SMS
-        $result = $this->sendWhatsApp($customer->phone, $message);
-
-        if (!$result['success'] && $this->isSmsEnabled()) {
-            $result = $this->sendSms($customer->phone, $this->shortenMessage($message));
-        }
-
-        return $result;
+        return $this->sendWhatsApp($customer->phone, $message);
     }
 
     /**
@@ -156,13 +120,7 @@ class NotificationService
     {
         $message = $this->buildReminderMessage($customer, $daysBeforeDue);
 
-        $result = $this->sendWhatsApp($customer->phone, $message);
-
-        if (!$result['success'] && $this->isSmsEnabled()) {
-            $result = $this->sendSms($customer->phone, $this->shortenMessage($message));
-        }
-
-        return $result;
+        return $this->sendWhatsApp($customer->phone, $message);
     }
 
     /**
@@ -182,14 +140,7 @@ class NotificationService
     {
         $message = $this->buildIsolationMessage($customer);
 
-        $result = $this->sendWhatsApp($customer->phone, $message);
-
-        // Also send SMS for isolation (important notice)
-        if ($this->isSmsEnabled()) {
-            $this->sendSms($customer->phone, $this->shortenMessage($message));
-        }
-
-        return $result;
+        return $this->sendWhatsApp($customer->phone, $message);
     }
 
     /**
@@ -453,11 +404,6 @@ class NotificationService
     protected function isWhatsAppEnabled(): bool
     {
         return Setting::getValue('notification', 'whatsapp_enabled', true);
-    }
-
-    protected function isSmsEnabled(): bool
-    {
-        return Setting::getValue('notification', 'sms_enabled', false);
     }
 
     protected function isEmailEnabled(): bool

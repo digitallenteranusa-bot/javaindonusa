@@ -2,6 +2,7 @@
 
 namespace App\Services\Notification\Channels;
 
+use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -14,9 +15,10 @@ class WhatsAppChannel
 
     public function __construct()
     {
-        $this->driver = config('notification.whatsapp.driver', 'fonnte');
-        $this->apiKey = config('notification.whatsapp.api_key', '');
-        $this->sender = config('notification.whatsapp.sender');
+        // Read from database first, fallback to config
+        $this->driver = $this->getSetting('whatsapp_driver') ?? config('notification.whatsapp.driver', 'fonnte');
+        $this->apiKey = $this->getSetting('whatsapp_api_key') ?? config('notification.whatsapp.api_key', '');
+        $this->sender = $this->getSetting('whatsapp_sender') ?? config('notification.whatsapp.sender');
 
         $this->baseUrl = match ($this->driver) {
             'fonnte' => 'https://api.fonnte.com',
@@ -26,6 +28,14 @@ class WhatsAppChannel
             'manual' => '',
             default => '',
         };
+    }
+
+    /**
+     * Get setting value from database
+     */
+    protected function getSetting(string $key): ?string
+    {
+        return Setting::where('key', $key)->value('value');
     }
 
     /**

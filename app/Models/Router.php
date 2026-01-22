@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -28,6 +29,7 @@ class Router extends Model
         'cpu_load',
         'memory_usage',
         'notes',
+        'radius_server_id',
     ];
 
     protected $hidden = [
@@ -57,6 +59,16 @@ class Router extends Model
     public function areas(): HasMany
     {
         return $this->hasMany(Area::class);
+    }
+
+    public function radiusServer(): BelongsTo
+    {
+        return $this->belongsTo(RadiusServer::class);
+    }
+
+    public function vpnConfigs(): HasMany
+    {
+        return $this->hasMany(VpnConfig::class);
     }
 
     // ================================================================

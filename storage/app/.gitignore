@@ -1,0 +1,4 @@
+*
+!public/
+!vpn-templates/
+!.gitignore

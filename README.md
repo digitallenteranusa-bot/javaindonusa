@@ -6,7 +6,8 @@ Sistem Billing ISP lengkap dengan integrasi Mikrotik API, GenieACS (TR-069), Sis
 
 | File | Deskripsi |
 |------|-----------|
-| [01_INSTALASI.md](docs/01_INSTALASI.md) | **Panduan instalasi lengkap** |
+| [01_INSTALASI.md](docs/01_INSTALASI.md) | **Panduan instalasi Linux (Production)** |
+| [02_INSTALASI_WINDOWS.md](docs/02_INSTALASI_WINDOWS.md) | **Panduan instalasi Windows (Development)** |
 | [02_ALUR_INTEGRASI.md](docs/02_ALUR_INTEGRASI.md) | Alur integrasi Mikrotik API & GenieACS |
 | [03_LOGIKA_TAGIHAN.md](docs/03_LOGIKA_TAGIHAN.md) | Algoritma invoice & pembayaran |
 | [04_STRUKTUR_FOLDER.md](docs/04_STRUKTUR_FOLDER.md) | Struktur folder Laravel project |
@@ -53,7 +54,7 @@ Sistem Billing ISP lengkap dengan integrasi Mikrotik API, GenieACS (TR-069), Sis
 
 ### 5. Manajemen Kas (Petty Cash)
 - Input pengeluaran dengan foto nota
-- Kategori: Bensin, Makan, Transport, Pulsa, Parkir, Lainnya
+- Field: Jumlah, Keterangan, Bukti Foto
 - Verifikasi admin sebelum potong setoran
 - Kalkulasi otomatis: Tagihan Masuk - Belanja = Harus Setor
 - Laporan harian dan bulanan (PDF)
@@ -79,9 +80,28 @@ Sistem Billing ISP lengkap dengan integrasi Mikrotik API, GenieACS (TR-069), Sis
 
 ### 9. Notifikasi
 - WhatsApp (reminder, isolir, buka akses)
-- SMS
-- Email
-- Push notification
+- Konfigurasi WhatsApp via UI (Settings > WhatsApp)
+- Support driver: Fonnte, WaBlas, WAHA, Custom
+
+### 10. Manajemen FTTH (Fiber To The Home) - BARU
+- **ODP** (Optical Distribution Point) - Manajemen titik distribusi fiber
+- **OLT** (Optical Line Terminal) - Manajemen perangkat OLT
+- **Mapping** - Peta interaktif pelanggan & ODP dengan Leaflet.js
+- Radius Server (placeholder)
+
+### 11. VPN Script Generator - BARU
+- Generate script VPN untuk Mikrotik router
+- Protokol: L2TP/IPSec, PPTP, SSTP
+- Support RouterOS v6 dan v7
+
+### 12. Roles & Permissions (RBAC) - BARU
+- Manajemen hak akses per role
+- Assign/revoke permission
+- Reset ke default permissions
+
+### 13. Customizable Branding - BARU
+- Upload logo ISP
+- Logo tampil di invoice PDF, receipt, dan portal
 
 ## Tech Stack
 
@@ -196,12 +216,21 @@ Jadwal otomatis:
 ## Struktur URL
 
 ### Admin
-- `/dashboard` - Dashboard admin
-- `/customers` - Manajemen pelanggan
-- `/invoices` - Manajemen invoice
-- `/payments` - Manajemen pembayaran
-- `/routers` - Manajemen router
-- `/reports` - Laporan
+- `/admin` - Dashboard admin
+- `/admin/customers` - Manajemen pelanggan
+- `/admin/invoices` - Manajemen invoice
+- `/admin/payments` - Manajemen pembayaran
+- `/admin/routers` - Manajemen router
+- `/admin/routers/{id}/vpn` - VPN script generator
+- `/admin/odps` - Manajemen ODP (FTTH)
+- `/admin/olts` - Manajemen OLT (FTTH)
+- `/admin/radius-servers` - Manajemen Radius Server
+- `/admin/mapping` - Peta pelanggan & ODP
+- `/admin/reports` - Laporan
+- `/admin/audit-logs` - Audit log
+- `/admin/roles` - Roles & Permissions
+- `/admin/settings` - Pengaturan (ISP Info, Logo, WhatsApp, Mikrotik, GenieACS)
+- `/admin/system` - System Info & Backup
 
 ### Penagih
 - `/collector` - Dashboard penagih

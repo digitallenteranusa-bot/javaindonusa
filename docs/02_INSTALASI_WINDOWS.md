@@ -495,5 +495,167 @@ C:\laragon\www\billing\
 
 ---
 
+## Fitur Baru (v1.1)
+
+### Struktur Menu Admin
+
+```
+Admin Panel (/admin)
+├── Dashboard
+├── Pelanggan
+│   ├── Daftar Pelanggan
+│   └── Mapping (Peta)
+├── Tagihan
+│   ├── Invoice
+│   └── Pembayaran
+├── Master Data
+│   ├── Paket
+│   ├── Area
+│   ├── Router
+│   │   └── VPN Config (per router)
+│   ├── ODP (Baru)
+│   ├── OLT (Baru)
+│   └── Radius Server (Baru)
+├── Penagih
+│   ├── Daftar Penagih
+│   ├── Pengeluaran
+│   └── Setoran
+├── Perangkat (GenieACS)
+├── Laporan
+├── Audit Log
+├── Pengaturan
+│   ├── ISP Info + Logo Upload
+│   ├── WhatsApp (Baru)
+│   ├── Mikrotik
+│   └── GenieACS
+├── Roles & Permissions (Baru)
+└── System Info
+```
+
+### Modul Baru
+
+#### 1. ODP (Optical Distribution Point)
+Manajemen titik distribusi fiber optik.
+
+```
+URL: http://billing.test/admin/odps
+```
+
+Fitur:
+- CRUD ODP dengan tipe tiang (Sendiri, PLN, Telkom, Bersama, Lainnya)
+- Tracking kapasitas port
+- Koordinat GPS untuk mapping
+- Link ke pelanggan
+
+#### 2. OLT (Optical Line Terminal)
+Manajemen perangkat OLT.
+
+```
+URL: http://billing.test/admin/olts
+```
+
+Fitur:
+- Support tipe: HIOSO, HSGQ, ZTE, VSOL, Lainnya
+- PON ports: 2, 4, 8, 16
+- Cek koneksi & update status
+
+#### 3. Radius Server (Placeholder)
+Manajemen Radius Server.
+
+```
+URL: http://billing.test/admin/radius-servers
+```
+
+#### 4. VPN Script Generator
+Generate script VPN untuk Mikrotik.
+
+```
+URL: http://billing.test/admin/routers/{id}/vpn
+```
+
+Protokol: L2TP/IPSec, PPTP, SSTP
+
+#### 5. Mapping (Peta Interaktif)
+Visualisasi lokasi pelanggan dan ODP.
+
+```
+URL: http://billing.test/admin/mapping
+```
+
+Fitur:
+- Peta dengan Leaflet.js
+- Marker clustering
+- Drag & drop untuk update koordinat
+
+#### 6. Roles & Permissions
+Manajemen hak akses.
+
+```
+URL: http://billing.test/admin/roles
+```
+
+#### 7. WhatsApp Config
+Konfigurasi gateway WhatsApp dari UI.
+
+```
+URL: http://billing.test/admin/settings (Tab WhatsApp)
+```
+
+Driver: Fonnte, WaBlas, WAHA, Custom
+
+#### 8. Logo Upload
+Upload logo ISP untuk branding.
+
+```
+URL: http://billing.test/admin/settings (Tab ISP Info)
+```
+
+### Perubahan Penting
+
+| Fitur | Perubahan |
+|-------|-----------|
+| Hapus Invoice | Tombol hapus di detail invoice (jika belum ada bayaran) |
+| Hapus Router | Tombol hapus di daftar router |
+| Hapus Area | Cascade delete (sub-area ikut terhapus) |
+| Portal Penagih | Admin/superadmin tidak bisa akses |
+| Form Belanja | Kategori dihapus (jumlah, keterangan, foto saja) |
+| Invoice PDF | Handle pelanggan yang sudah dihapus |
+
+### Konfigurasi Awal Setelah Login
+
+1. **Settings > ISP Info**
+   - Isi nama perusahaan, alamat, telepon
+   - Upload logo ISP
+   - Isi rekening bank
+
+2. **Settings > WhatsApp** (Opsional)
+   - Aktifkan WhatsApp notification
+   - Pilih driver (Fonnte, WaBlas, dll)
+   - Masukkan API key
+   - Test kirim pesan
+
+3. **Master Data > Paket**
+   - Tambah paket internet (nama, harga, kecepatan)
+
+4. **Master Data > Area**
+   - Tambah area/wilayah operasional
+
+5. **Master Data > Router** (Jika pakai Mikrotik)
+   - Tambah router dengan IP, username, password
+   - Test koneksi
+
+6. **Master Data > ODP** (Jika pakai FTTH)
+   - Tambah ODP dengan koordinat
+   - Set kapasitas port
+
+7. **Master Data > OLT** (Jika pakai FTTH)
+   - Tambah OLT dengan IP dan kredensial
+
+8. **Roles & Permissions** (Opsional)
+   - Sesuaikan permission per role jika diperlukan
+
+---
+
 *Dokumentasi ini untuk development di Windows*
 *Untuk production, gunakan panduan 01_INSTALASI.md (Linux)*
+*Terakhir diperbarui: Januari 2026*

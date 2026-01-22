@@ -850,10 +850,142 @@ Buka browser dan akses:
 ### 12.3 Konfigurasi Awal (Setelah Login)
 
 1. **Settings > ISP Info** - Isi informasi ISP (nama, alamat, rekening bank)
-2. **Master Data > Paket** - Tambah paket internet
-3. **Master Data > Area** - Tambah area/wilayah
-4. **Master Data > Router** - Tambah router Mikrotik (jika ada)
-5. **Settings > Notifikasi** - Konfigurasi WhatsApp/SMS (jika ada)
+2. **Settings > Upload Logo** - Upload logo ISP untuk tampilan di invoice/receipt
+3. **Settings > WhatsApp** - Konfigurasi gateway WhatsApp untuk notifikasi
+4. **Master Data > Paket** - Tambah paket internet
+5. **Master Data > Area** - Tambah area/wilayah
+6. **Master Data > Router** - Tambah router Mikrotik (jika ada)
+7. **Master Data > ODP** - Tambah ODP jika menggunakan FTTH (opsional)
+8. **Master Data > OLT** - Tambah OLT jika menggunakan FTTH (opsional)
+9. **Roles & Permissions** - Atur hak akses untuk setiap role (opsional)
+
+---
+
+## Fitur Baru (v1.1)
+
+### Modul ODP (Optical Distribution Point)
+Manajemen titik distribusi fiber optik untuk FTTH.
+
+| Menu | URL | Keterangan |
+|------|-----|------------|
+| Daftar ODP | `/admin/odps` | Lihat semua ODP |
+| Tambah ODP | `/admin/odps/create` | Tambah ODP baru |
+
+Fitur:
+- Tipe tiang: Sendiri, PLN, Telkom, Bersama, Lainnya
+- Tracking kapasitas port (terpakai/total)
+- Relasi ke Area
+- Link ke pelanggan
+
+### Modul OLT (Optical Line Terminal)
+Manajemen perangkat OLT untuk FTTH.
+
+| Menu | URL | Keterangan |
+|------|-----|------------|
+| Daftar OLT | `/admin/olts` | Lihat semua OLT |
+| Tambah OLT | `/admin/olts/create` | Tambah OLT baru |
+
+Fitur:
+- Support tipe: HIOSO, HSGQ, ZTE, VSOL, Lainnya
+- PON ports: 2, 4, 8, 16
+- Cek koneksi OLT
+- Status: Active, Inactive, Maintenance
+
+### Modul Radius Server (Placeholder)
+Manajemen Radius Server untuk autentikasi PPPoE.
+
+| Menu | URL | Keterangan |
+|------|-----|------------|
+| Daftar Radius | `/admin/radius-servers` | Lihat semua Radius Server |
+
+### Modul VPN Script Generator
+Generate script VPN untuk Mikrotik router.
+
+| Menu | URL | Keterangan |
+|------|-----|------------|
+| VPN Config | `/admin/routers/{router}/vpn` | Generate VPN script |
+
+Protokol yang didukung:
+- L2TP/IPSec (RouterOS v6 & v7)
+- PPTP
+- SSTP
+
+### Modul Mapping (Peta)
+Peta interaktif untuk visualisasi lokasi pelanggan dan ODP.
+
+| Menu | URL | Keterangan |
+|------|-----|------------|
+| Mapping | `/admin/mapping` | Peta pelanggan & ODP |
+
+Fitur:
+- Leaflet.js dengan marker clustering
+- Update koordinat pelanggan via drag & drop
+- Update koordinat ODP via drag & drop
+- Filter berdasarkan area
+
+### Modul Roles & Permissions
+Manajemen hak akses berbasis role (RBAC).
+
+| Menu | URL | Keterangan |
+|------|-----|------------|
+| Roles | `/admin/roles` | Atur permission per role |
+
+Fitur:
+- Assign/revoke permission per role
+- Reset ke default permissions
+- Permission groups: customers, invoices, payments, dll.
+
+### Pengaturan WhatsApp In-App
+Konfigurasi gateway WhatsApp langsung dari aplikasi.
+
+| Menu | URL | Keterangan |
+|------|-----|------------|
+| Settings > WhatsApp | `/admin/settings` | Tab WhatsApp |
+
+Fitur:
+- Enable/disable WhatsApp
+- Pilih driver: Fonnte, WaBlas, WAHA, Custom
+- Tes kirim pesan
+- Cek status gateway
+
+### Upload Logo ISP
+Upload logo ISP untuk branding.
+
+| Menu | URL | Keterangan |
+|------|-----|------------|
+| Settings > ISP Info | `/admin/settings` | Upload Logo |
+
+Logo akan tampil di:
+- Header admin panel
+- Invoice PDF
+- Receipt PDF
+- Portal pelanggan
+
+### Fitur Hapus Invoice
+Hapus invoice yang salah input (sebelum ada pembayaran).
+
+Syarat:
+- Invoice belum ada pembayaran
+- Invoice status bukan 'paid'
+
+Akses: Halaman detail invoice > Tombol "Hapus Invoice"
+
+### Fitur Hapus Router
+Hapus router Mikrotik dari sistem.
+
+Syarat:
+- Router tidak memiliki pelanggan
+- Router tidak terhubung ke area
+
+Akses: Halaman daftar router > Tombol hapus (ikon trash)
+
+### Perubahan Lainnya
+
+1. **Collector Portal** - Admin/superadmin tidak bisa akses portal penagih
+2. **Hapus Area** - Otomatis menghapus sub-area (cascade delete)
+3. **Invoice PDF** - Penanganan error untuk pelanggan yang sudah dihapus
+4. **Form Belanja Penagih** - Field Kategori dihapus (hanya jumlah, keterangan, foto)
+5. **Kontak Customer Portal** - Dapat diupdate via Settings > ISP Info
 
 ---
 
@@ -1002,9 +1134,12 @@ sudo systemctl restart billing-worker
 - [ ] Firewall sudah dikonfigurasi
 - [ ] Koneksi Mikrotik berhasil (jika digunakan)
 - [ ] Koneksi GenieACS berhasil (jika digunakan)
-- [ ] Notifikasi WhatsApp/SMS berhasil (jika digunakan)
+- [ ] Notifikasi WhatsApp berhasil (jika digunakan)
 - [ ] Password admin sudah diganti
 - [ ] Backup database sudah dijadwalkan
+- [ ] Logo ISP sudah diupload (Settings > ISP Info)
+- [ ] ODP sudah ditambahkan (jika menggunakan FTTH)
+- [ ] OLT sudah dikonfigurasi (jika menggunakan FTTH)
 
 ---
 

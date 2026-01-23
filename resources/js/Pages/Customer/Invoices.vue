@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3'
+import CustomerLayout from '@/Layouts/CustomerLayout.vue'
 
 const props = defineProps({
     customer: Object,
@@ -41,7 +42,8 @@ const getStatusBadge = (status) => {
 <template>
     <Head title="Histori Tagihan" />
 
-    <div class="min-h-screen bg-gray-100">
+    <CustomerLayout :customer="customer">
+        <div class="bg-gray-100 pb-4">
         <!-- Header -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-6">
             <div class="flex items-center gap-3">
@@ -123,5 +125,6 @@ const getStatusBadge = (status) => {
                 />
             </div>
         </div>
-    </div>
+        </div>
+    </CustomerLayout>
 </template>

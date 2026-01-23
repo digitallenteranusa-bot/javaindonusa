@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
+import CustomerLayout from '@/Layouts/CustomerLayout.vue'
 
 const props = defineProps({
     customer: Object,
@@ -56,7 +57,8 @@ const copyToClipboard = (text) => {
 <template>
     <Head title="Portal Pelanggan" />
 
-    <div class="min-h-screen bg-gray-100">
+    <CustomerLayout :customer="customer">
+        <div class="bg-gray-100 pb-4">
         <!-- Header -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
             <div class="px-4 py-6">
@@ -65,9 +67,6 @@ const copyToClipboard = (text) => {
                         <h1 class="text-xl font-bold">Halo, {{ customer?.name ?? '-' }}</h1>
                         <p class="text-blue-100 text-sm mt-1">ID: {{ customer?.customer_id ?? '-' }}</p>
                     </div>
-                    <Link :href="route('customer.logout')" method="post" class="text-sm bg-white/20 px-3 py-1 rounded-full">
-                        Keluar
-                    </Link>
                 </div>
 
                 <!-- Package Info -->
@@ -272,10 +271,6 @@ const copyToClipboard = (text) => {
             </div>
         </div>
 
-        <!-- Footer -->
-        <div class="bg-white border-t border-gray-200 px-4 py-4 text-center">
-            <p class="text-sm text-gray-600">{{ isp_info.company_name }}</p>
-            <p class="text-xs text-gray-400 mt-1">{{ isp_info.tagline }}</p>
         </div>
-    </div>
+    </CustomerLayout>
 </template>

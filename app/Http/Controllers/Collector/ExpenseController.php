@@ -165,10 +165,9 @@ class ExpenseController extends Controller
                 $request->notes
             );
 
-            return back()->with('success', [
-                'message' => 'Request settlement berhasil dibuat',
-                'settlement' => $settlement,
-            ]);
+            $formattedAmount = 'Rp ' . number_format($settlement->actual_amount, 0, ',', '.');
+
+            return back()->with('success', "Request setoran {$formattedAmount} berhasil dibuat. Menunggu verifikasi admin.");
 
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());

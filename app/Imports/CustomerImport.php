@@ -17,10 +17,11 @@ use Maatwebsite\Excel\Concerns\SkipsFailures;
 use Maatwebsite\Excel\Concerns\Importable;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
+use Maatwebsite\Excel\Concerns\WithMapping;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
-class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnError, SkipsOnFailure, WithBatchInserts, WithChunkReading
+class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnError, SkipsOnFailure, WithBatchInserts, WithChunkReading, WithMapping
 {
     use Importable, SkipsErrors, SkipsFailures;
 
@@ -36,6 +37,42 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
         $this->areaCache = Area::pluck('id', 'name')->toArray();
         $this->routerCache = Router::pluck('id', 'name')->toArray();
         $this->collectorCache = User::where('role', 'penagih')->pluck('id', 'name')->toArray();
+    }
+
+    /**
+     * Map/transform row data before processing
+     */
+    public function map($row): array
+    {
+        return [
+            'id_pelanggan' => $row['id_pelanggan'] ?? null,
+            'nama' => $row['nama'] ?? null,
+            'alamat' => $row['alamat'] ?? null,
+            'rt_rw' => $row['rt_rw'] ?? null,
+            'kelurahan' => $row['kelurahan'] ?? null,
+            'kecamatan' => $row['kecamatan'] ?? null,
+            'telepon' => $this->formatPhone($row['telepon'] ?? null),
+            'telepon_alternatif' => $this->formatPhone($row['telepon_alternatif'] ?? null),
+            'email' => $row['email'] ?? null,
+            'nik' => isset($row['nik']) ? (string) $row['nik'] : null,
+            'paket' => $row['paket'] ?? null,
+            'area' => $row['area'] ?? null,
+            'router' => $row['router'] ?? null,
+            'penagih' => $row['penagih'] ?? null,
+            'pppoe_username' => $row['pppoe_username'] ?? null,
+            'pppoe_password' => $row['pppoe_password'] ?? null,
+            'ip_address' => $row['ip_address'] ?? null,
+            'mac_address' => $row['mac_address'] ?? null,
+            'onu_serial' => $row['onu_serial'] ?? null,
+            'status' => $row['status'] ?? 'active',
+            'hutang' => $row['hutang'] ?? 0,
+            'tanggal_gabung' => $row['tanggal_gabung'] ?? null,
+            'tanggal_tagih' => $row['tanggal_tagih'] ?? 1,
+            'tipe_koneksi' => $row['tipe_koneksi'] ?? 'pppoe',
+            'catatan' => $row['catatan'] ?? null,
+            'latitude' => $row['latitude'] ?? null,
+            'longitude' => $row['longitude'] ?? null,
+        ];
     }
 
     /**
@@ -111,9 +148,30 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
     {
         return [
             'nama' => 'required|string|max:100',
-            'telepon' => 'nullable|string|max:20',
+            'telepon' => 'nullable|max:20',
             'email' => 'nullable|email|max:100',
         ];
+    }
+
+    /**
+     * Prepare data before validation
+     */
+    public function prepareForValidation(array $data): array
+    {
+        // Convert phone numbers from numeric to string
+        if (isset($data['telepon']) && is_numeric($data['telepon'])) {
+            $data['telepon'] = $this->formatPhone((string) $data['telepon']);
+        }
+        if (isset($data['telepon_alternatif']) && is_numeric($data['telepon_alternatif'])) {
+            $data['telepon_alternatif'] = $this->formatPhone((string) $data['telepon_alternatif']);
+        }
+
+        // Convert NIK from numeric to string
+        if (isset($data['nik']) && is_numeric($data['nik'])) {
+            $data['nik'] = (string) $data['nik'];
+        }
+
+        return $data;
     }
 
     /**
@@ -234,16 +292,26 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
     /**
      * Format phone number
      */
-    protected function formatPhone(?string $phone): ?string
+    protected function formatPhone($phone): ?string
     {
         if (empty($phone)) return null;
+
+        // Convert to string if numeric
+        $phone = (string) $phone;
 
         // Remove non-numeric characters
         $phone = preg_replace('/[^0-9]/', '', $phone);
 
+        if (empty($phone)) return null;
+
         // Convert 62 prefix to 0
         if (str_starts_with($phone, '62')) {
             $phone = '0' . substr($phone, 2);
+        }
+
+        // If phone doesn't start with 0, add it (likely lost leading zero in Excel)
+        if (!str_starts_with($phone, '0') && strlen($phone) >= 9) {
+            $phone = '0' . $phone;
         }
 
         return $phone;

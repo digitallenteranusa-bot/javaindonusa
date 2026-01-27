@@ -143,17 +143,35 @@ class CollectorService
         User $collector,
         ?string $search = null,
         ?string $status = null,
+        ?string $paymentStatus = null,
         int $perPage = 20
     ) {
         $customerIds = $this->getAssignedCustomerIds($collector);
 
         $query = Customer::whereIn('id', $customerIds)
-            ->where('total_debt', '>', 0)
             ->with(['package', 'area', 'invoices' => function ($q) {
-                $q->whereIn('status', ['pending', 'partial', 'overdue'])
-                    ->orderBy('period_year')
-                    ->orderBy('period_month');
+                $q->whereIn('status', ['pending', 'partial', 'overdue', 'paid'])
+                    ->orderBy('period_year', 'desc')
+                    ->orderBy('period_month', 'desc');
             }]);
+
+        // Filter berdasarkan payment status
+        if ($paymentStatus === 'paid') {
+            // Pelanggan yang sudah lunas (total_debt = 0)
+            $query->where('total_debt', '<=', 0);
+        } elseif ($paymentStatus === 'unpaid') {
+            // Pelanggan yang belum bayar
+            $query->where('total_debt', '>', 0);
+        } elseif ($paymentStatus === 'overdue') {
+            // Pelanggan dengan invoice overdue
+            $query->where('total_debt', '>', 0)
+                ->whereHas('invoices', function ($q) {
+                    $q->where('status', 'overdue');
+                });
+        } else {
+            // Default: semua pelanggan dengan hutang > 0
+            $query->where('total_debt', '>', 0);
+        }
 
         // Filter berdasarkan nama pelanggan
         if ($search) {

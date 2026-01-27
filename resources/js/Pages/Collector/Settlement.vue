@@ -40,15 +40,25 @@ const formatDateTime = (date) => {
     })
 }
 
+// Get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
+}
+
 // Settlement modal
 const showSettlementModal = ref(false)
 const form = useForm({
-    amount: props.pendingSettlement?.must_settle || 0,
+    period_start: getTodayDate(),
+    period_end: getTodayDate(),
+    actual_amount: props.pendingSettlement?.must_settle || 0,
     notes: '',
 })
 
 const openSettlementModal = () => {
-    form.amount = props.pendingSettlement?.must_settle || 0
+    form.period_start = getTodayDate()
+    form.period_end = getTodayDate()
+    form.actual_amount = props.pendingSettlement?.must_settle || 0
     form.notes = ''
     showSettlementModal.value = true
 }
@@ -262,7 +272,7 @@ const canSettle = computed(() => {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah Setoran</label>
                             <input
-                                v-model="form.amount"
+                                v-model="form.actual_amount"
                                 type="number"
                                 readonly
                                 class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-gray-50 text-xl font-semibold text-center"

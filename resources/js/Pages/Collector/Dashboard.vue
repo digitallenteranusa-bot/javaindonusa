@@ -120,9 +120,9 @@ const processPayment = () => {
 // Open WhatsApp
 const openWhatsApp = (customer) => {
     router.post(route('collector.whatsapp', customer.id), {}, {
-        onSuccess: (response) => {
-            if (response.props.whatsapp_url) {
-                window.open(response.props.whatsapp_url, '_blank')
+        onSuccess: (page) => {
+            if (page.props.flash?.whatsapp_url) {
+                window.open(page.props.flash.whatsapp_url, '_blank')
             }
         },
     })

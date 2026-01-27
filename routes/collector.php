@@ -16,6 +16,18 @@ Route::middleware(['auth', 'role:penagih'])->prefix('collector')->name('collecto
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Serve receipt images (protected)
+    Route::get('/receipts/{path}', function ($path) {
+        $fullPath = storage_path('app/public/receipts/' . $path);
+
+        if (!file_exists($fullPath)) {
+            abort(404);
+        }
+
+        $mime = mime_content_type($fullPath);
+        return response()->file($fullPath, ['Content-Type' => $mime]);
+    })->where('path', '.*')->name('receipt');
+
     // Pelanggan
     Route::get('/customers', [DashboardController::class, 'customers'])->name('customers');
     Route::get('/customers/{customer}', [DashboardController::class, 'customerDetail'])->name('customer.detail');

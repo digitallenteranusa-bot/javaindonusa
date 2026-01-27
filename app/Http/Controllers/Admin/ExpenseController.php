@@ -91,7 +91,7 @@ class ExpenseController extends Controller
      */
     public function show(Expense $expense)
     {
-        $expense->load(['user', 'approvedBy']);
+        $expense->load(['user', 'verifiedBy']);
 
         return Inertia::render('Admin/Expense/Show', [
             'expense' => $expense,

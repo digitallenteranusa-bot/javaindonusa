@@ -193,25 +193,27 @@ class PaymentService
     }
 
     /**
-     * Generate unique payment number
+     * Generate unique payment number with locking
      */
     protected function generatePaymentNumber(): string
     {
         $prefix = 'PAY';
         $dateCode = now()->format('Ymd');
 
-        $lastPayment = Payment::where('payment_number', 'like', "{$prefix}{$dateCode}%")
+        // Use database lock to prevent race condition
+        $lastPayment = Payment::where('payment_number', 'like', "{$prefix}-{$dateCode}-%")
+            ->lockForUpdate()
             ->orderBy('payment_number', 'desc')
             ->first();
 
         if ($lastPayment) {
-            $lastNumber = (int) substr($lastPayment->payment_number, -4);
+            $lastNumber = (int) substr($lastPayment->payment_number, -5);
             $newNumber = $lastNumber + 1;
         } else {
             $newNumber = 1;
         }
 
-        return sprintf('%s%s%04d', $prefix, $dateCode, $newNumber);
+        return sprintf('%s-%s-%05d', $prefix, $dateCode, $newNumber);
     }
 
     /**

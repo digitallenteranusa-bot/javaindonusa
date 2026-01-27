@@ -69,14 +69,26 @@ class DashboardController extends Controller
             $collector,
             $request->get('search'),
             $request->get('status'),
+            $request->get('payment_status'),
             20
         );
 
+        // Get stats for display
+        $customerIds = Customer::where('collector_id', $collector->id)->pluck('id')->toArray();
+        $stats = [
+            'total' => count($customerIds),
+            'paid' => Customer::whereIn('id', $customerIds)->where('total_debt', '<=', 0)->count(),
+            'unpaid' => Customer::whereIn('id', $customerIds)->where('total_debt', '>', 0)->count(),
+            'isolated' => Customer::whereIn('id', $customerIds)->where('status', 'isolated')->count(),
+        ];
+
         return Inertia::render('Collector/Customers', [
             'customers' => $customers,
+            'stats' => $stats,
             'filters' => [
                 'search' => $request->get('search'),
                 'status' => $request->get('status'),
+                'payment_status' => $request->get('payment_status'),
             ],
         ]);
     }
@@ -250,10 +262,8 @@ class DashboardController extends Controller
             'notes' => 'WhatsApp reminder sent',
         ]);
 
-        return response()->json([
-            'success' => true,
-            'whatsapp_url' => $whatsappUrl,
-        ]);
+        // Return Inertia redirect with whatsapp_url in flash data
+        return back()->with('whatsapp_url', $whatsappUrl);
     }
 
     /**

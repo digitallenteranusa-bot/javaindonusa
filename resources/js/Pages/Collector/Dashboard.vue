@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { ref, computed, watch } from 'vue'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import CollectorLayout from '@/Layouts/CollectorLayout.vue'
 
 const props = defineProps({
@@ -9,6 +9,15 @@ const props = defineProps({
     dailySummary: Object,
     filters: Object,
 })
+
+const page = usePage()
+
+// Watch for WhatsApp URL in flash
+watch(() => page.props.flash?.whatsapp_url, (url) => {
+    if (url) {
+        window.open(url, '_blank')
+    }
+}, { immediate: true })
 
 const search = ref(props.filters.search || '')
 const statusFilter = ref(props.filters.status || '')
@@ -119,13 +128,7 @@ const processPayment = () => {
 
 // Open WhatsApp
 const openWhatsApp = (customer) => {
-    router.post(route('collector.whatsapp', customer.id), {}, {
-        onSuccess: (page) => {
-            if (page.props.flash?.whatsapp_url) {
-                window.open(page.props.flash.whatsapp_url, '_blank')
-            }
-        },
-    })
+    router.post(route('collector.whatsapp', customer.id))
 }
 
 // Handle file upload

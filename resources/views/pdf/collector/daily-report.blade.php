@@ -36,10 +36,10 @@
             margin-bottom: 20px;
         }
         .info-row {
-            display: flex;
             margin-bottom: 5px;
         }
         .info-label {
+            display: inline-block;
             width: 120px;
             font-weight: bold;
         }
@@ -78,10 +78,15 @@
             margin-top: 20px;
         }
         .summary-row {
-            display: flex;
-            justify-content: space-between;
             padding: 5px 0;
             border-bottom: 1px dotted #ddd;
+            overflow: hidden;
+        }
+        .summary-row span:first-child {
+            float: left;
+        }
+        .summary-row span:last-child {
+            float: right;
         }
         .summary-row:last-child {
             border-bottom: none;
@@ -97,12 +102,15 @@
         }
         .signature-area {
             margin-top: 40px;
-            display: flex;
-            justify-content: space-between;
+            overflow: hidden;
         }
         .signature-box {
             width: 45%;
             text-align: center;
+            float: left;
+        }
+        .signature-box:last-child {
+            float: right;
         }
         .signature-line {
             margin-top: 60px;

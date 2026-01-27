@@ -87,9 +87,19 @@ const handleFileUpload = (event) => {
     transferProof.value = event.target.files[0]
 }
 
-// WhatsApp
+// WhatsApp - generate URL directly on client
 const openWhatsApp = (customer) => {
-    router.post(route('collector.whatsapp', customer.id))
+    let phone = customer.phone?.replace(/[^0-9]/g, '') || ''
+
+    // Convert 08 to 628
+    if (phone.startsWith('0')) {
+        phone = '62' + phone.substring(1)
+    }
+
+    const message = `Yth. Bapak/Ibu ${customer.name},\n\nKami mengingatkan bahwa tagihan internet Anda sebesar ${formatCurrency(customer.total_debt)} belum terbayar.\n\nMohon segera melakukan pembayaran untuk menghindari pemutusan layanan.\n\nTerima kasih.`
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+    window.open(url, '_blank')
 }
 
 // Call customer

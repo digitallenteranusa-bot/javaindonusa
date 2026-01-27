@@ -29,8 +29,10 @@ class Settlement extends Model
         'difference',
         'status',
         'received_by',
+        'verified_by',
         'verified_at',
         'notes',
+        'verification_notes',
     ];
 
     protected function casts(): array
@@ -60,6 +62,8 @@ class Settlement extends Model
     const STATUS_PENDING = 'pending';
     const STATUS_SETTLED = 'settled';
     const STATUS_DISCREPANCY = 'discrepancy';
+    const STATUS_VERIFIED = 'verified';
+    const STATUS_REJECTED = 'rejected';
 
     // ================================================================
     // RELATIONSHIPS
@@ -73,6 +77,11 @@ class Settlement extends Model
     public function receivedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'received_by');
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 
     // ================================================================
@@ -142,6 +151,8 @@ class Settlement extends Model
             self::STATUS_PENDING => 'Menunggu',
             self::STATUS_SETTLED => 'Selesai',
             self::STATUS_DISCREPANCY => 'Selisih',
+            self::STATUS_VERIFIED => 'Terverifikasi',
+            self::STATUS_REJECTED => 'Ditolak',
             default => $this->status,
         };
     }

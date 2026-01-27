@@ -20,6 +20,7 @@ const showOdps = ref(true)
 const selectedArea = ref(props.filters.area_id || '')
 const selectedStatus = ref(props.filters.status || '')
 const loading = ref(false)
+const showSidebar = ref(false) // Hidden by default on mobile
 
 const customerStatuses = {
     active: { label: 'Aktif', color: '#22c55e' },
@@ -226,93 +227,133 @@ const zoomToAll = () => {
             </div>
         </template>
 
-        <div class="flex gap-6">
-            <!-- Sidebar Filters -->
-            <div class="w-64 flex-shrink-0 space-y-4">
-                <!-- Layer Toggle -->
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <h3 class="font-semibold mb-3">Layer</h3>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2">
-                            <input v-model="showCustomers" type="checkbox" class="rounded text-blue-600">
-                            <span class="flex items-center gap-2">
-                                <span class="w-3 h-3 bg-green-500 rounded-full"></span>
-                                Pelanggan ({{ markers.customers.length }})
-                            </span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="showOdps" type="checkbox" class="rounded text-blue-600">
-                            <span class="flex items-center gap-2">
-                                <span class="w-3 h-3 bg-blue-500 rounded"></span>
-                                ODP ({{ markers.odps.length }})
-                            </span>
-                        </label>
-                    </div>
-                </div>
+        <div class="relative">
+            <!-- Mobile Toggle Button -->
+            <button
+                @click="showSidebar = !showSidebar"
+                class="lg:hidden fixed bottom-20 right-4 z-[1000] bg-blue-600 text-white p-3 rounded-full shadow-lg"
+            >
+                <svg v-if="!showSidebar" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
 
-                <!-- Filters -->
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <h3 class="font-semibold mb-3">Filter</h3>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="text-sm text-gray-600">Area</label>
-                            <select
-                                v-model="selectedArea"
-                                class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                            >
-                                <option value="">Semua Area</option>
-                                <option v-for="area in areas" :key="area.id" :value="area.id">
-                                    {{ area.name }}
-                                </option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-600">Status Pelanggan</label>
-                            <select
-                                v-model="selectedStatus"
-                                class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                            >
-                                <option value="">Semua Status</option>
-                                <option v-for="(info, status) in customerStatuses" :key="status" :value="status">
-                                    {{ info.label }}
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+            <!-- Mobile Sidebar Overlay -->
+            <div
+                v-if="showSidebar"
+                class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[999]"
+                @click="showSidebar = false"
+            ></div>
 
-                <!-- Legend -->
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <h3 class="font-semibold mb-3">Legenda</h3>
-                    <div class="space-y-2 text-sm">
-                        <p class="font-medium text-gray-600">Pelanggan:</p>
-                        <div v-for="(info, status) in customerStatuses" :key="status" class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full" :style="{ backgroundColor: info.color }"></span>
-                            <span>{{ info.label }}</span>
-                        </div>
-                        <p class="font-medium text-gray-600 mt-3">ODP (Port Tersedia):</p>
-                        <div class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-green-500 rounded"></span>
-                            <span>Banyak (&lt;70%)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-yellow-500 rounded"></span>
-                            <span>Sedang (70-90%)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-red-500 rounded"></span>
-                            <span>Penuh (&gt;90%)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Map Container -->
-            <div class="flex-1">
+            <div class="flex gap-6">
+                <!-- Sidebar Filters -->
                 <div
-                    ref="mapContainer"
-                    class="w-full h-[calc(100vh-200px)] rounded-xl shadow-sm bg-gray-100"
-                ></div>
+                    :class="[
+                        'w-72 lg:w-64 flex-shrink-0 space-y-4',
+                        'fixed lg:relative inset-y-0 left-0 z-[1000] lg:z-auto',
+                        'bg-gray-100 lg:bg-transparent p-4 lg:p-0',
+                        'transform transition-transform duration-300 ease-in-out',
+                        'overflow-y-auto',
+                        showSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+                    ]"
+                >
+                    <!-- Close button for mobile -->
+                    <div class="lg:hidden flex justify-end mb-2">
+                        <button @click="showSidebar = false" class="p-2 text-gray-500">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Layer Toggle -->
+                    <div class="bg-white rounded-xl shadow-sm p-4">
+                        <h3 class="font-semibold mb-3">Layer</h3>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2">
+                                <input v-model="showCustomers" type="checkbox" class="rounded text-blue-600">
+                                <span class="flex items-center gap-2">
+                                    <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                                    Pelanggan ({{ markers.customers.length }})
+                                </span>
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input v-model="showOdps" type="checkbox" class="rounded text-blue-600">
+                                <span class="flex items-center gap-2">
+                                    <span class="w-3 h-3 bg-blue-500 rounded"></span>
+                                    ODP ({{ markers.odps.length }})
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="bg-white rounded-xl shadow-sm p-4">
+                        <h3 class="font-semibold mb-3">Filter</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-sm text-gray-600">Area</label>
+                                <select
+                                    v-model="selectedArea"
+                                    class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                >
+                                    <option value="">Semua Area</option>
+                                    <option v-for="area in areas" :key="area.id" :value="area.id">
+                                        {{ area.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-600">Status Pelanggan</label>
+                                <select
+                                    v-model="selectedStatus"
+                                    class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                >
+                                    <option value="">Semua Status</option>
+                                    <option v-for="(info, status) in customerStatuses" :key="status" :value="status">
+                                        {{ info.label }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="bg-white rounded-xl shadow-sm p-4">
+                        <h3 class="font-semibold mb-3">Legenda</h3>
+                        <div class="space-y-2 text-sm">
+                            <p class="font-medium text-gray-600">Pelanggan:</p>
+                            <div v-for="(info, status) in customerStatuses" :key="status" class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full" :style="{ backgroundColor: info.color }"></span>
+                                <span>{{ info.label }}</span>
+                            </div>
+                            <p class="font-medium text-gray-600 mt-3">ODP (Port Tersedia):</p>
+                            <div class="flex items-center gap-2">
+                                <span class="w-4 h-4 bg-green-500 rounded"></span>
+                                <span>Banyak (&lt;70%)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-4 h-4 bg-yellow-500 rounded"></span>
+                                <span>Sedang (70-90%)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-4 h-4 bg-red-500 rounded"></span>
+                                <span>Penuh (&gt;90%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Container -->
+                <div class="flex-1 w-full">
+                    <div
+                        ref="mapContainer"
+                        class="w-full h-[calc(100vh-180px)] lg:h-[calc(100vh-200px)] rounded-xl shadow-sm bg-gray-100"
+                    ></div>
+                </div>
             </div>
         </div>
     </AdminLayout>

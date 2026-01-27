@@ -9,9 +9,12 @@ use App\Models\Area;
 use App\Models\Router;
 use App\Models\User;
 use App\Services\Billing\DebtService;
+use App\Imports\CustomerImport;
+use App\Exports\CustomerTemplateExport;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CustomerController extends Controller
 {
@@ -325,5 +328,60 @@ class CustomerController extends Controller
         }
 
         return back()->with('info', 'Hutang sudah sesuai, tidak ada perubahan');
+    }
+
+    /**
+     * Download import template
+     */
+    public function downloadTemplate()
+    {
+        return Excel::download(new CustomerTemplateExport, 'template_import_pelanggan.xlsx');
+    }
+
+    /**
+     * Import customers from Excel
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240', // max 10MB
+        ], [
+            'file.required' => 'File Excel wajib diupload',
+            'file.mimes' => 'Format file harus xlsx, xls, atau csv',
+            'file.max' => 'Ukuran file maksimal 10MB',
+        ]);
+
+        try {
+            $import = new CustomerImport();
+            Excel::import($import, $request->file('file'));
+
+            $failures = $import->failures();
+            $errors = $import->errors();
+
+            $failureCount = count($failures);
+            $errorCount = count($errors);
+
+            if ($failureCount > 0 || $errorCount > 0) {
+                $errorMessages = [];
+
+                foreach ($failures as $failure) {
+                    $errorMessages[] = "Baris {$failure->row()}: " . implode(', ', $failure->errors());
+                }
+
+                foreach ($errors as $error) {
+                    $errorMessages[] = $error->getMessage();
+                }
+
+                // Limit error messages to first 10
+                $errorMessages = array_slice($errorMessages, 0, 10);
+
+                return back()->with('warning', 'Import selesai dengan beberapa error: ' . implode('; ', $errorMessages));
+            }
+
+            return back()->with('success', 'Import pelanggan berhasil!');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal import: ' . $e->getMessage());
+        }
     }
 }

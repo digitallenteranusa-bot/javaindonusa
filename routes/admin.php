@@ -50,6 +50,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->name('customers.write-off-debt');
     Route::post('/customers/{customer}/recalculate-debt', [CustomerController::class, 'recalculateDebt'])
         ->name('customers.recalculate-debt');
+    Route::get('/customers-import-template', [CustomerController::class, 'downloadTemplate'])
+        ->name('customers.import-template');
+    Route::post('/customers-import', [CustomerController::class, 'import'])
+        ->name('customers.import');
 
     // ================================================================
     // PACKAGES (Master Data)

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import debounce from 'lodash/debounce'
 
@@ -16,6 +16,40 @@ const search = ref(props.filters.search || '')
 const statusFilter = ref(props.filters.status || '')
 const areaFilter = ref(props.filters.area_id || '')
 const packageFilter = ref(props.filters.package_id || '')
+
+// Import modal
+const showImportModal = ref(false)
+const importForm = useForm({
+    file: null,
+})
+const fileInput = ref(null)
+
+const openImportModal = () => {
+    showImportModal.value = true
+    importForm.reset()
+}
+
+const closeImportModal = () => {
+    showImportModal.value = false
+    importForm.reset()
+}
+
+const handleFileChange = (e) => {
+    importForm.file = e.target.files[0]
+}
+
+const submitImport = () => {
+    importForm.post('/admin/customers-import', {
+        forceFormData: true,
+        onSuccess: () => {
+            closeImportModal()
+        },
+    })
+}
+
+const downloadTemplate = () => {
+    window.location.href = '/admin/customers-import-template'
+}
 
 // Format currency
 const formatCurrency = (value) => {
@@ -79,15 +113,26 @@ const deleteCustomer = (customer) => {
         <template #header>
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-gray-900">Pelanggan</h1>
-                <Link
-                    href="/admin/customers/create"
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Tambah Pelanggan
-                </Link>
+                <div class="flex items-center gap-2">
+                    <button
+                        @click="openImportModal"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        Import Excel
+                    </button>
+                    <Link
+                        href="/admin/customers/create"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Tambah Pelanggan
+                    </Link>
+                </div>
             </div>
         </template>
 
@@ -245,5 +290,122 @@ const deleteCustomer = (customer) => {
                 </div>
             </div>
         </div>
+
+        <!-- Import Modal -->
+        <Teleport to="body">
+            <div v-if="showImportModal" class="fixed inset-0 z-50 overflow-y-auto">
+                <div class="flex items-center justify-center min-h-screen px-4">
+                    <div class="fixed inset-0 bg-black opacity-50" @click="closeImportModal"></div>
+
+                    <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Import Pelanggan dari Excel</h3>
+                            <button @click="closeImportModal" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Download Template -->
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div class="flex items-start gap-3">
+                                    <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <div>
+                                        <p class="text-sm text-blue-800">Download template Excel terlebih dahulu untuk memastikan format data yang benar.</p>
+                                        <button
+                                            @click="downloadTemplate"
+                                            class="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                            Download Template
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- File Upload -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">File Excel</label>
+                                <div
+                                    class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors"
+                                    :class="{ 'border-blue-500 bg-blue-50': importForm.file }"
+                                >
+                                    <input
+                                        ref="fileInput"
+                                        type="file"
+                                        accept=".xlsx,.xls,.csv"
+                                        @change="handleFileChange"
+                                        class="hidden"
+                                    >
+                                    <div v-if="!importForm.file">
+                                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <p class="mt-2 text-sm text-gray-600">
+                                            <button type="button" @click="fileInput.click()" class="text-blue-600 hover:text-blue-800 font-medium">
+                                                Pilih file
+                                            </button>
+                                            atau drag & drop
+                                        </p>
+                                        <p class="mt-1 text-xs text-gray-500">XLSX, XLS, CSV (Max 10MB)</p>
+                                    </div>
+                                    <div v-else class="flex items-center justify-center gap-3">
+                                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <div class="text-left">
+                                            <p class="text-sm font-medium text-gray-900">{{ importForm.file.name }}</p>
+                                            <p class="text-xs text-gray-500">{{ (importForm.file.size / 1024).toFixed(1) }} KB</p>
+                                        </div>
+                                        <button type="button" @click="fileInput.click()" class="text-blue-600 hover:text-blue-800 text-sm">
+                                            Ganti
+                                        </button>
+                                    </div>
+                                </div>
+                                <p v-if="importForm.errors.file" class="mt-1 text-sm text-red-600">{{ importForm.errors.file }}</p>
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+                                <p class="font-medium mb-1">Catatan:</p>
+                                <ul class="list-disc list-inside space-y-1 text-xs">
+                                    <li>Nama <strong>Paket</strong>, <strong>Area</strong>, <strong>Router</strong>, dan <strong>Penagih</strong> harus sesuai dengan data yang ada di sistem</li>
+                                    <li>Kolom <strong>id_pelanggan</strong> boleh dikosongkan (akan di-generate otomatis)</li>
+                                    <li>Format tanggal: <strong>YYYY-MM-DD</strong> (contoh: 2024-01-15)</li>
+                                    <li>Pelanggan dengan ID yang sudah ada akan di-skip</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 mt-6">
+                            <button
+                                type="button"
+                                @click="closeImportModal"
+                                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                @click="submitImport"
+                                :disabled="!importForm.file || importForm.processing"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                <svg v-if="importForm.processing" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {{ importForm.processing ? 'Mengimport...' : 'Import' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </AdminLayout>
 </template>

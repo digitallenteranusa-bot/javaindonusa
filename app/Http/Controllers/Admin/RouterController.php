@@ -188,22 +188,26 @@ class RouterController extends Controller
         try {
             $this->mikrotikService->connect($router);
 
-            $resources = $this->mikrotikService->getResources();
-            $identity = $this->mikrotikService->getIdentity();
+            // Use getRouterInfo() which fetches from both /system/resource and /system/routerboard
+            $info = $this->mikrotikService->getRouterInfo();
 
             $router->update([
-                'identity' => $identity,
-                'version' => $resources['version'] ?? null,
-                'model' => $resources['board-name'] ?? null,
-                'uptime' => $resources['uptime'] ?? null,
-                'cpu_load' => $resources['cpu-load'] ?? null,
-                'memory_usage' => isset($resources['free-memory'], $resources['total-memory'])
-                    ? round((1 - $resources['free-memory'] / $resources['total-memory']) * 100)
+                'identity' => $info['identity'] ?? null,
+                'version' => $info['version'] ?? null,
+                'model' => $info['model'] ?? $info['board_name'] ?? null,
+                'serial_number' => $info['serial'] ?? null,
+                'uptime' => $info['uptime'] ?? null,
+                'cpu_load' => $info['cpu_load'] ?? null,
+                'memory_usage' => isset($info['free_memory'], $info['total_memory']) && $info['total_memory'] > 0
+                    ? round((1 - $info['free_memory'] / $info['total_memory']) * 100)
                     : null,
                 'last_connected_at' => now(),
             ]);
 
-            return back()->with('success', 'Informasi router berhasil disinkronkan');
+            $modelInfo = $info['model'] ?? $info['board_name'] ?? 'Unknown';
+            $versionInfo = $info['version'] ?? 'Unknown';
+
+            return back()->with('success', "Informasi router berhasil disinkronkan. Model: {$modelInfo}, Version: {$versionInfo}");
 
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal sinkronisasi: ' . $e->getMessage());

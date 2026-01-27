@@ -48,7 +48,7 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'id_pelanggan' => $row['id_pelanggan'] ?? null,
             'nama' => $row['nama'] ?? null,
             'alamat' => $row['alamat'] ?? null,
-            'rt_rw' => $row['rt_rw'] ?? null,
+            'rt_rw' => isset($row['rt_rw']) ? (string) $row['rt_rw'] : null,
             'kelurahan' => $row['kelurahan'] ?? null,
             'kecamatan' => $row['kecamatan'] ?? null,
             'telepon' => $this->formatPhone($row['telepon'] ?? null),
@@ -70,9 +70,58 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'tanggal_tagih' => $row['tanggal_tagih'] ?? 1,
             'tipe_koneksi' => $row['tipe_koneksi'] ?? 'pppoe',
             'catatan' => $row['catatan'] ?? null,
-            'latitude' => $row['latitude'] ?? null,
-            'longitude' => $row['longitude'] ?? null,
+            'latitude' => $this->formatCoordinate($row['latitude'] ?? null),
+            'longitude' => $this->formatCoordinate($row['longitude'] ?? null),
         ];
+    }
+
+    /**
+     * Format coordinate (latitude/longitude)
+     * Handle cases where Excel removes decimal point
+     */
+    protected function formatCoordinate($value): ?float
+    {
+        if (empty($value)) return null;
+
+        $value = (float) $value;
+
+        // If value is already in valid range, return as-is
+        if ($value >= -180 && $value <= 180) {
+            return $value;
+        }
+
+        // Check if it's a latitude (should be between -90 and 90)
+        // or longitude (should be between -180 and 180)
+        // If out of range, it's likely missing decimal point
+
+        // For Indonesian coordinates:
+        // Latitude: around -8 to 6 (usually 1-2 digits before decimal, 6 after)
+        // Longitude: around 95 to 141 (usually 2-3 digits before decimal, 6 after)
+
+        $absValue = abs($value);
+        $sign = $value < 0 ? -1 : 1;
+
+        // Try to detect and fix the decimal position
+        if ($absValue > 1000000) {
+            // Likely 6 decimal places shifted (e.g., -8124738 should be -8.124738)
+            return $sign * ($absValue / 1000000);
+        } elseif ($absValue > 100000) {
+            // Likely 5 decimal places shifted
+            return $sign * ($absValue / 100000);
+        } elseif ($absValue > 10000) {
+            // Likely 4 decimal places shifted
+            return $sign * ($absValue / 10000);
+        } elseif ($absValue > 1000) {
+            // Likely 3 decimal places shifted
+            return $sign * ($absValue / 1000);
+        }
+
+        // If still out of range, return null to avoid database error
+        if ($value < -180 || $value > 180) {
+            return null;
+        }
+
+        return $value;
     }
 
     /**

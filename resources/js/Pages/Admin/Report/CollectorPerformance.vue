@@ -108,24 +108,24 @@ const exportToExcel = () => {
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-white rounded-xl shadow-sm p-4">
                 <p class="text-sm text-gray-500">Total Penagih</p>
-                <p class="text-2xl font-bold mt-1">{{ collectors.length }}</p>
+                <p class="text-2xl font-bold mt-1">{{ collectors?.length || 0 }}</p>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-4">
                 <p class="text-sm text-gray-500">Total Tagihan</p>
                 <p class="text-2xl font-bold mt-1 text-blue-600">
-                    {{ formatCurrency(collectors.reduce((a, b) => a + b.total_billable, 0)) }}
+                    {{ formatCurrency(collectors?.reduce((a, b) => a + (b.total_billable || 0), 0) || 0) }}
                 </p>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-4">
                 <p class="text-sm text-gray-500">Total Tertagih</p>
                 <p class="text-2xl font-bold mt-1 text-green-600">
-                    {{ formatCurrency(collectors.reduce((a, b) => a + b.total_collected, 0)) }}
+                    {{ formatCurrency(collectors?.reduce((a, b) => a + (b.total_collected || 0), 0) || 0) }}
                 </p>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-4">
                 <p class="text-sm text-gray-500">Rata-rata Collection Rate</p>
                 <p class="text-2xl font-bold mt-1">
-                    {{ collectors.length > 0 ? (collectors.reduce((a, b) => a + b.collection_rate, 0) / collectors.length).toFixed(1) : 0 }}%
+                    {{ collectors?.length > 0 ? (collectors.reduce((a, b) => a + (b.collection_rate || 0), 0) / collectors.length).toFixed(1) : 0 }}%
                 </p>
             </div>
         </div>

@@ -89,7 +89,7 @@ class RoleController extends Controller
     /**
      * Reset permissions to default for a role
      */
-    public function resetToDefault(string $role)
+    public function reset(string $role)
     {
         if (!array_key_exists($role, $this->roles)) {
             return back()->with('error', 'Role tidak valid');

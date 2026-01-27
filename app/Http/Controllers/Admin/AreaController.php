@@ -158,6 +158,11 @@ class AreaController extends Controller
             return back()->with('error', 'Tidak dapat menghapus area yang masih memiliki pelanggan');
         }
 
+        // Check if area has ODPs
+        if ($area->odps()->exists()) {
+            return back()->with('error', 'Tidak dapat menghapus area yang masih memiliki ODP. Hapus atau pindahkan ODP terlebih dahulu.');
+        }
+
         // Check if any sub-areas have customers
         $childrenWithCustomers = $area->children()
             ->whereHas('customers')
@@ -165,6 +170,15 @@ class AreaController extends Controller
 
         if ($childrenWithCustomers) {
             return back()->with('error', 'Tidak dapat menghapus area karena sub-area masih memiliki pelanggan');
+        }
+
+        // Check if any sub-areas have ODPs
+        $childrenWithOdps = $area->children()
+            ->whereHas('odps')
+            ->exists();
+
+        if ($childrenWithOdps) {
+            return back()->with('error', 'Tidak dapat menghapus area karena sub-area masih memiliki ODP');
         }
 
         // Cascade delete: delete all sub-areas first

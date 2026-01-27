@@ -137,19 +137,26 @@ class RouterController extends Controller
     public function destroy(Router $router)
     {
         // Check if router has customers
-        if ($router->customers()->exists()) {
-            return back()->with('error', 'Tidak dapat menghapus router yang masih memiliki pelanggan');
+        $customerCount = $router->customers()->count();
+        if ($customerCount > 0) {
+            return back()->with('error', "Tidak dapat menghapus router yang masih memiliki {$customerCount} pelanggan. Pindahkan pelanggan ke router lain terlebih dahulu.");
         }
 
         // Check if router has areas
-        if ($router->areas()->exists()) {
-            return back()->with('error', 'Tidak dapat menghapus router yang masih terhubung dengan area');
+        $areaCount = $router->areas()->count();
+        if ($areaCount > 0) {
+            // Get area names for helpful message
+            $areaNames = $router->areas()->pluck('name')->take(3)->implode(', ');
+            $moreText = $areaCount > 3 ? " dan " . ($areaCount - 3) . " area lainnya" : "";
+
+            return back()->with('error', "Tidak dapat menghapus router yang masih terhubung dengan {$areaCount} area ({$areaNames}{$moreText}). Pindahkan area ke router lain terlebih dahulu.");
         }
 
+        $routerName = $router->name;
         $router->delete();
 
         return redirect()->route('admin.routers.index')
-            ->with('success', 'Router berhasil dihapus');
+            ->with('success', "Router '{$routerName}' berhasil dihapus");
     }
 
     /**

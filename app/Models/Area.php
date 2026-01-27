@@ -69,6 +69,11 @@ class Area extends Model
         return $this->hasMany(Area::class, 'parent_id');
     }
 
+    public function odps(): HasMany
+    {
+        return $this->hasMany(Odp::class);
+    }
+
     // ================================================================
     // SCOPES
     // ================================================================

@@ -1,9 +1,10 @@
 <script setup>
-import { computed } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
+import { Link, usePage, router } from '@inertiajs/vue3'
 
 const page = usePage()
 const user = computed(() => page.props.auth?.user)
+const showProfileMenu = ref(false)
 
 // Check active route
 const isActive = (routeName) => {
@@ -19,6 +20,11 @@ const isActive = (routeName) => {
         return currentUrl === '/collector' || currentUrl === '/collector/'
     }
     return currentUrl.startsWith(routes[routeName])
+}
+
+// Logout
+const logout = () => {
+    router.post('/logout')
 }
 </script>
 
@@ -70,8 +76,83 @@ const isActive = (routeName) => {
                     </svg>
                     <span class="text-xs mt-1">Setoran</span>
                 </Link>
+                <!-- Profile/Account -->
+                <button
+                    @click="showProfileMenu = true"
+                    class="flex flex-col items-center py-1 px-3 text-gray-500"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span class="text-xs mt-1">Akun</span>
+                </button>
             </div>
         </nav>
+
+        <!-- Profile Menu Modal -->
+        <div
+            v-if="showProfileMenu"
+            class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end justify-center"
+            @click.self="showProfileMenu = false"
+        >
+            <div class="bg-white rounded-t-2xl w-full max-w-lg p-6 animate-slide-up">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Akun Saya</h3>
+                    <button @click="showProfileMenu = false" class="text-gray-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- User Info -->
+                <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl mb-4">
+                    <div class="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                        {{ user?.name?.charAt(0)?.toUpperCase() || 'U' }}
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">{{ user?.name || 'User' }}</p>
+                        <p class="text-sm text-gray-500">{{ user?.email || user?.phone || '-' }}</p>
+                        <p class="text-xs text-blue-600">Penagih</p>
+                    </div>
+                </div>
+
+                <!-- Menu Items -->
+                <div class="space-y-2">
+                    <Link
+                        href="/collector/reports/daily"
+                        class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50"
+                        @click="showProfileMenu = false"
+                    >
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span>Laporan Harian</span>
+                    </Link>
+                    <Link
+                        href="/collector/reports/monthly"
+                        class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50"
+                        @click="showProfileMenu = false"
+                    >
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>Laporan Bulanan</span>
+                    </Link>
+                </div>
+
+                <!-- Logout Button -->
+                <button
+                    @click="logout"
+                    class="w-full mt-4 py-3 bg-red-500 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Keluar
+                </button>
+            </div>
+        </div>
 
         <!-- Flash Messages -->
         <div
@@ -88,3 +169,14 @@ const isActive = (routeName) => {
         </div>
     </div>
 </template>
+
+<style scoped>
+.animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+</style>

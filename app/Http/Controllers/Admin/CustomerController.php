@@ -352,8 +352,15 @@ class CustomerController extends Controller
         ]);
 
         try {
+            // Count before import
+            $countBefore = Customer::count();
+
             $import = new CustomerImport();
             Excel::import($import, $request->file('file'));
+
+            // Count after import
+            $countAfter = Customer::count();
+            $importedCount = $countAfter - $countBefore;
 
             $failures = $import->failures();
             $errors = $import->errors();
@@ -372,15 +379,23 @@ class CustomerController extends Controller
                     $errorMessages[] = $error->getMessage();
                 }
 
-                // Limit error messages to first 10
-                $errorMessages = array_slice($errorMessages, 0, 10);
+                // Limit error messages to first 5
+                $errorMessages = array_slice($errorMessages, 0, 5);
+                $moreErrors = ($failureCount + $errorCount) > 5 ? ' (+' . (($failureCount + $errorCount) - 5) . ' error lainnya)' : '';
 
-                return back()->with('warning', 'Import selesai dengan beberapa error: ' . implode('; ', $errorMessages));
+                return back()->with('warning', "Import selesai: {$importedCount} pelanggan berhasil diimport. Error: " . implode('; ', $errorMessages) . $moreErrors);
             }
 
-            return back()->with('success', 'Import pelanggan berhasil!');
+            if ($importedCount === 0) {
+                return back()->with('info', 'Tidak ada pelanggan baru yang diimport. Kemungkinan data sudah ada atau format tidak sesuai.');
+            }
+
+            return back()->with('success', "Import berhasil! {$importedCount} pelanggan baru telah ditambahkan.");
 
         } catch (\Exception $e) {
+            \Log::error('Customer import error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', 'Gagal import: ' . $e->getMessage());
         }
     }

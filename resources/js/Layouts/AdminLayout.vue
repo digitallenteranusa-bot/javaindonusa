@@ -1,9 +1,49 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
 const user = computed(() => page.props.auth?.user)
+
+// Flash message handling with auto-dismiss
+const showSuccess = ref(false)
+const showError = ref(false)
+const showWarning = ref(false)
+const showInfo = ref(false)
+
+const successMessage = computed(() => page.props.flash?.success)
+const errorMessage = computed(() => page.props.flash?.error)
+const warningMessage = computed(() => page.props.flash?.warning)
+const infoMessage = computed(() => page.props.flash?.info)
+
+// Watch for flash messages and auto-dismiss
+watch(successMessage, (val) => {
+    if (val) {
+        showSuccess.value = true
+        setTimeout(() => { showSuccess.value = false }, 5000)
+    }
+}, { immediate: true })
+
+watch(errorMessage, (val) => {
+    if (val) {
+        showError.value = true
+        setTimeout(() => { showError.value = false }, 8000)
+    }
+}, { immediate: true })
+
+watch(warningMessage, (val) => {
+    if (val) {
+        showWarning.value = true
+        setTimeout(() => { showWarning.value = false }, 8000)
+    }
+}, { immediate: true })
+
+watch(infoMessage, (val) => {
+    if (val) {
+        showInfo.value = true
+        setTimeout(() => { showInfo.value = false }, 5000)
+    }
+}, { immediate: true })
 
 const sidebarOpen = ref(true)
 const mobileMenuOpen = ref(false)
@@ -429,35 +469,118 @@ const getIcon = (name) => ({
         </div>
 
         <!-- Flash Messages -->
-        <Transition
-            enter-active-class="transition ease-out duration-300"
-            enter-from-class="opacity-0 translate-y-2"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition ease-in duration-200"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-2"
-        >
-            <div
-                v-if="$page.props.flash?.success"
-                class="fixed bottom-4 right-4 left-4 lg:left-auto z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg"
+        <div class="fixed bottom-4 right-4 left-4 lg:left-auto z-50 space-y-2 max-w-md">
+            <!-- Success -->
+            <Transition
+                enter-active-class="transition ease-out duration-300"
+                enter-from-class="opacity-0 translate-y-2"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-200"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 translate-y-2"
             >
-                {{ $page.props.flash.success }}
-            </div>
-        </Transition>
-        <Transition
-            enter-active-class="transition ease-out duration-300"
-            enter-from-class="opacity-0 translate-y-2"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition ease-in duration-200"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-2"
-        >
-            <div
-                v-if="$page.props.flash?.error"
-                class="fixed bottom-4 right-4 left-4 lg:left-auto z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg"
+                <div
+                    v-if="showSuccess && successMessage"
+                    class="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-start gap-3"
+                >
+                    <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="flex-1">
+                        <p class="font-semibold">Berhasil!</p>
+                        <p class="text-sm opacity-90">{{ successMessage }}</p>
+                    </div>
+                    <button @click="showSuccess = false" class="text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </Transition>
+
+            <!-- Error -->
+            <Transition
+                enter-active-class="transition ease-out duration-300"
+                enter-from-class="opacity-0 translate-y-2"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-200"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 translate-y-2"
             >
-                {{ $page.props.flash.error }}
-            </div>
-        </Transition>
+                <div
+                    v-if="showError && errorMessage"
+                    class="bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-start gap-3"
+                >
+                    <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="flex-1">
+                        <p class="font-semibold">Error!</p>
+                        <p class="text-sm opacity-90">{{ errorMessage }}</p>
+                    </div>
+                    <button @click="showError = false" class="text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </Transition>
+
+            <!-- Warning -->
+            <Transition
+                enter-active-class="transition ease-out duration-300"
+                enter-from-class="opacity-0 translate-y-2"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-200"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 translate-y-2"
+            >
+                <div
+                    v-if="showWarning && warningMessage"
+                    class="bg-yellow-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-start gap-3"
+                >
+                    <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div class="flex-1">
+                        <p class="font-semibold">Peringatan!</p>
+                        <p class="text-sm opacity-90">{{ warningMessage }}</p>
+                    </div>
+                    <button @click="showWarning = false" class="text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </Transition>
+
+            <!-- Info -->
+            <Transition
+                enter-active-class="transition ease-out duration-300"
+                enter-from-class="opacity-0 translate-y-2"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-200"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 translate-y-2"
+            >
+                <div
+                    v-if="showInfo && infoMessage"
+                    class="bg-blue-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-start gap-3"
+                >
+                    <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="flex-1">
+                        <p class="font-semibold">Info</p>
+                        <p class="text-sm opacity-90">{{ infoMessage }}</p>
+                    </div>
+                    <button @click="showInfo = false" class="text-white/80 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </Transition>
+        </div>
     </div>
 </template>

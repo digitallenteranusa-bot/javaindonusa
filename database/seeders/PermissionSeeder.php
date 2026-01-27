@@ -13,9 +13,15 @@ class PermissionSeeder extends Seeder
      */
     public function run(): void
     {
+        // Disable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
         // Clear existing permissions
         DB::table('role_permissions')->truncate();
         DB::table('permissions')->truncate();
+
+        // Re-enable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $permissions = [
             // Customer Management
@@ -157,8 +163,27 @@ class PermissionSeeder extends Seeder
         ];
 
         // Assign default permissions to roles
-        Permission::syncRolePermissions('penagih', $penagihPermissions);
-        Permission::syncRolePermissions('teknisi', $teknisiPermissions);
+        Permission::syncForRole('penagih', $penagihPermissions);
+        Permission::syncForRole('technician', $teknisiPermissions);
+
+        // Finance role permissions
+        $financePermissions = [
+            'customers.view',
+            'invoices.view',
+            'invoices.generate',
+            'invoices.mark-paid',
+            'invoices.export',
+            'payments.view',
+            'payments.create',
+            'payments.export',
+            'expenses.view',
+            'expenses.approve',
+            'settlements.view',
+            'settlements.verify',
+            'reports.view',
+            'reports.export',
+        ];
+        Permission::syncForRole('finance', $financePermissions);
 
         $this->command->info('Permissions seeded successfully!');
         $this->command->info('Default permissions assigned to penagih and teknisi roles.');

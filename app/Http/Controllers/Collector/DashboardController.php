@@ -172,11 +172,12 @@ class DashboardController extends Controller
                 $request->notes
             );
 
-            return back()->with('success', [
-                'message' => 'Pembayaran berhasil dicatat',
-                'payment' => $result['payment'],
-                'access_opened' => $result['access_opened'],
-            ]);
+            $message = 'Pembayaran Rp ' . number_format($request->amount, 0, ',', '.') . ' berhasil dicatat';
+            if ($result['access_opened']) {
+                $message .= '. Akses internet pelanggan telah dibuka kembali.';
+            }
+
+            return back()->with('success', $message);
 
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
@@ -211,11 +212,12 @@ class DashboardController extends Controller
                 $request->notes
             );
 
-            return back()->with('success', [
-                'message' => 'Pembayaran transfer berhasil dicatat',
-                'payment' => $result['payment'],
-                'access_opened' => $result['access_opened'],
-            ]);
+            $message = 'Pembayaran transfer Rp ' . number_format($request->amount, 0, ',', '.') . ' berhasil dicatat';
+            if ($result['access_opened']) {
+                $message .= '. Akses internet pelanggan telah dibuka kembali.';
+            }
+
+            return back()->with('success', $message);
 
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());

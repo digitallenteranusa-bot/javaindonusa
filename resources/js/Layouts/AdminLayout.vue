@@ -48,6 +48,18 @@ watch(infoMessage, (val) => {
 const sidebarOpen = ref(true)
 const mobileMenuOpen = ref(false)
 
+// Collapsible menu sections - load from localStorage
+const expandedSections = ref({
+    billing: localStorage.getItem('sidebar_billing') !== 'false',
+    master: localStorage.getItem('sidebar_master') !== 'false',
+    system: localStorage.getItem('sidebar_system') !== 'false',
+})
+
+const toggleSection = (section) => {
+    expandedSections.value[section] = !expandedSections.value[section]
+    localStorage.setItem(`sidebar_${section}`, expandedSections.value[section])
+}
+
 // Close mobile menu on route change
 const closeMobileMenu = () => {
     mobileMenuOpen.value = false
@@ -165,6 +177,9 @@ const icons = {
     },
     close: {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`
+    },
+    'chevron-down': {
+        template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`
     }
 }
 
@@ -248,41 +263,98 @@ const getIcon = (name) => ({
 
                     <!-- Billing -->
                     <div class="mb-4">
-                        <p class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Billing</p>
-                        <ul class="space-y-1">
-                            <li v-for="item in billingNavigation" :key="item.name">
-                                <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
-                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
-                                    <span class="truncate">{{ item.name }}</span>
-                                </Link>
-                            </li>
-                        </ul>
+                        <button
+                            @click="toggleSection('billing')"
+                            class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                        >
+                            <span>Billing</span>
+                            <component
+                                :is="getIcon('chevron-down')"
+                                class="w-4 h-4 transition-transform duration-200"
+                                :class="{ 'rotate-180': !expandedSections.billing }"
+                            />
+                        </button>
+                        <Transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-96"
+                            leave-active-class="transition-all duration-200 ease-in"
+                            leave-from-class="opacity-100 max-h-96"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
+                            <ul v-show="expandedSections.billing" class="space-y-1 overflow-hidden">
+                                <li v-for="item in billingNavigation" :key="item.name">
+                                    <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                        <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                        <span class="truncate">{{ item.name }}</span>
+                                    </Link>
+                                </li>
+                            </ul>
+                        </Transition>
                     </div>
 
                     <!-- Master Data -->
                     <div class="mb-4">
-                        <p class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Master Data</p>
-                        <ul class="space-y-1">
-                            <li v-for="item in masterNavigation" :key="item.name">
-                                <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
-                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
-                                    <span class="truncate">{{ item.name }}</span>
-                                </Link>
-                            </li>
-                        </ul>
+                        <button
+                            @click="toggleSection('master')"
+                            class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                        >
+                            <span>Master Data</span>
+                            <component
+                                :is="getIcon('chevron-down')"
+                                class="w-4 h-4 transition-transform duration-200"
+                                :class="{ 'rotate-180': !expandedSections.master }"
+                            />
+                        </button>
+                        <Transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-96"
+                            leave-active-class="transition-all duration-200 ease-in"
+                            leave-from-class="opacity-100 max-h-96"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
+                            <ul v-show="expandedSections.master" class="space-y-1 overflow-hidden">
+                                <li v-for="item in masterNavigation" :key="item.name">
+                                    <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                        <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                        <span class="truncate">{{ item.name }}</span>
+                                    </Link>
+                                </li>
+                            </ul>
+                        </Transition>
                     </div>
 
                     <!-- System -->
                     <div class="mb-4">
-                        <p class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sistem</p>
-                        <ul class="space-y-1">
-                            <li v-for="item in systemNavigation" :key="item.name">
-                                <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
-                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
-                                    <span class="truncate">{{ item.name }}</span>
-                                </Link>
-                            </li>
-                        </ul>
+                        <button
+                            @click="toggleSection('system')"
+                            class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                        >
+                            <span>Sistem</span>
+                            <component
+                                :is="getIcon('chevron-down')"
+                                class="w-4 h-4 transition-transform duration-200"
+                                :class="{ 'rotate-180': !expandedSections.system }"
+                            />
+                        </button>
+                        <Transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-96"
+                            leave-active-class="transition-all duration-200 ease-in"
+                            leave-from-class="opacity-100 max-h-96"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
+                            <ul v-show="expandedSections.system" class="space-y-1 overflow-hidden">
+                                <li v-for="item in systemNavigation" :key="item.name">
+                                    <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                        <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                        <span class="truncate">{{ item.name }}</span>
+                                    </Link>
+                                </li>
+                            </ul>
+                        </Transition>
                     </div>
                 </nav>
 
@@ -365,41 +437,101 @@ const getIcon = (name) => ({
 
                 <!-- Billing -->
                 <div class="mb-4">
-                    <p v-if="sidebarOpen" class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Billing</p>
-                    <ul class="space-y-1">
-                        <li v-for="item in billingNavigation" :key="item.name">
-                            <Link :href="item.href" :class="navLinkClass(item.href)">
-                                <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
-                                <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
-                            </Link>
-                        </li>
-                    </ul>
+                    <button
+                        v-if="sidebarOpen"
+                        @click="toggleSection('billing')"
+                        class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                    >
+                        <span>Billing</span>
+                        <component
+                            :is="getIcon('chevron-down')"
+                            class="w-4 h-4 transition-transform duration-200"
+                            :class="{ 'rotate-180': !expandedSections.billing }"
+                        />
+                    </button>
+                    <Transition
+                        enter-active-class="transition-all duration-200 ease-out"
+                        enter-from-class="opacity-0 max-h-0"
+                        enter-to-class="opacity-100 max-h-96"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="opacity-100 max-h-96"
+                        leave-to-class="opacity-0 max-h-0"
+                    >
+                        <ul v-show="expandedSections.billing || !sidebarOpen" class="space-y-1 overflow-hidden">
+                            <li v-for="item in billingNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </Transition>
                 </div>
 
                 <!-- Master Data -->
                 <div class="mb-4">
-                    <p v-if="sidebarOpen" class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Master Data</p>
-                    <ul class="space-y-1">
-                        <li v-for="item in masterNavigation" :key="item.name">
-                            <Link :href="item.href" :class="navLinkClass(item.href)">
-                                <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
-                                <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
-                            </Link>
-                        </li>
-                    </ul>
+                    <button
+                        v-if="sidebarOpen"
+                        @click="toggleSection('master')"
+                        class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                    >
+                        <span>Master Data</span>
+                        <component
+                            :is="getIcon('chevron-down')"
+                            class="w-4 h-4 transition-transform duration-200"
+                            :class="{ 'rotate-180': !expandedSections.master }"
+                        />
+                    </button>
+                    <Transition
+                        enter-active-class="transition-all duration-200 ease-out"
+                        enter-from-class="opacity-0 max-h-0"
+                        enter-to-class="opacity-100 max-h-96"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="opacity-100 max-h-96"
+                        leave-to-class="opacity-0 max-h-0"
+                    >
+                        <ul v-show="expandedSections.master || !sidebarOpen" class="space-y-1 overflow-hidden">
+                            <li v-for="item in masterNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </Transition>
                 </div>
 
                 <!-- System -->
                 <div class="mb-4">
-                    <p v-if="sidebarOpen" class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sistem</p>
-                    <ul class="space-y-1">
-                        <li v-for="item in systemNavigation" :key="item.name">
-                            <Link :href="item.href" :class="navLinkClass(item.href)">
-                                <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
-                                <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
-                            </Link>
-                        </li>
-                    </ul>
+                    <button
+                        v-if="sidebarOpen"
+                        @click="toggleSection('system')"
+                        class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                    >
+                        <span>Sistem</span>
+                        <component
+                            :is="getIcon('chevron-down')"
+                            class="w-4 h-4 transition-transform duration-200"
+                            :class="{ 'rotate-180': !expandedSections.system }"
+                        />
+                    </button>
+                    <Transition
+                        enter-active-class="transition-all duration-200 ease-out"
+                        enter-from-class="opacity-0 max-h-0"
+                        enter-to-class="opacity-100 max-h-96"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="opacity-100 max-h-96"
+                        leave-to-class="opacity-0 max-h-0"
+                    >
+                        <ul v-show="expandedSections.system || !sidebarOpen" class="space-y-1 overflow-hidden">
+                            <li v-for="item in systemNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </Transition>
                 </div>
             </nav>
 

@@ -35,11 +35,9 @@ class DashboardController extends Controller
         // Ambil statistik
         $stats = $this->collectorService->getDashboardStats($collector, $period);
 
-        // Ambil pelanggan menunggak
-        $overdueCustomers = $this->collectorService->getOverdueCustomers(
+        // Ambil pelanggan menunggak (hanya yang punya hutang)
+        $overdueCustomers = $this->collectorService->getOverdueCustomersForDashboard(
             $collector,
-            $request->get('search'),
-            $request->get('status'),
             10
         );
 

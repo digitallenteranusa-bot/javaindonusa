@@ -200,6 +200,25 @@ class CollectorService
             ->paginate($perPage);
     }
 
+    /**
+     * Ambil daftar pelanggan menunggak untuk Dashboard (hanya yang punya hutang)
+     */
+    public function getOverdueCustomersForDashboard(User $collector, int $limit = 10)
+    {
+        $customerIds = $this->getAssignedCustomerIds($collector);
+
+        return Customer::whereIn('id', $customerIds)
+            ->where('total_debt', '>', 0)  // Hanya yang punya hutang
+            ->with(['package', 'area', 'invoices' => function ($q) {
+                $q->whereIn('status', ['pending', 'partial', 'overdue'])
+                    ->orderBy('period_year', 'desc')
+                    ->orderBy('period_month', 'desc');
+            }])
+            ->orderBy('total_debt', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
     // ================================================================
     // PROSES PEMBAYARAN OLEH PENAGIH
     // ================================================================

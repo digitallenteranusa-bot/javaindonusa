@@ -257,7 +257,7 @@ const handleFileUpload = (event) => {
 
                 <div class="space-y-3">
                     <div
-                        v-for="customer in overdueCustomers.data"
+                        v-for="customer in overdueCustomers"
                         :key="customer.id"
                         class="bg-white rounded-xl shadow-sm p-4"
                     >
@@ -308,7 +308,7 @@ const handleFileUpload = (event) => {
                 </div>
 
                 <!-- Empty State -->
-                <div v-if="!overdueCustomers.data?.length" class="text-center py-12">
+                <div v-if="!overdueCustomers?.length" class="text-center py-12">
                     <p class="text-gray-500">Tidak ada pelanggan menunggak</p>
                 </div>
             </div>

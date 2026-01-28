@@ -42,6 +42,7 @@ class IspInfo extends Model
         return [
             'bank_accounts' => 'array',
             'ewallet_accounts' => 'array',
+            'operational_hours' => 'array',
         ];
     }
 
@@ -167,7 +168,6 @@ class IspInfo extends Model
 
     /**
      * Get operational status
-     * Format: "08:00 - 17:00" atau "Senin-Jumat 08:00-17:00"
      */
     public function isOperationalNow(): bool
     {
@@ -175,8 +175,24 @@ class IspInfo extends Model
             return true;
         }
 
-        // Simple check - just return true if operational_hours is set
-        // For more complex logic, parse the string format
-        return true;
+        $now = now();
+        $dayOfWeek = strtolower($now->format('l'));
+
+        if (!isset($this->operational_hours[$dayOfWeek])) {
+            return false;
+        }
+
+        $hours = $this->operational_hours[$dayOfWeek];
+
+        if (isset($hours['closed']) && $hours['closed']) {
+            return false;
+        }
+
+        $open = $hours['open'] ?? '00:00';
+        $close = $hours['close'] ?? '23:59';
+
+        $currentTime = $now->format('H:i');
+
+        return $currentTime >= $open && $currentTime <= $close;
     }
 }

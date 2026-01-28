@@ -204,7 +204,6 @@ class SettingsController extends Controller
             'whatsapp_number' => 'nullable|string|max:20',
             'email' => 'nullable|string|email:filter',
             'website' => 'nullable|string|max:255',
-            'operational_hours' => 'nullable|string|max:100',
             'bank_accounts' => 'nullable|array',
             'bank_accounts.*.bank' => 'nullable|string',
             'bank_accounts.*.account' => 'nullable|string',
@@ -223,7 +222,7 @@ class SettingsController extends Controller
         }
 
         // Clean empty strings to null
-        foreach (['tagline', 'address', 'phone_secondary', 'whatsapp_number', 'email', 'website', 'operational_hours'] as $field) {
+        foreach (['tagline', 'address', 'phone_secondary', 'whatsapp_number', 'email', 'website'] as $field) {
             if (isset($validated[$field]) && $validated[$field] === '') {
                 $validated[$field] = null;
             }

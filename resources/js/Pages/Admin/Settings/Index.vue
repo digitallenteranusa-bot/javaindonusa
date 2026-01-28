@@ -34,9 +34,33 @@ const ispForm = useForm({
     whatsapp_number: props.ispInfo?.whatsapp_number || '',
     email: props.ispInfo?.email || '',
     website: props.ispInfo?.website || '',
-    operational_hours: props.ispInfo?.operational_hours || '',
     bank_accounts: props.ispInfo?.bank_accounts?.length ? props.ispInfo.bank_accounts : [{ bank: '', account: '', name: '' }],
 })
+
+// Format operational hours for display
+const formatOperationalHours = (hours) => {
+    if (!hours || typeof hours !== 'object') return '-'
+
+    const days = {
+        monday: 'Senin',
+        tuesday: 'Selasa',
+        wednesday: 'Rabu',
+        thursday: 'Kamis',
+        friday: 'Jumat',
+        saturday: 'Sabtu',
+        sunday: 'Minggu'
+    }
+
+    const result = []
+    for (const [day, schedule] of Object.entries(hours)) {
+        if (schedule.closed) {
+            result.push(`${days[day]}: Tutup`)
+        } else {
+            result.push(`${days[day]}: ${schedule.open} - ${schedule.close}`)
+        }
+    }
+    return result.join(', ')
+}
 
 // Notification form (removed SMS)
 const notificationForm = useForm({
@@ -308,11 +332,14 @@ const tabs = [
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                                <input v-model="ispForm.website" type="url" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="https://example.com">
+                                <input v-model="ispForm.website" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="https://example.com">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Jam Operasional</label>
-                                <input v-model="ispForm.operational_hours" type="text" placeholder="08:00 - 17:00" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <div class="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-600">
+                                    {{ formatOperationalHours(ispInfo?.operational_hours) }}
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Dikelola melalui database</p>
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Alamat</label>

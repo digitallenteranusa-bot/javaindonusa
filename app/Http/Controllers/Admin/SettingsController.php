@@ -199,21 +199,33 @@ class SettingsController extends Controller
             'company_name' => 'required|string|max:255',
             'tagline' => 'nullable|string|max:255',
             'address' => 'nullable|string',
-            'phone' => 'required|string|max:20',
+            'phone_primary' => 'required|string|max:20',
+            'phone_secondary' => 'nullable|string|max:20',
+            'whatsapp_number' => 'nullable|string|max:20',
             'email' => 'nullable|email',
             'website' => 'nullable|url',
             'operational_hours' => 'nullable|string|max:100',
             'bank_accounts' => 'nullable|array',
-            'bank_accounts.*.bank' => 'required|string',
-            'bank_accounts.*.account' => 'required|string',
-            'bank_accounts.*.name' => 'required|string',
+            'bank_accounts.*.bank' => 'required_with:bank_accounts|string',
+            'bank_accounts.*.account' => 'required_with:bank_accounts|string',
+            'bank_accounts.*.name' => 'required_with:bank_accounts|string',
         ]);
+
+        // Filter empty bank accounts
+        if (isset($validated['bank_accounts'])) {
+            $validated['bank_accounts'] = array_filter($validated['bank_accounts'], function ($acc) {
+                return !empty($acc['bank']) && !empty($acc['account']) && !empty($acc['name']);
+            });
+            $validated['bank_accounts'] = array_values($validated['bank_accounts']);
+        }
 
         $ispInfo = IspInfo::first();
         if ($ispInfo) {
             $ispInfo->update($validated);
+            $ispInfo->clearCache();
         } else {
             IspInfo::create($validated);
+            IspInfo::clearCache();
         }
 
         return back()->with('success', 'Informasi ISP berhasil disimpan');

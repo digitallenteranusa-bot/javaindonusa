@@ -29,11 +29,13 @@ const ispForm = useForm({
     company_name: props.ispInfo?.company_name || '',
     tagline: props.ispInfo?.tagline || '',
     address: props.ispInfo?.address || '',
-    phone: props.ispInfo?.phone || '',
+    phone_primary: props.ispInfo?.phone_primary || '',
+    phone_secondary: props.ispInfo?.phone_secondary || '',
+    whatsapp_number: props.ispInfo?.whatsapp_number || '',
     email: props.ispInfo?.email || '',
     website: props.ispInfo?.website || '',
     operational_hours: props.ispInfo?.operational_hours || '',
-    bank_accounts: props.ispInfo?.bank_accounts || [{ bank: '', account: '', name: '' }],
+    bank_accounts: props.ispInfo?.bank_accounts?.length ? props.ispInfo.bank_accounts : [{ bank: '', account: '', name: '' }],
 })
 
 // Notification form (removed SMS)
@@ -273,14 +275,24 @@ const tabs = [
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Nama Perusahaan *</label>
                                 <input v-model="ispForm.company_name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <p v-if="ispForm.errors.company_name" class="text-red-500 text-xs mt-1">{{ ispForm.errors.company_name }}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Tagline</label>
                                 <input v-model="ispForm.tagline" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Telepon *</label>
-                                <input v-model="ispForm.phone" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Telepon Utama *</label>
+                                <input v-model="ispForm.phone_primary" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="08123456789">
+                                <p v-if="ispForm.errors.phone_primary" class="text-red-500 text-xs mt-1">{{ ispForm.errors.phone_primary }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Telepon Sekunder</label>
+                                <input v-model="ispForm.phone_secondary" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="08123456789">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nomor WhatsApp</label>
+                                <input v-model="ispForm.whatsapp_number" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="08123456789">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -288,7 +300,7 @@ const tabs = [
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                                <input v-model="ispForm.website" type="url" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <input v-model="ispForm.website" type="url" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="https://example.com">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Jam Operasional</label>

@@ -250,7 +250,7 @@ const getIcon = (name) => ({
                 <nav class="flex-1 overflow-y-auto py-4 px-3">
                     <!-- Main -->
                     <div class="mb-4">
-                        <p class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Menu Utama</p>
+                        <p class="px-3 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-wider">Menu Utama</p>
                         <ul class="space-y-1">
                             <li v-for="item in mainNavigation" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
@@ -265,7 +265,7 @@ const getIcon = (name) => ({
                     <div class="mb-4">
                         <button
                             @click="toggleSection('billing')"
-                            class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                            class="w-full flex items-center justify-between px-3 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-colors"
                         >
                             <span>Billing</span>
                             <component
@@ -297,7 +297,7 @@ const getIcon = (name) => ({
                     <div class="mb-4">
                         <button
                             @click="toggleSection('master')"
-                            class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                            class="w-full flex items-center justify-between px-3 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-colors"
                         >
                             <span>Master Data</span>
                             <component
@@ -329,7 +329,7 @@ const getIcon = (name) => ({
                     <div class="mb-4">
                         <button
                             @click="toggleSection('system')"
-                            class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                            class="w-full flex items-center justify-between px-3 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-colors"
                         >
                             <span>Sistem</span>
                             <component
@@ -424,7 +424,7 @@ const getIcon = (name) => ({
             <nav class="flex-1 overflow-y-auto py-4 px-3">
                 <!-- Main -->
                 <div class="mb-4">
-                    <p v-if="sidebarOpen" class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Menu Utama</p>
+                    <p v-if="sidebarOpen" class="px-3 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-wider">Menu Utama</p>
                     <ul class="space-y-1">
                         <li v-for="item in mainNavigation" :key="item.name">
                             <Link :href="item.href" :class="navLinkClass(item.href)">
@@ -440,7 +440,7 @@ const getIcon = (name) => ({
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('billing')"
-                        class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                        class="w-full flex items-center justify-between px-3 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-colors"
                     >
                         <span>Billing</span>
                         <component
@@ -473,7 +473,7 @@ const getIcon = (name) => ({
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('master')"
-                        class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                        class="w-full flex items-center justify-between px-3 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-colors"
                     >
                         <span>Master Data</span>
                         <component
@@ -506,7 +506,7 @@ const getIcon = (name) => ({
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('system')"
-                        class="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                        class="w-full flex items-center justify-between px-3 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-colors"
                     >
                         <span>Sistem</span>
                         <component

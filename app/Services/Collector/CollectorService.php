@@ -156,22 +156,30 @@ class CollectorService
             }]);
 
         // Filter berdasarkan payment status
+        $currentMonth = now()->month;
+        $currentYear = now()->year;
+
         if ($paymentStatus === 'paid') {
-            // Pelanggan yang sudah lunas (total_debt = 0)
-            $query->where('total_debt', '<=', 0);
+            // Pelanggan yang sudah lunas = punya invoice bulan ini DAN sudah dibayar
+            $query->whereHas('invoices', function ($q) use ($currentMonth, $currentYear) {
+                $q->where('period_month', $currentMonth)
+                    ->where('period_year', $currentYear)
+                    ->where('status', 'paid');
+            });
         } elseif ($paymentStatus === 'unpaid') {
-            // Pelanggan yang belum bayar
-            $query->where('total_debt', '>', 0);
+            // Pelanggan yang belum bayar = punya invoice bulan ini tapi belum lunas
+            $query->whereHas('invoices', function ($q) use ($currentMonth, $currentYear) {
+                $q->where('period_month', $currentMonth)
+                    ->where('period_year', $currentYear)
+                    ->whereIn('status', ['pending', 'partial', 'overdue']);
+            });
         } elseif ($paymentStatus === 'overdue') {
             // Pelanggan dengan invoice overdue
-            $query->where('total_debt', '>', 0)
-                ->whereHas('invoices', function ($q) {
-                    $q->where('status', 'overdue');
-                });
-        } else {
-            // Default: semua pelanggan dengan hutang > 0
-            $query->where('total_debt', '>', 0);
+            $query->whereHas('invoices', function ($q) {
+                $q->where('status', 'overdue');
+            });
         }
+        // Default: tampilkan semua pelanggan (tidak filter by debt)
 
         // Filter berdasarkan nama pelanggan
         if ($search) {

@@ -197,7 +197,7 @@ const openMaps = (customer) => {
                     :key="customer.id"
                     class="bg-white rounded-xl shadow-sm overflow-hidden"
                 >
-                    <div class="p-4">
+                    <Link :href="route('collector.customer.detail', customer.id)" class="block p-4">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2">
@@ -236,9 +236,11 @@ const openMaps = (customer) => {
                                 </p>
                             </div>
                         </div>
+                    </Link>
 
-                        <!-- Action Buttons -->
-                        <div class="flex gap-2 mt-4">
+                    <!-- Action Buttons -->
+                    <div class="px-4 pb-4">
+                        <div class="flex gap-2">
                             <button
                                 @click="callCustomer(customer)"
                                 class="flex-1 flex items-center justify-center gap-1 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm"

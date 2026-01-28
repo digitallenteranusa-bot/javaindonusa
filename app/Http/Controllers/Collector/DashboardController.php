@@ -75,10 +75,31 @@ class DashboardController extends Controller
 
         // Get stats for display
         $customerIds = Customer::where('collector_id', $collector->id)->pluck('id')->toArray();
+        $currentMonth = now()->month;
+        $currentYear = now()->year;
+
+        // Hitung pelanggan yang sudah lunas bulan ini (punya invoice bulan ini dengan status paid)
+        $paidCount = Customer::whereIn('id', $customerIds)
+            ->whereHas('invoices', function ($q) use ($currentMonth, $currentYear) {
+                $q->where('period_month', $currentMonth)
+                    ->where('period_year', $currentYear)
+                    ->where('status', 'paid');
+            })
+            ->count();
+
+        // Hitung pelanggan yang belum bayar bulan ini (punya invoice bulan ini dengan status pending/partial/overdue)
+        $unpaidCount = Customer::whereIn('id', $customerIds)
+            ->whereHas('invoices', function ($q) use ($currentMonth, $currentYear) {
+                $q->where('period_month', $currentMonth)
+                    ->where('period_year', $currentYear)
+                    ->whereIn('status', ['pending', 'partial', 'overdue']);
+            })
+            ->count();
+
         $stats = [
             'total' => count($customerIds),
-            'paid' => Customer::whereIn('id', $customerIds)->where('total_debt', '<=', 0)->count(),
-            'unpaid' => Customer::whereIn('id', $customerIds)->where('total_debt', '>', 0)->count(),
+            'paid' => $paidCount,
+            'unpaid' => $unpaidCount,
             'isolated' => Customer::whereIn('id', $customerIds)->where('status', 'isolated')->count(),
         ];
 

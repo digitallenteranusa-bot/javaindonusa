@@ -84,7 +84,15 @@ const saveBilling = () => {
 }
 
 const saveIspInfo = () => {
-    ispForm.post('/admin/settings/isp-info')
+    ispForm.post('/admin/settings/isp-info', {
+        preserveScroll: true,
+        onError: (errors) => {
+            console.log('Validation errors:', errors)
+        },
+        onSuccess: () => {
+            console.log('ISP Info saved successfully')
+        }
+    })
 }
 
 const saveNotification = () => {
@@ -332,6 +340,14 @@ const tabs = [
                                     </button>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Error Display -->
+                        <div v-if="Object.keys(ispForm.errors).length > 0" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <p class="text-red-800 font-medium mb-2">Terdapat kesalahan:</p>
+                            <ul class="list-disc list-inside text-sm text-red-600">
+                                <li v-for="(error, field) in ispForm.errors" :key="field">{{ error }}</li>
+                            </ul>
                         </div>
 
                         <div class="flex justify-end">

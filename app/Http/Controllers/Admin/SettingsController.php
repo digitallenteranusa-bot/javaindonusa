@@ -202,33 +202,46 @@ class SettingsController extends Controller
             'phone_primary' => 'required|string|max:20',
             'phone_secondary' => 'nullable|string|max:20',
             'whatsapp_number' => 'nullable|string|max:20',
-            'email' => 'nullable|email',
-            'website' => 'nullable|url',
+            'email' => 'nullable|string|email:filter',
+            'website' => 'nullable|string|max:255',
             'operational_hours' => 'nullable|string|max:100',
             'bank_accounts' => 'nullable|array',
-            'bank_accounts.*.bank' => 'required_with:bank_accounts|string',
-            'bank_accounts.*.account' => 'required_with:bank_accounts|string',
-            'bank_accounts.*.name' => 'required_with:bank_accounts|string',
+            'bank_accounts.*.bank' => 'nullable|string',
+            'bank_accounts.*.account' => 'nullable|string',
+            'bank_accounts.*.name' => 'nullable|string',
         ]);
 
         // Filter empty bank accounts
         if (isset($validated['bank_accounts'])) {
             $validated['bank_accounts'] = array_filter($validated['bank_accounts'], function ($acc) {
-                return !empty($acc['bank']) && !empty($acc['account']) && !empty($acc['name']);
+                return !empty($acc['bank']) || !empty($acc['account']) || !empty($acc['name']);
             });
             $validated['bank_accounts'] = array_values($validated['bank_accounts']);
+            if (empty($validated['bank_accounts'])) {
+                $validated['bank_accounts'] = null;
+            }
         }
 
-        $ispInfo = IspInfo::first();
-        if ($ispInfo) {
-            $ispInfo->update($validated);
-            $ispInfo->clearCache();
-        } else {
-            IspInfo::create($validated);
+        // Clean empty strings to null
+        foreach (['tagline', 'address', 'phone_secondary', 'whatsapp_number', 'email', 'website', 'operational_hours'] as $field) {
+            if (isset($validated[$field]) && $validated[$field] === '') {
+                $validated[$field] = null;
+            }
+        }
+
+        try {
+            $ispInfo = IspInfo::first();
+            if ($ispInfo) {
+                $ispInfo->update($validated);
+            } else {
+                $ispInfo = IspInfo::create($validated);
+            }
             IspInfo::clearCache();
-        }
 
-        return back()->with('success', 'Informasi ISP berhasil disimpan');
+            return back()->with('success', 'Informasi ISP berhasil disimpan');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage());
+        }
     }
 
     /**

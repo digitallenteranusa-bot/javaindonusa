@@ -13,12 +13,24 @@ Route::prefix('portal')->name('customer.')->group(function () {
 
     // Login (Tanpa Auth)
     Route::get('/login', [PortalController::class, 'showLogin'])->name('login');
-    Route::post('/login', [PortalController::class, 'requestOTP'])->name('request-otp');
-    Route::post('/verify-otp', [PortalController::class, 'verifyOTP'])->name('verify-otp');
+
+    // Rate limited OTP endpoints
+    // Request OTP: max 5 requests per minute per IP
+    Route::post('/login', [PortalController::class, 'requestOTP'])
+        ->middleware('throttle:5,1')
+        ->name('request-otp');
+
+    // Verify OTP: max 10 attempts per minute per IP
+    Route::post('/verify-otp', [PortalController::class, 'verifyOTP'])
+        ->middleware('throttle:10,1')
+        ->name('verify-otp');
+
     Route::get('/auth/{token}', [PortalController::class, 'loginWithToken'])->name('auth.token');
 
-    // Halaman Isolir (Public - Tanpa Login)
-    Route::get('/isolation/{customerId}', [PortalController::class, 'isolationPage'])->name('isolation');
+    // Halaman Isolir (Public - Tanpa Login, rate limited)
+    Route::get('/isolation/{customerId}', [PortalController::class, 'isolationPage'])
+        ->middleware('throttle:30,1')
+        ->name('isolation');
 
     // Authenticated Customer Routes
     Route::middleware(['customer.auth'])->group(function () {

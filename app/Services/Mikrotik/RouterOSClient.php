@@ -246,15 +246,31 @@ class RouterOSClient
     protected function read(): array
     {
         $response = [];
+        $attempts = 0;
+        $maxAttempts = 100; // Prevent infinite loop
 
-        while (true) {
+        while ($attempts < $maxAttempts) {
             $word = $this->readWord();
 
-            if ($word === false || $word === '') {
+            if ($word === false) {
+                // Socket error or timeout
                 break;
             }
 
+            if ($word === '') {
+                // Empty word means end of sentence, but we need to wait for !done
+                // Check if we already have a terminal response
+                if (in_array('!done', $response) || in_array('!fatal', $response) || in_array('!trap', $response)) {
+                    break;
+                }
+                // Otherwise continue reading (might be between sentences)
+                $attempts++;
+                usleep(10000); // Wait 10ms before retry
+                continue;
+            }
+
             $response[] = $word;
+            $attempts = 0; // Reset attempts on successful read
 
             $this->log("RX: {$word}", 'debug');
 

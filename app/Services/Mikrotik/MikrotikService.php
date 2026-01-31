@@ -102,9 +102,16 @@ class MikrotikService
         $identity = $this->client->command('/system/identity/print');
         $resource = $this->client->command('/system/resource/print');
 
+        // Debug: log raw responses
+        Log::info('RouterOS API raw responses', [
+            'identity' => $identity,
+            'resource' => $resource,
+        ]);
+
         // Routerboard info might not exist on CHR/x86
         try {
             $routerboard = $this->client->command('/system/routerboard/print');
+            Log::info('RouterOS routerboard response', ['routerboard' => $routerboard]);
         } catch (\Exception $e) {
             $routerboard = [];
         }

@@ -225,6 +225,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->name('system.download-install');
     Route::get('/system/backups', [SettingsController::class, 'getBackups'])
         ->name('system.backups');
+    Route::get('/system/backups/download/{filename}', [SettingsController::class, 'downloadBackup'])
+        ->name('system.download-backup');
+    Route::post('/system/upload-backup', [SettingsController::class, 'uploadBackup'])
+        ->name('system.upload-backup');
     Route::post('/system/restore-backup', [SettingsController::class, 'restoreBackup'])
         ->name('system.restore-backup');
     Route::delete('/system/delete-backup', [SettingsController::class, 'deleteBackup'])

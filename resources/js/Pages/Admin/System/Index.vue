@@ -19,10 +19,13 @@ const backups = ref([])
 const showBackupModal = ref(false)
 const selectedBackup = ref(null)
 const restoringBackup = ref(false)
+const uploadingBackup = ref(false)
 
 // File upload
 const updateFile = ref(null)
 const fileInput = ref(null)
+const backupFile = ref(null)
+const backupFileInput = ref(null)
 
 // Live server time
 const serverTime = ref(new Date(props.systemInfo.server_time))
@@ -163,6 +166,41 @@ const deleteBackup = (backup) => {
     router.delete('/admin/system/delete-backup', {
         data: { backup_file: backup.name },
         onSuccess: () => {
+            loadBackups()
+        }
+    })
+}
+
+const handleBackupFileSelect = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+        if (file.type !== 'application/zip' && !file.name.endsWith('.zip')) {
+            alert('File harus berformat ZIP')
+            return
+        }
+        backupFile.value = file
+    }
+}
+
+const uploadBackup = () => {
+    if (!backupFile.value) {
+        alert('Pilih file backup terlebih dahulu')
+        return
+    }
+
+    uploadingBackup.value = true
+
+    const formData = new FormData()
+    formData.append('backup_file', backupFile.value)
+
+    router.post('/admin/system/upload-backup', formData, {
+        forceFormData: true,
+        onFinish: () => {
+            uploadingBackup.value = false
+            backupFile.value = null
+            if (backupFileInput.value) {
+                backupFileInput.value.value = ''
+            }
             loadBackups()
         }
     })
@@ -398,6 +436,28 @@ const formatNumber = (num) => {
                             {{ creatingBackup ? 'Membuat Backup...' : 'Buat Backup Sekarang' }}
                         </button>
 
+                        <!-- Upload Backup -->
+                        <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                            <h5 class="text-sm font-medium text-gray-700 mb-2">Upload Backup</h5>
+                            <div class="flex gap-2">
+                                <input
+                                    ref="backupFileInput"
+                                    type="file"
+                                    accept=".zip"
+                                    @change="handleBackupFileSelect"
+                                    class="flex-1 text-sm text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                />
+                                <button
+                                    @click="uploadBackup"
+                                    :disabled="!backupFile || uploadingBackup"
+                                    class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+                                >
+                                    {{ uploadingBackup ? '...' : 'Upload' }}
+                                </button>
+                            </div>
+                            <p v-if="backupFile" class="text-xs text-green-600 mt-1">{{ backupFile.name }}</p>
+                        </div>
+
                         <!-- Backup List -->
                         <div class="mt-4">
                             <div class="flex items-center justify-between mb-2">
@@ -422,6 +482,15 @@ const formatNumber = (num) => {
                                         <p class="text-xs text-gray-500">{{ backup.size }} - {{ backup.created_at }}</p>
                                     </div>
                                     <div class="flex gap-1">
+                                        <a
+                                            :href="`/admin/system/backups/download/${backup.name}`"
+                                            class="p-1.5 text-green-600 hover:bg-green-100 rounded"
+                                            title="Download"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                        </a>
                                         <button
                                             @click="confirmRestore(backup)"
                                             class="p-1.5 text-blue-600 hover:bg-blue-100 rounded"

@@ -470,6 +470,59 @@ class SettingsController extends Controller
     }
 
     /**
+     * Download backup file
+     */
+    public function downloadBackup(string $filename)
+    {
+        $backupPath = storage_path('app/backups/' . $filename);
+
+        // Security: only allow .zip files and prevent directory traversal
+        if (!str_ends_with($filename, '.zip') || str_contains($filename, '..') || str_contains($filename, '/')) {
+            abort(404, 'Backup tidak ditemukan');
+        }
+
+        if (!file_exists($backupPath)) {
+            return back()->with('error', 'File backup tidak ditemukan');
+        }
+
+        return response()->download($backupPath, $filename, [
+            'Content-Type' => 'application/zip',
+        ]);
+    }
+
+    /**
+     * Upload backup file
+     */
+    public function uploadBackup(Request $request)
+    {
+        $request->validate([
+            'backup_file' => 'required|file|mimes:zip|max:102400', // Max 100MB
+        ]);
+
+        try {
+            $file = $request->file('backup_file');
+            $filename = $file->getClientOriginalName();
+
+            // Ensure backup directory exists
+            $backupPath = storage_path('app/backups');
+            if (!is_dir($backupPath)) {
+                mkdir($backupPath, 0755, true);
+            }
+
+            // If file already exists, add timestamp
+            if (file_exists($backupPath . '/' . $filename)) {
+                $filename = pathinfo($filename, PATHINFO_FILENAME) . '_' . time() . '.zip';
+            }
+
+            $file->move($backupPath, $filename);
+
+            return back()->with('success', "Backup '{$filename}' berhasil diupload");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal upload backup: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Restore from backup
      */
     public function restoreBackup(Request $request, UpdateService $updateService)

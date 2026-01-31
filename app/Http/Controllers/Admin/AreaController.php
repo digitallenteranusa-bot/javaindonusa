@@ -59,7 +59,7 @@ class AreaController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
-            'code' => 'required|string|max:20|unique:areas,code',
+            'code' => ['required', 'string', 'max:20', Rule::unique('areas')->whereNull('deleted_at')],
             'description' => 'nullable|string|max:500',
             'parent_id' => 'nullable|exists:areas,id',
             'collector_id' => 'nullable|exists:users,id',
@@ -117,7 +117,7 @@ class AreaController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
-            'code' => ['required', 'string', 'max:20', Rule::unique('areas')->ignore($area->id)],
+            'code' => ['required', 'string', 'max:20', Rule::unique('areas')->ignore($area->id)->whereNull('deleted_at')],
             'description' => 'nullable|string|max:500',
             'parent_id' => 'nullable|exists:areas,id',
             'collector_id' => 'nullable|exists:users,id',

@@ -181,9 +181,6 @@ class RouterController extends Controller
             // Use getRouterInfo() which fetches from both /system/resource and /system/routerboard
             $info = $this->mikrotikService->getRouterInfo();
 
-            // Debug log
-            \Log::info('Router sync info for ' . $router->name, $info);
-
             $router->update([
                 'identity' => $info['identity'] ?? null,
                 'version' => $info['version'] ?? null,

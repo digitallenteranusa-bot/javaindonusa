@@ -160,9 +160,6 @@ class RouterOSClient
 
         $response = $this->send($sentence);
 
-        // Debug: log raw response
-        Log::info('[RouterOS] Command: ' . $cmd, ['raw_response' => $response]);
-
         return $this->parseResponse($response);
     }
 

@@ -101,7 +101,16 @@ class MikrotikService
 
         $identity = $this->client->command('/system/identity/print');
         $resource = $this->client->command('/system/resource/print');
-        $routerboard = $this->client->command('/system/routerboard/print');
+
+        // Routerboard info might not exist on CHR/x86
+        try {
+            $routerboard = $this->client->command('/system/routerboard/print');
+        } catch (\Exception $e) {
+            $routerboard = [];
+        }
+
+        $boardName = $resource[0]['board-name'] ?? null;
+        $model = $routerboard[0]['model'] ?? $boardName ?? 'Unknown';
 
         return [
             'identity' => $identity[0]['name'] ?? 'Unknown',
@@ -113,9 +122,9 @@ class MikrotikService
             'free_hdd' => $resource[0]['free-hdd-space'] ?? 0,
             'total_hdd' => $resource[0]['total-hdd-space'] ?? 0,
             'architecture' => $resource[0]['architecture-name'] ?? 'Unknown',
-            'board_name' => $resource[0]['board-name'] ?? 'Unknown',
-            'model' => $routerboard[0]['model'] ?? 'Unknown',
-            'serial' => $routerboard[0]['serial-number'] ?? 'Unknown',
+            'board_name' => $boardName ?? 'Unknown',
+            'model' => $model,
+            'serial' => $routerboard[0]['serial-number'] ?? null,
         ];
     }
 

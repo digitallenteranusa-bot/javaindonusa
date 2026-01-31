@@ -248,4 +248,4 @@ Jadwal otomatis:
 
 ## License
 
-Proprietary - Java Indonusa
+Proprietary - Java Indonusa TRENGGALEK KONOHA

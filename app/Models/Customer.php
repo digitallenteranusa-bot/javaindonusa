@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Crypt;
 
 class Customer extends Model
 {
@@ -70,6 +71,47 @@ class Customer extends Model
             'latitude' => 'decimal:8',
             'longitude' => 'decimal:8',
         ];
+    }
+
+    // ================================================================
+    // ACCESSORS & MUTATORS FOR ENCRYPTION
+    // ================================================================
+
+    /**
+     * Encrypt PPPoE password when setting
+     */
+    public function setPppoePasswordAttribute($value): void
+    {
+        if (!empty($value)) {
+            // Check if already encrypted (to avoid double encryption)
+            try {
+                Crypt::decryptString($value);
+                // If decryption succeeds, it's already encrypted
+                $this->attributes['pppoe_password'] = $value;
+            } catch (\Exception $e) {
+                // Not encrypted, encrypt it
+                $this->attributes['pppoe_password'] = Crypt::encryptString($value);
+            }
+        } else {
+            $this->attributes['pppoe_password'] = null;
+        }
+    }
+
+    /**
+     * Decrypt PPPoE password when getting
+     */
+    public function getPppoePasswordAttribute($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($value);
+        } catch (\Exception $e) {
+            // Return as-is if decryption fails (legacy unencrypted data)
+            return $value;
+        }
     }
 
     // ================================================================

@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Web middleware group
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
+            \App\Http\Middleware\SecurityHeaders::class,
         ]);
 
         // Alias middleware

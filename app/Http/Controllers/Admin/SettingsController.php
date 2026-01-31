@@ -62,7 +62,7 @@ class SettingsController extends Controller
     public function uploadLogo(Request $request)
     {
         $request->validate([
-            'logo' => 'required|image|mimes:png,jpg,jpeg,svg|max:2048',
+            'logo' => 'required|image|mimes:png,jpg,jpeg|max:2048',
         ]);
 
         // Delete old logo if exists

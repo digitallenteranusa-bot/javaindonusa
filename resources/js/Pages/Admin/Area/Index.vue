@@ -6,17 +6,14 @@ import AdminLayout from '@/Layouts/AdminLayout.vue'
 const props = defineProps({
     areas: Object,
     filters: Object,
-    routers: Array,
 })
 
 const search = ref(props.filters.search || '')
-const routerFilter = ref(props.filters.router_id || '')
 
 // Apply filters
 const applyFilters = () => {
     router.get('/admin/areas', {
         search: search.value || undefined,
-        router_id: routerFilter.value || undefined,
     }, {
         preserveState: true,
         preserveScroll: true,
@@ -57,25 +54,13 @@ const deleteArea = (area) => {
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
-            <div class="flex gap-4">
-                <input
-                    v-model="search"
-                    type="text"
-                    placeholder="Cari area..."
-                    class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    @keyup.enter="applyFilters"
-                >
-                <select
-                    v-model="routerFilter"
-                    @change="applyFilters"
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value="">Semua Router</option>
-                    <option v-for="r in routers" :key="r.id" :value="r.id">
-                        {{ r.name }}
-                    </option>
-                </select>
-            </div>
+            <input
+                v-model="search"
+                type="text"
+                placeholder="Cari area..."
+                class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                @keyup.enter="applyFilters"
+            >
         </div>
 
         <!-- Table -->
@@ -85,7 +70,6 @@ const deleteArea = (area) => {
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kode</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Area</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Router</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Penagih</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pelanggan</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -103,7 +87,6 @@ const deleteArea = (area) => {
                                 </p>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-sm">{{ area.router?.name || '-' }}</td>
                         <td class="px-4 py-3 text-sm">{{ area.collector?.name || '-' }}</td>
                         <td class="px-4 py-3">
                             <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">

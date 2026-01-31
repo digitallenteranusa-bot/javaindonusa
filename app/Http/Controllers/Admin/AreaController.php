@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Area;
-use App\Models\Router;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -17,7 +16,7 @@ class AreaController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Area::with(['router', 'collector', 'parent'])
+        $query = Area::with(['collector', 'parent'])
             ->withCount('customers');
 
         if ($request->filled('search')) {
@@ -32,17 +31,12 @@ class AreaController extends Controller
             $query->active();
         }
 
-        if ($request->filled('router_id')) {
-            $query->where('router_id', $request->router_id);
-        }
-
         $areas = $query->orderBy('name')->paginate($request->get('per_page', 15))
             ->withQueryString();
 
         return Inertia::render('Admin/Area/Index', [
             'areas' => $areas,
-            'filters' => $request->only(['search', 'active_only', 'router_id']),
-            'routers' => Router::active()->get(['id', 'name']),
+            'filters' => $request->only(['search', 'active_only']),
         ]);
     }
 
@@ -53,7 +47,6 @@ class AreaController extends Controller
     {
         return Inertia::render('Admin/Area/Form', [
             'area' => null,
-            'routers' => Router::active()->get(),
             'collectors' => User::where('role', 'penagih')->where('is_active', true)->get(['id', 'name']),
             'parentAreas' => Area::active()->root()->get(['id', 'name']),
         ]);
@@ -69,7 +62,6 @@ class AreaController extends Controller
             'code' => 'required|string|max:20|unique:areas,code',
             'description' => 'nullable|string|max:500',
             'parent_id' => 'nullable|exists:areas,id',
-            'router_id' => 'required|exists:routers,id',
             'collector_id' => 'nullable|exists:users,id',
             'is_active' => 'boolean',
             'coverage_radius' => 'nullable|numeric|min:0',
@@ -90,7 +82,7 @@ class AreaController extends Controller
      */
     public function show(Area $area)
     {
-        $area->load(['router', 'collector', 'parent', 'children']);
+        $area->load(['collector', 'parent', 'children']);
         $area->loadCount('customers');
 
         // Get customers in this area
@@ -113,7 +105,6 @@ class AreaController extends Controller
     {
         return Inertia::render('Admin/Area/Form', [
             'area' => $area,
-            'routers' => Router::active()->get(),
             'collectors' => User::where('role', 'penagih')->where('is_active', true)->get(['id', 'name']),
             'parentAreas' => Area::active()->root()->where('id', '!=', $area->id)->get(['id', 'name']),
         ]);
@@ -129,7 +120,6 @@ class AreaController extends Controller
             'code' => ['required', 'string', 'max:20', Rule::unique('areas')->ignore($area->id)],
             'description' => 'nullable|string|max:500',
             'parent_id' => 'nullable|exists:areas,id',
-            'router_id' => 'required|exists:routers,id',
             'collector_id' => 'nullable|exists:users,id',
             'is_active' => 'boolean',
             'coverage_radius' => 'nullable|numeric|min:0',

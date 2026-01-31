@@ -17,7 +17,6 @@ class Area extends Model
         'code',
         'description',
         'parent_id',
-        'router_id',
         'collector_id',
         'is_active',
         'coverage_radius',
@@ -47,11 +46,6 @@ class Area extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
-    }
-
-    public function router(): BelongsTo
-    {
-        return $this->belongsTo(Router::class);
     }
 
     public function collector(): BelongsTo

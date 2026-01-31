@@ -5,7 +5,6 @@ import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 const props = defineProps({
     area: Object,
-    routers: Array,
     collectors: Array,
     parentAreas: Array,
 })
@@ -17,7 +16,6 @@ const form = useForm({
     code: props.area?.code || '',
     description: props.area?.description || '',
     parent_id: props.area?.parent_id || '',
-    router_id: props.area?.router_id || '',
     collector_id: props.area?.collector_id || '',
     is_active: props.area?.is_active ?? true,
     coverage_radius: props.area?.coverage_radius || '',
@@ -102,34 +100,17 @@ const submit = () => {
                         </select>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Router *</label>
-                            <select
-                                v-model="form.router_id"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                :class="{ 'border-red-500': form.errors.router_id }"
-                            >
-                                <option value="">Pilih Router</option>
-                                <option v-for="router in routers" :key="router.id" :value="router.id">
-                                    {{ router.name }} ({{ router.ip_address }})
-                                </option>
-                            </select>
-                            <p v-if="form.errors.router_id" class="text-red-500 text-sm mt-1">{{ form.errors.router_id }}</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Penagih Default</label>
-                            <select
-                                v-model="form.collector_id"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">Pilih Penagih</option>
-                                <option v-for="collector in collectors" :key="collector.id" :value="collector.id">
-                                    {{ collector.name }}
-                                </option>
-                            </select>
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Penagih Default</label>
+                        <select
+                            v-model="form.collector_id"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Pilih Penagih</option>
+                            <option v-for="collector in collectors" :key="collector.id" :value="collector.id">
+                                {{ collector.name }}
+                            </option>
+                        </select>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">

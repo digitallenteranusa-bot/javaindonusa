@@ -56,11 +56,6 @@ class Router extends Model
         return $this->hasMany(Customer::class);
     }
 
-    public function areas(): HasMany
-    {
-        return $this->hasMany(Area::class);
-    }
-
     public function radiusServer(): BelongsTo
     {
         return $this->belongsTo(RadiusServer::class);

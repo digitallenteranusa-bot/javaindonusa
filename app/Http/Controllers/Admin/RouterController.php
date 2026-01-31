@@ -23,7 +23,7 @@ class RouterController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Router::withCount(['customers', 'areas']);
+        $query = Router::withCount(['customers']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -86,8 +86,8 @@ class RouterController extends Controller
      */
     public function show(Router $router)
     {
-        $router->loadCount(['customers', 'areas']);
-        $router->load(['areas', 'customers' => fn($q) => $q->limit(10)->orderBy('created_at', 'desc')]);
+        $router->loadCount(['customers']);
+        $router->load(['customers' => fn($q) => $q->limit(10)->orderBy('created_at', 'desc')]);
 
         return Inertia::render('Admin/Router/Show', [
             'router' => $router,
@@ -140,16 +140,6 @@ class RouterController extends Controller
         $customerCount = $router->customers()->count();
         if ($customerCount > 0) {
             return back()->with('error', "Tidak dapat menghapus router yang masih memiliki {$customerCount} pelanggan. Pindahkan pelanggan ke router lain terlebih dahulu.");
-        }
-
-        // Check if router has areas
-        $areaCount = $router->areas()->count();
-        if ($areaCount > 0) {
-            // Get area names for helpful message
-            $areaNames = $router->areas()->pluck('name')->take(3)->implode(', ');
-            $moreText = $areaCount > 3 ? " dan " . ($areaCount - 3) . " area lainnya" : "";
-
-            return back()->with('error', "Tidak dapat menghapus router yang masih terhubung dengan {$areaCount} area ({$areaNames}{$moreText}). Pindahkan area ke router lain terlebih dahulu.");
         }
 
         $routerName = $router->name;

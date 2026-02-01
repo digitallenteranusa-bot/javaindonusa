@@ -14,23 +14,27 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         // Admin Users
-        User::create([
-            'name' => 'Super Admin',
-            'email' => 'admin@javaindonusa.net',
-            'phone' => '08111111111',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-            'is_active' => true,
-        ]);
+        User::firstOrCreate(
+            ['email' => 'admin@javaindonusa.net'],
+            [
+                'name' => 'Super Admin',
+                'phone' => '08111111111',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+                'is_active' => true,
+            ]
+        );
 
-        User::create([
-            'name' => 'Finance Admin',
-            'email' => 'finance@javaindonusa.net',
-            'phone' => '08111111112',
-            'password' => Hash::make('password'),
-            'role' => 'finance',
-            'is_active' => true,
-        ]);
+        User::firstOrCreate(
+            ['email' => 'finance@javaindonusa.net'],
+            [
+                'name' => 'Finance Admin',
+                'phone' => '08111111112',
+                'password' => Hash::make('password'),
+                'role' => 'finance',
+                'is_active' => true,
+            ]
+        );
 
         // Collectors
         $collectors = [
@@ -67,15 +71,17 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($collectors as $collector) {
-            User::create([
-                'name' => $collector['name'],
-                'email' => $collector['email'],
-                'phone' => $collector['phone'],
-                'password' => Hash::make('password'),
-                'role' => 'penagih',
-                'commission_rate' => $collector['commission_rate'],
-                'is_active' => true,
-            ]);
+            User::firstOrCreate(
+                ['email' => $collector['email']],
+                [
+                    'name' => $collector['name'],
+                    'phone' => $collector['phone'],
+                    'password' => Hash::make('password'),
+                    'role' => 'penagih',
+                    'commission_rate' => $collector['commission_rate'],
+                    'is_active' => true,
+                ]
+            );
         }
 
         // Technicians
@@ -93,14 +99,16 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($technicians as $technician) {
-            User::create([
-                'name' => $technician['name'],
-                'email' => $technician['email'],
-                'phone' => $technician['phone'],
-                'password' => Hash::make('password'),
-                'role' => 'technician',
-                'is_active' => true,
-            ]);
+            User::firstOrCreate(
+                ['email' => $technician['email']],
+                [
+                    'name' => $technician['name'],
+                    'phone' => $technician['phone'],
+                    'password' => Hash::make('password'),
+                    'role' => 'technician',
+                    'is_active' => true,
+                ]
+            );
         }
     }
 }

@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Area;
-use App\Models\Router;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -16,7 +15,6 @@ class AreaSeeder extends Seeder
     {
         // Get collectors
         $collectors = User::where('role', 'penagih')->get();
-        $routers = Router::all();
 
         // Parent areas (main regions)
         $mainAreas = [
@@ -24,7 +22,6 @@ class AreaSeeder extends Seeder
                 'name' => 'Area Timur',
                 'code' => 'TIMUR',
                 'description' => 'Wilayah Jakarta Timur dan sekitarnya',
-                'router_id' => $routers->where('name', 'Router Area Timur')->first()?->id,
                 'latitude' => -6.2250,
                 'longitude' => 106.9004,
             ],
@@ -32,7 +29,6 @@ class AreaSeeder extends Seeder
                 'name' => 'Area Barat',
                 'code' => 'BARAT',
                 'description' => 'Wilayah Jakarta Barat dan sekitarnya',
-                'router_id' => $routers->where('name', 'Router Area Barat')->first()?->id,
                 'latitude' => -6.1675,
                 'longitude' => 106.7589,
             ],
@@ -40,7 +36,6 @@ class AreaSeeder extends Seeder
                 'name' => 'Area Utara',
                 'code' => 'UTARA',
                 'description' => 'Wilayah Jakarta Utara dan sekitarnya',
-                'router_id' => $routers->where('name', 'Router Area Utara')->first()?->id,
                 'latitude' => -6.1214,
                 'longitude' => 106.9025,
             ],
@@ -48,7 +43,6 @@ class AreaSeeder extends Seeder
                 'name' => 'Area Selatan',
                 'code' => 'SELATAN',
                 'description' => 'Wilayah Jakarta Selatan dan sekitarnya',
-                'router_id' => $routers->where('name', 'Router Area Selatan')->first()?->id,
                 'latitude' => -6.2615,
                 'longitude' => 106.8106,
             ],
@@ -56,7 +50,10 @@ class AreaSeeder extends Seeder
 
         $createdMainAreas = [];
         foreach ($mainAreas as $area) {
-            $createdMainAreas[$area['code']] = Area::create(array_merge($area, ['is_active' => true]));
+            $createdMainAreas[$area['code']] = Area::firstOrCreate(
+                ['code' => $area['code']],
+                array_merge($area, ['is_active' => true])
+            );
         }
 
         // Sub-areas (kelurahan/kampung)
@@ -149,15 +146,16 @@ class AreaSeeder extends Seeder
             $parent = $createdMainAreas[$subArea['parent']];
             $collector = $collectors[$subArea['collector_index']] ?? null;
 
-            Area::create([
-                'name' => $subArea['name'],
-                'code' => $subArea['code'],
-                'description' => "Kelurahan {$subArea['name']}",
-                'parent_id' => $parent->id,
-                'router_id' => $parent->router_id,
-                'collector_id' => $collector?->id,
-                'is_active' => true,
-            ]);
+            Area::firstOrCreate(
+                ['code' => $subArea['code']],
+                [
+                    'name' => $subArea['name'],
+                    'description' => "Kelurahan {$subArea['name']}",
+                    'parent_id' => $parent->id,
+                    'collector_id' => $collector?->id,
+                    'is_active' => true,
+                ]
+            );
         }
 
         // Update collectors' area_id

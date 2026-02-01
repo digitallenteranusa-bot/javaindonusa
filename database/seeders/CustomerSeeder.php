@@ -49,7 +49,7 @@ class CustomerSeeder extends Seeder
 
             $area = $areas->random();
             $package = $packages->random();
-            $router = Router::find($area->router_id) ?? $routers->random();
+            $router = $routers->random();
             $collector = User::find($area->collector_id) ?? $collectors->random();
 
             $street = $streets[array_rand($streets)];

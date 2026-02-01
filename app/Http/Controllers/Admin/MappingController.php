@@ -257,10 +257,10 @@ class MappingController extends Controller
             ];
         }
 
-        // Default to Indonesia center (Jakarta)
+        // Default to Trenggalek, Jawa Timur
         return [
-            'lat' => -6.2088,
-            'lng' => 106.8456,
+            'lat' => -8.0505,
+            'lng' => 111.7083,
         ];
     }
 

@@ -57,21 +57,23 @@ const formatDate = (date) => {
     return new Date(date).toLocaleString('id-ID')
 }
 
-// Status badge color
+// Status badge color - use computed status from model
 const getStatusColor = (client) => {
-    if (!client.is_enabled) return 'bg-red-100 text-red-700'
-    if (client.connected_at && (!client.disconnected_at || new Date(client.connected_at) > new Date(client.disconnected_at))) {
-        return 'bg-green-100 text-green-700'
+    const colors = {
+        connected: 'bg-green-100 text-green-700',
+        disconnected: 'bg-gray-100 text-gray-600',
+        disabled: 'bg-red-100 text-red-700',
     }
-    return 'bg-gray-100 text-gray-600'
+    return colors[client.status] || 'bg-gray-100 text-gray-600'
 }
 
 const getStatusText = (client) => {
-    if (!client.is_enabled) return 'Disabled'
-    if (client.connected_at && (!client.disconnected_at || new Date(client.connected_at) > new Date(client.disconnected_at))) {
-        return 'Connected'
+    const texts = {
+        connected: 'Connected',
+        disconnected: 'Disconnected',
+        disabled: 'Disabled',
     }
-    return 'Disconnected'
+    return texts[client.status] || 'Unknown'
 }
 
 // Protocol badge

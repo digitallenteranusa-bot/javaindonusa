@@ -28,6 +28,7 @@ class VpnServerClient extends Model
         'is_enabled',
         'connected_at',
         'disconnected_at',
+        'last_handshake',
         'remote_ip',
         'bytes_received',
         'bytes_sent',
@@ -42,12 +43,21 @@ class VpnServerClient extends Model
         'preshared_key',
     ];
 
+    protected $appends = [
+        'is_connected',
+        'status',
+        'status_color',
+        'bytes_received_formatted',
+        'bytes_sent_formatted',
+    ];
+
     protected function casts(): array
     {
         return [
             'is_enabled' => 'boolean',
             'connected_at' => 'datetime',
             'disconnected_at' => 'datetime',
+            'last_handshake' => 'datetime',
             'last_generated_at' => 'datetime',
             'bytes_received' => 'integer',
             'bytes_sent' => 'integer',
@@ -69,6 +79,12 @@ class VpnServerClient extends Model
 
     public function getIsConnectedAttribute(): bool
     {
+        // For WireGuard: use last_handshake (must be within last 3 minutes)
+        if ($this->last_handshake) {
+            return $this->last_handshake->gt(now()->subMinutes(3));
+        }
+
+        // For OpenVPN or fallback: use connected_at/disconnected_at
         if (!$this->connected_at) {
             return false;
         }
@@ -77,7 +93,8 @@ class VpnServerClient extends Model
             return false;
         }
 
-        return true;
+        // Also check if connected_at is recent (within last 5 minutes)
+        return $this->connected_at->gt(now()->subMinutes(5));
     }
 
     public function getStatusAttribute(): string

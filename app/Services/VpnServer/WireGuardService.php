@@ -376,12 +376,13 @@ EOT;
                 $info = $liveStatus[$client->public_key];
 
                 // Convert Unix timestamp to Carbon datetime
-                $lastHandshake = $info['last_handshake']
-                    ? \Carbon\Carbon::createFromTimestamp($info['last_handshake'])
+                $lastHandshakeTimestamp = $info['last_handshake'];
+                $lastHandshake = $lastHandshakeTimestamp
+                    ? \Carbon\Carbon::createFromTimestamp($lastHandshakeTimestamp)
                     : null;
 
-                // Consider connected if handshake within last 3 minutes
-                $isConnected = $lastHandshake && $lastHandshake->gt(now()->subMinutes(3));
+                // Consider connected if handshake within last 3 minutes (compare timestamps directly)
+                $isConnected = $lastHandshakeTimestamp && ($lastHandshakeTimestamp > (time() - 180));
 
                 $client->update([
                     'last_handshake' => $lastHandshake,

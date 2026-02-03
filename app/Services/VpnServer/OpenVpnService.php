@@ -28,16 +28,16 @@ class OpenVpnService
         $easyrsaInstalled = File::exists('/usr/share/easy-rsa/easyrsa');
 
         // Check if PKI directory is initialized (has openssl-easyrsa.cnf)
-        // Use sudo ls since it's more commonly allowed in sudoers
-        $pkiDirExists = Process::run('sudo ls ' . $this->pkiPath . '/openssl-easyrsa.cnf 2>/dev/null')->successful();
+        // Use sudo cat with /dev/null redirection - cat is already in sudoers
+        $pkiDirExists = Process::run('sudo cat ' . $this->pkiPath . '/openssl-easyrsa.cnf > /dev/null 2>&1')->successful();
 
         // Check if CA certificate exists
-        $caCertExists = Process::run('sudo ls ' . $this->pkiPath . '/ca.crt 2>/dev/null')->successful();
+        $caCertExists = Process::run('sudo cat ' . $this->pkiPath . '/ca.crt > /dev/null 2>&1')->successful();
 
         // Check server files
-        $serverCertExists = Process::run('sudo ls ' . $this->serverPath . '/server.crt 2>/dev/null')->successful();
-        $dhExists = Process::run('sudo ls ' . $this->serverPath . '/dh.pem 2>/dev/null')->successful();
-        $taKeyExists = Process::run('sudo ls ' . $this->serverPath . '/ta.key 2>/dev/null')->successful();
+        $serverCertExists = Process::run('sudo cat ' . $this->serverPath . '/server.crt > /dev/null 2>&1')->successful();
+        $dhExists = Process::run('sudo cat ' . $this->serverPath . '/dh.pem > /dev/null 2>&1')->successful();
+        $taKeyExists = Process::run('sudo cat ' . $this->serverPath . '/ta.key > /dev/null 2>&1')->successful();
 
         $serviceRunning = false;
         if ($openvpnInstalled) {

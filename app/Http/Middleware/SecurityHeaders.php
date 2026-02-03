@@ -52,9 +52,9 @@ class SecurityHeaders
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for Vue.js
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net", // Required for Tailwind + Bunny Fonts
-            "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.openstreetmap.org", // Map tiles
+            "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.openstreetmap.org https://server.arcgisonline.com https://*.arcgisonline.com https://*.basemaps.cartocdn.com", // Map tiles (OSM + ESRI Satellite + Carto)
             "font-src 'self' data: https://fonts.bunny.net", // Bunny Fonts
-            "connect-src 'self' https://*.tile.openstreetmap.org", // Map tile requests
+            "connect-src 'self' https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.arcgisonline.com https://*.basemaps.cartocdn.com", // Map tile requests
             "frame-ancestors 'self'",
             "form-action 'self'",
             "base-uri 'self'",

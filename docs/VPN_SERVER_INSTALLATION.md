@@ -112,6 +112,8 @@ www-data ALL=(ALL) NOPASSWD: /bin/mkdir -p /etc/openvpn/*
 www-data ALL=(ALL) NOPASSWD: /bin/mkdir -p /var/log/openvpn
 www-data ALL=(ALL) NOPASSWD: /bin/cp *
 www-data ALL=(ALL) NOPASSWD: /bin/chmod *
+www-data ALL=(ALL) NOPASSWD: /bin/cat /etc/openvpn/*
+www-data ALL=(ALL) NOPASSWD: /bin/cat /var/log/openvpn/*
 ```
 
 ```bash

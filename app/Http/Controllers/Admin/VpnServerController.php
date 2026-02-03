@@ -106,7 +106,8 @@ class VpnServerController extends Controller
     {
         $validated = $request->validate([
             'public_endpoint' => 'required|string|max:255',
-            'server_address' => 'required|string|max:50',
+            'wg_server_address' => 'required|string|max:50',
+            'openvpn_server_address' => 'required|string|max:50',
             'port' => 'required|integer|min:1|max:65535',
             'protocol' => 'required|in:udp,tcp',
             'wg_port' => 'required|integer|min:1|max:65535',
@@ -115,6 +116,9 @@ class VpnServerController extends Controller
         foreach ($validated as $key => $value) {
             Setting::setValue('vpn_server', $key, $value);
         }
+
+        // Keep backward compatibility - set server_address to WireGuard subnet
+        Setting::setValue('vpn_server', 'server_address', $validated['wg_server_address']);
 
         return back()->with('success', 'Pengaturan VPN Server berhasil disimpan');
     }

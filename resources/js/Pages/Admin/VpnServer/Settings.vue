@@ -11,7 +11,8 @@ const props = defineProps({
 
 const form = useForm({
     public_endpoint: props.settings.public_endpoint || '',
-    server_address: props.settings.server_address || '10.200.1.0/24',
+    wg_server_address: props.settings.wg_server_address || props.settings.server_address || '10.200.1.0/24',
+    openvpn_server_address: props.settings.openvpn_server_address || '10.200.2.0/24',
     port: props.settings.port || 1194,
     protocol: props.settings.protocol || 'udp',
     wg_port: props.settings.wg_port || 51820,
@@ -109,17 +110,31 @@ const generateWgKeys = () => {
                         <p class="text-xs text-gray-500 mt-1">IP public atau domain VPS tempat VPN server berjalan</p>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            VPN Network (CIDR)
-                        </label>
-                        <input
-                            v-model="form.server_address"
-                            type="text"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            placeholder="10.200.1.0/24"
-                        >
-                        <p class="text-xs text-gray-500 mt-1">Network untuk VPN tunnel. Server akan menggunakan IP .1</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                WireGuard Subnet
+                            </label>
+                            <input
+                                v-model="form.wg_server_address"
+                                type="text"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                placeholder="10.200.1.0/24"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Server: .1</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                OpenVPN Subnet
+                            </label>
+                            <input
+                                v-model="form.openvpn_server_address"
+                                type="text"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                placeholder="10.200.2.0/24"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Server: .1</p>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">

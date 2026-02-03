@@ -277,7 +277,8 @@ VARS;
 
     public function getNextAvailableClientIp(): string
     {
-        $serverAddress = Setting::getValue('vpn_server', 'server_address', '10.200.1.0/24');
+        // OpenVPN uses separate subnet (10.200.2.0/24) to avoid conflict with WireGuard
+        $serverAddress = Setting::getValue('vpn_server', 'openvpn_server_address', '10.200.2.0/24');
         $parts = explode('.', explode('/', $serverAddress)[0]);
         $baseIp = $parts[0] . '.' . $parts[1] . '.' . $parts[2] . '.';
 
@@ -307,7 +308,8 @@ VARS;
         $s = Setting::vpnServer();
         $port = $s['port'] ?? 1194;
         $protocol = $s['protocol'] ?? 'udp';
-        $serverAddress = $s['server_address'] ?? '10.200.1.0/24';
+        // OpenVPN uses separate subnet (10.200.2.0/24) to avoid conflict with WireGuard
+        $serverAddress = $s['openvpn_server_address'] ?? '10.200.2.0/24';
         $network = explode('/', $serverAddress)[0];
 
         $config = <<<EOT
@@ -442,6 +444,9 @@ EOT;
         $s = Setting::vpnServer();
         $endpoint = $s['public_endpoint'] ?? '';
         $port = $s['port'] ?? 1194;
+        $serverAddress = $s['openvpn_server_address'] ?? '10.200.2.0/24';
+        $networkParts = explode('.', explode('/', $serverAddress)[0]);
+        $serverIp = $networkParts[0] . '.' . $networkParts[1] . '.' . $networkParts[2] . '.1';
 
         return <<<EOT
 # ============================================================
@@ -472,7 +477,7 @@ EOT;
     comment="VPN to Billing Server"
 
 # STEP 4: Add firewall rule to allow VPN traffic
-/ip firewall filter add chain=input src-address=10.200.1.0/24 action=accept \\
+/ip firewall filter add chain=input src-address={$serverAddress} action=accept \\
     comment="Allow VPN Billing" place-before=0
 
 # STEP 5: Enable interface
@@ -483,7 +488,7 @@ EOT;
 # ============================================================
 # /interface ovpn-client print
 # /interface ovpn-client monitor ovpn-billing
-# /ping 10.200.1.1
+# /ping {$serverIp}
 EOT;
     }
 

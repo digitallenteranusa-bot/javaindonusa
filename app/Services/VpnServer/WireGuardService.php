@@ -95,7 +95,9 @@ class WireGuardService
 
     public function getNextAvailableClientIp(): string
     {
-        $serverAddress = Setting::getValue('vpn_server', 'server_address', '10.200.1.0/24');
+        // WireGuard uses wg_server_address, fallback to server_address for backward compatibility
+        $serverAddress = Setting::getValue('vpn_server', 'wg_server_address')
+            ?? Setting::getValue('vpn_server', 'server_address', '10.200.1.0/24');
         $parts = explode('.', explode('/', $serverAddress)[0]);
         $baseIp = $parts[0] . '.' . $parts[1] . '.' . $parts[2] . '.';
 
@@ -124,7 +126,8 @@ class WireGuardService
     {
         $s = Setting::vpnServer();
         $privateKey = $s['wg_private_key'] ?? '';
-        $serverAddress = $s['server_address'] ?? '10.200.1.0/24';
+        // WireGuard uses wg_server_address, fallback to server_address for backward compatibility
+        $serverAddress = $s['wg_server_address'] ?? $s['server_address'] ?? '10.200.1.0/24';
         $port = $s['wg_port'] ?? 51820;
 
         // Get server IP (first usable IP in subnet)
@@ -190,7 +193,8 @@ class WireGuardService
         $serverPublicKey = $s['wg_public_key'] ?? '';
         $endpoint = $s['public_endpoint'] ?? '';
         $port = $s['wg_port'] ?? 51820;
-        $serverAddress = $s['server_address'] ?? '10.200.1.0/24';
+        // WireGuard uses wg_server_address, fallback to server_address for backward compatibility
+        $serverAddress = $s['wg_server_address'] ?? $s['server_address'] ?? '10.200.1.0/24';
 
         // Calculate server IP
         $serverIp = preg_replace('/\.\d+$/', '.1', explode('/', $serverAddress)[0]);

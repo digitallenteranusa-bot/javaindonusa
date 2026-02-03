@@ -212,7 +212,7 @@ const generateWgKeys = () => {
                             <div
                                 :class="[
                                     'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium',
-                                    openVpnStatus.pki_initialized && settings.ca_cert ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                                    openVpnStatus.ca_cert_exists ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                                 ]"
                             >
                                 2
@@ -224,16 +224,16 @@ const generateWgKeys = () => {
                         </div>
                         <button
                             @click="generateCa"
-                            :disabled="loading.generateCa || !openVpnStatus.pki_initialized || settings.ca_cert"
+                            :disabled="loading.generateCa || !openVpnStatus.pki_initialized || openVpnStatus.ca_cert_exists"
                             :class="[
                                 'px-4 py-2 rounded-lg text-sm',
-                                settings.ca_cert
+                                openVpnStatus.ca_cert_exists
                                     ? 'bg-green-100 text-green-700'
                                     : 'bg-blue-100 text-blue-700 hover:bg-blue-200',
                                 { 'opacity-50 cursor-not-allowed': !openVpnStatus.pki_initialized }
                             ]"
                         >
-                            {{ settings.ca_cert ? 'Done' : (loading.generateCa ? 'Loading...' : 'Run') }}
+                            {{ openVpnStatus.ca_cert_exists ? 'Done' : (loading.generateCa ? 'Loading...' : 'Run') }}
                         </button>
                     </div>
 
@@ -255,13 +255,13 @@ const generateWgKeys = () => {
                         </div>
                         <button
                             @click="generateServer"
-                            :disabled="loading.generateServer || !settings.ca_cert || openVpnStatus.server_cert_exists"
+                            :disabled="loading.generateServer || !openVpnStatus.ca_cert_exists || openVpnStatus.server_cert_exists"
                             :class="[
                                 'px-4 py-2 rounded-lg text-sm',
                                 openVpnStatus.server_cert_exists
                                     ? 'bg-green-100 text-green-700'
                                     : 'bg-blue-100 text-blue-700 hover:bg-blue-200',
-                                { 'opacity-50 cursor-not-allowed': !settings.ca_cert }
+                                { 'opacity-50 cursor-not-allowed': !openVpnStatus.ca_cert_exists }
                             ]"
                         >
                             {{ openVpnStatus.server_cert_exists ? 'Done' : (loading.generateServer ? 'Loading...' : 'Run') }}

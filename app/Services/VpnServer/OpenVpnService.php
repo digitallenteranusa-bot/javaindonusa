@@ -26,10 +26,17 @@ class OpenVpnService
     {
         $openvpnInstalled = $this->isInstalled();
         $easyrsaInstalled = File::exists('/usr/share/easy-rsa/easyrsa');
-        $pkiInitialized = File::exists($this->pkiPath . '/ca.crt');
-        $serverCertExists = File::exists($this->serverPath . '/server.crt');
-        $dhExists = File::exists($this->serverPath . '/dh.pem');
-        $taKeyExists = File::exists($this->serverPath . '/ta.key');
+
+        // Check if PKI directory is initialized (has openssl-easyrsa.cnf)
+        $pkiDirExists = Process::run('sudo test -f ' . $this->pkiPath . '/openssl-easyrsa.cnf && echo yes')->successful();
+
+        // Check if CA certificate exists
+        $caCertExists = Process::run('sudo test -f ' . $this->pkiPath . '/ca.crt && echo yes')->successful();
+
+        // Check server files
+        $serverCertExists = Process::run('sudo test -f ' . $this->serverPath . '/server.crt && echo yes')->successful();
+        $dhExists = Process::run('sudo test -f ' . $this->serverPath . '/dh.pem && echo yes')->successful();
+        $taKeyExists = Process::run('sudo test -f ' . $this->serverPath . '/ta.key && echo yes')->successful();
 
         $serviceRunning = false;
         if ($openvpnInstalled) {
@@ -40,12 +47,13 @@ class OpenVpnService
         return [
             'openvpn_installed' => $openvpnInstalled,
             'easyrsa_installed' => $easyrsaInstalled,
-            'pki_initialized' => $pkiInitialized,
+            'pki_initialized' => $pkiDirExists,      // PKI directory exists
+            'ca_cert_exists' => $caCertExists,        // CA certificate exists
             'server_cert_exists' => $serverCertExists,
             'dh_exists' => $dhExists,
             'ta_key_exists' => $taKeyExists,
             'service_running' => $serviceRunning,
-            'all_ready' => $openvpnInstalled && $easyrsaInstalled && $pkiInitialized &&
+            'all_ready' => $openvpnInstalled && $easyrsaInstalled && $caCertExists &&
                           $serverCertExists && $dhExists && $taKeyExists,
         ];
     }

@@ -217,9 +217,9 @@ const wireGuardReady = computed(() => props.wireGuardStatus?.all_ready)
                         </span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-500">PKI Ready</span>
-                        <span :class="openVpnStatus.pki_initialized ? 'text-green-600' : 'text-red-600'">
-                            {{ openVpnStatus.pki_initialized ? 'Yes' : 'No' }}
+                        <span class="text-gray-500">CA Ready</span>
+                        <span :class="openVpnStatus.ca_cert_exists ? 'text-green-600' : 'text-red-600'">
+                            {{ openVpnStatus.ca_cert_exists ? 'Yes' : 'No' }}
                         </span>
                     </div>
                     <div class="flex justify-between">

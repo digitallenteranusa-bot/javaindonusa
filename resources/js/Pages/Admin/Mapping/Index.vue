@@ -21,6 +21,11 @@ const selectedArea = ref(props.filters.area_id || '')
 const selectedStatus = ref(props.filters.status || '')
 const loading = ref(false)
 const showSidebar = ref(false) // Hidden by default on mobile
+const mapStyle = ref('satellite') // 'street' or 'satellite'
+const locating = ref(false)
+const locationError = ref('')
+
+let baseLayers = {}
 
 const customerStatuses = {
     active: { label: 'Aktif', color: '#22c55e' },
@@ -52,12 +57,30 @@ onMounted(async () => {
 const initMap = () => {
     map.value = L.map(mapContainer.value).setView(
         [props.centerPoint.lat, props.centerPoint.lng],
-        13
+        17 // Zoom lebih dekat untuk lihat rumah
     )
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map.value)
+    // Base layers
+    baseLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    })
+
+    baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 19
+    })
+
+    // Add hybrid labels on satellite
+    baseLayers.labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+        attribution: '',
+        maxZoom: 19,
+        pane: 'shadowPane'
+    })
+
+    // Default to satellite view
+    baseLayers.satellite.addTo(map.value)
+    baseLayers.labels.addTo(map.value)
 
     // Initialize marker cluster groups if available
     if (L.markerClusterGroup) {
@@ -75,6 +98,78 @@ const initMap = () => {
 
     map.value.addLayer(markerLayers.value.customers)
     map.value.addLayer(markerLayers.value.odps)
+}
+
+const switchMapStyle = (style) => {
+    mapStyle.value = style
+
+    // Remove all base layers
+    Object.values(baseLayers).forEach(layer => {
+        if (map.value.hasLayer(layer)) {
+            map.value.removeLayer(layer)
+        }
+    })
+
+    // Add selected style
+    if (style === 'street') {
+        baseLayers.street.addTo(map.value)
+    } else {
+        baseLayers.satellite.addTo(map.value)
+        baseLayers.labels.addTo(map.value)
+    }
+}
+
+const locateMe = () => {
+    if (!navigator.geolocation) {
+        locationError.value = 'Browser tidak mendukung geolocation'
+        return
+    }
+
+    locating.value = true
+    locationError.value = ''
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords
+            map.value.setView([latitude, longitude], 18)
+
+            // Add temporary marker
+            const myLocationIcon = L.divIcon({
+                className: 'my-location-marker',
+                html: `<div style="background-color: #3b82f6; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px #3b82f6, 0 2px 8px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [22, 22],
+                iconAnchor: [11, 11],
+            })
+
+            L.marker([latitude, longitude], { icon: myLocationIcon })
+                .addTo(map.value)
+                .bindPopup('Lokasi Anda')
+                .openPopup()
+
+            locating.value = false
+        },
+        (error) => {
+            locating.value = false
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    locationError.value = 'Akses lokasi ditolak. Izinkan akses lokasi di browser.'
+                    break
+                case error.POSITION_UNAVAILABLE:
+                    locationError.value = 'Informasi lokasi tidak tersedia.'
+                    break
+                case error.TIMEOUT:
+                    locationError.value = 'Waktu permintaan lokasi habis.'
+                    break
+                default:
+                    locationError.value = 'Gagal mendapatkan lokasi.'
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    )
 }
 
 const loadData = async () => {
@@ -204,6 +299,42 @@ const zoomToAll = () => {
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-gray-900">Mapping Pelanggan & ODP</h1>
                 <div class="flex gap-2">
+                    <!-- Map Style Toggle -->
+                    <div class="flex rounded-lg overflow-hidden border border-gray-300">
+                        <button
+                            @click="switchMapStyle('satellite')"
+                            :class="[
+                                'px-3 py-2 text-sm',
+                                mapStyle === 'satellite' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                            ]"
+                        >
+                            Satelit
+                        </button>
+                        <button
+                            @click="switchMapStyle('street')"
+                            :class="[
+                                'px-3 py-2 text-sm',
+                                mapStyle === 'street' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                            ]"
+                        >
+                            Peta
+                        </button>
+                    </div>
+
+                    <!-- Locate Me -->
+                    <button
+                        @click="locateMe"
+                        :disabled="locating"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 disabled:opacity-50"
+                        title="Lokasi Saat Ini"
+                    >
+                        <svg class="w-5 h-5" :class="{ 'animate-pulse': locating }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="hidden sm:inline">{{ locating ? 'Mencari...' : 'Lokasi Saya' }}</span>
+                    </button>
+
                     <button
                         @click="zoomToAll"
                         class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
@@ -211,7 +342,7 @@ const zoomToAll = () => {
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                         </svg>
-                        Zoom All
+                        <span class="hidden sm:inline">Zoom All</span>
                     </button>
                     <button
                         @click="loadData"
@@ -221,11 +352,21 @@ const zoomToAll = () => {
                         <svg class="w-5 h-5" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Refresh
+                        <span class="hidden sm:inline">Refresh</span>
                     </button>
                 </div>
             </div>
         </template>
+
+        <!-- Location Error -->
+        <div v-if="locationError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center justify-between">
+            <span>{{ locationError }}</span>
+            <button @click="locationError = ''" class="text-red-500 hover:text-red-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
 
         <div class="relative">
             <!-- Mobile Toggle Button -->

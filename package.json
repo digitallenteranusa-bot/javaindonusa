@@ -27,6 +27,7 @@
         "leaflet": "^1.9.4",
         "leaflet.markercluster": "^1.5.3",
         "lodash": "^4.17.21",
-        "vue-chartjs": "^5.3.0"
+        "vue-chartjs": "^5.3.0",
+        "ziggy-js": "^2.6.0"
     }
 }

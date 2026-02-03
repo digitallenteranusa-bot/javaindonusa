@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -12,6 +12,15 @@ const props = defineProps({
 })
 
 const isEdit = computed(() => !!props.customer)
+
+// Map related
+const showMapPicker = ref(false)
+const mapContainer = ref(null)
+const locating = ref(false)
+const locationError = ref('')
+let map = null
+let marker = null
+let L = null
 
 const form = useForm({
     name: props.customer?.name || '',
@@ -48,6 +57,129 @@ const onAreaChange = () => {
     if (area?.router_id) {
         form.router_id = area.router_id
     }
+}
+
+// Map picker functions
+const openMapPicker = async () => {
+    showMapPicker.value = true
+    await nextTick()
+
+    if (!L) {
+        L = await import('leaflet')
+        await import('leaflet/dist/leaflet.css')
+    }
+
+    // Default center (Trenggalek or customer location)
+    const defaultLat = form.latitude || -8.0654
+    const defaultLng = form.longitude || 111.7085
+
+    map = L.map(mapContainer.value).setView([defaultLat, defaultLng], 17)
+
+    // Satellite layer
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri',
+        maxZoom: 19
+    }).addTo(map)
+
+    // Labels overlay
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        pane: 'shadowPane'
+    }).addTo(map)
+
+    // Add marker if coordinates exist
+    if (form.latitude && form.longitude) {
+        addMarker(form.latitude, form.longitude)
+    }
+
+    // Click to place marker
+    map.on('click', (e) => {
+        addMarker(e.latlng.lat, e.latlng.lng)
+    })
+}
+
+const addMarker = (lat, lng) => {
+    if (marker) {
+        map.removeLayer(marker)
+    }
+
+    const icon = L.divIcon({
+        className: 'customer-marker',
+        html: `<div style="background-color: #ef4444; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
+    })
+
+    marker = L.marker([lat, lng], { icon, draggable: true }).addTo(map)
+
+    marker.on('dragend', () => {
+        const pos = marker.getLatLng()
+        form.latitude = pos.lat.toFixed(7)
+        form.longitude = pos.lng.toFixed(7)
+    })
+
+    form.latitude = lat.toFixed(7)
+    form.longitude = lng.toFixed(7)
+}
+
+const closeMapPicker = () => {
+    if (map) {
+        map.remove()
+        map = null
+        marker = null
+    }
+    showMapPicker.value = false
+}
+
+const confirmLocation = () => {
+    closeMapPicker()
+}
+
+const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+        locationError.value = 'Browser tidak mendukung geolocation'
+        return
+    }
+
+    locating.value = true
+    locationError.value = ''
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords
+
+            if (showMapPicker.value && map) {
+                map.setView([latitude, longitude], 18)
+                addMarker(latitude, longitude)
+            } else {
+                form.latitude = latitude.toFixed(7)
+                form.longitude = longitude.toFixed(7)
+            }
+
+            locating.value = false
+        },
+        (error) => {
+            locating.value = false
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    locationError.value = 'Akses lokasi ditolak. Izinkan akses lokasi di pengaturan browser.'
+                    break
+                case error.POSITION_UNAVAILABLE:
+                    locationError.value = 'Informasi lokasi tidak tersedia.'
+                    break
+                case error.TIMEOUT:
+                    locationError.value = 'Waktu permintaan lokasi habis.'
+                    break
+                default:
+                    locationError.value = 'Gagal mendapatkan lokasi.'
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    )
 }
 
 // Submit form
@@ -197,22 +329,58 @@ const submit = () => {
                         >
                     </div>
 
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Koordinat (Lat, Long)</label>
+
+                        <!-- Location Error -->
+                        <div v-if="locationError" class="mb-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center justify-between">
+                            <span>{{ locationError }}</span>
+                            <button type="button" @click="locationError = ''" class="text-red-400 hover:text-red-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
                         <div class="flex gap-2">
                             <input
                                 v-model="form.latitude"
                                 type="text"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 placeholder="Latitude"
                             >
                             <input
                                 v-model="form.longitude"
                                 type="text"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 placeholder="Longitude"
                             >
+                            <!-- Get Current Location -->
+                            <button
+                                type="button"
+                                @click="getCurrentLocation"
+                                :disabled="locating"
+                                class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+                                title="Ambil Lokasi Saat Ini"
+                            >
+                                <svg class="w-5 h-5" :class="{ 'animate-pulse': locating }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </button>
+                            <!-- Open Map Picker -->
+                            <button
+                                type="button"
+                                @click="openMapPicker"
+                                class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                                title="Pilih di Peta"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                </svg>
+                            </button>
                         </div>
+                        <p class="text-xs text-gray-500 mt-1">Klik tombol hijau untuk lokasi saat ini, atau tombol biru untuk pilih di peta</p>
                     </div>
                 </div>
             </div>
@@ -428,5 +596,65 @@ const submit = () => {
                 </button>
             </div>
         </form>
+
+        <!-- Map Picker Modal -->
+        <Teleport to="body">
+            <div v-if="showMapPicker" class="fixed inset-0 z-50 overflow-y-auto">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <!-- Backdrop -->
+                    <div class="fixed inset-0 bg-black bg-opacity-50" @click="closeMapPicker"></div>
+
+                    <!-- Modal -->
+                    <div class="relative bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                        <!-- Header -->
+                        <div class="flex items-center justify-between p-4 border-b">
+                            <h3 class="text-lg font-semibold">Pilih Lokasi di Peta</h3>
+                            <button @click="closeMapPicker" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Map -->
+                        <div ref="mapContainer" class="w-full h-[60vh]"></div>
+
+                        <!-- Footer -->
+                        <div class="p-4 border-t bg-gray-50">
+                            <div class="flex items-center justify-between">
+                                <div class="text-sm text-gray-600">
+                                    <span v-if="form.latitude && form.longitude">
+                                        Koordinat: {{ form.latitude }}, {{ form.longitude }}
+                                    </span>
+                                    <span v-else class="text-gray-400">Klik pada peta untuk memilih lokasi</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button
+                                        type="button"
+                                        @click="getCurrentLocation"
+                                        :disabled="locating"
+                                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        <svg class="w-5 h-5" :class="{ 'animate-pulse': locating }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        {{ locating ? 'Mencari...' : 'Lokasi Saya' }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="confirmLocation"
+                                        :disabled="!form.latitude || !form.longitude"
+                                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                                    >
+                                        Konfirmasi Lokasi
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </AdminLayout>
 </template>

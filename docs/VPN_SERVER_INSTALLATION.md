@@ -9,8 +9,14 @@ VPS (IP Public)                          Mikrotik (Tanpa IP Public)
 ┌─────────────────────┐                  ┌─────────────────────┐
 │  Billing System     │                  │  Router Cabang      │
 │  + VPN Server       │◄────VPN Tunnel───│  (VPN Client)       │
-│  10.200.1.1         │                  │  10.200.1.x         │
+│                     │                  │                     │
+│  WireGuard: .1.1    │                  │  WireGuard: .1.x    │
+│  OpenVPN:   .2.1    │                  │  OpenVPN:   .2.x    │
 └─────────────────────┘                  └─────────────────────┘
+
+Subnet:
+- WireGuard: 10.200.1.0/24 (Mikrotik v7+)
+- OpenVPN:   10.200.2.0/24 (Mikrotik v6/v7)
 ```
 
 **Keuntungan:**
@@ -138,7 +144,8 @@ sudo ufw allow 1194/udp comment "OpenVPN"
 sudo ufw allow 51820/udp comment "WireGuard"
 
 # PENTING: Izinkan traffic dari VPN subnet
-sudo ufw allow from 10.200.1.0/24 comment "VPN Subnet"
+sudo ufw allow from 10.200.1.0/24 comment "WireGuard VPN Subnet"
+sudo ufw allow from 10.200.2.0/24 comment "OpenVPN Subnet"
 
 # Izinkan traffic pada interface VPN
 sudo ufw allow in on wg0
@@ -164,6 +171,7 @@ sudo iptables -A FORWARD -o tun0 -j ACCEPT
 
 # NAT untuk VPN clients (ganti eth0 dengan interface publik Anda)
 sudo iptables -t nat -A POSTROUTING -s 10.200.1.0/24 -o eth0 -j MASQUERADE
+sudo iptables -t nat -A POSTROUTING -s 10.200.2.0/24 -o eth0 -j MASQUERADE
 
 # Simpan rules
 sudo apt install iptables-persistent
@@ -205,10 +213,13 @@ sudo sysctl -p
 | Setting | Contoh | Keterangan |
 |---------|--------|------------|
 | Public Endpoint | `vpn.example.com` atau `123.45.67.89` | IP/Domain publik VPS |
-| VPN Network | `10.200.1.0/24` | Subnet untuk VPN tunnel |
+| WireGuard Subnet | `10.200.1.0/24` | Subnet untuk WireGuard (Mikrotik v7+) |
+| OpenVPN Subnet | `10.200.2.0/24` | Subnet untuk OpenVPN (Mikrotik v6/v7) |
 | OpenVPN Port | `1194` | Port OpenVPN |
 | Protocol | `UDP` | UDP lebih cepat |
 | WireGuard Port | `51820` | Port WireGuard |
+
+> **Catatan:** WireGuard dan OpenVPN menggunakan subnet terpisah untuk menghindari konflik routing.
 
 Klik **Simpan Pengaturan**.
 
@@ -478,12 +489,96 @@ sudo systemctl enable wg-quick@wg0
 - Mikrotik v7+: Gunakan **WireGuard** (lebih cepat)
 
 **PENTING:** Jika menggunakan OpenVPN dan WireGuard bersamaan, gunakan subnet yang berbeda untuk menghindari konflik routing:
-- OpenVPN: `10.200.1.0/24`
-- WireGuard: `10.200.2.0/24`
+- WireGuard: `10.200.1.0/24` (default)
+- OpenVPN: `10.200.2.0/24` (default)
 
 ---
 
 ## Maintenance
+
+### Update Billing System
+
+Jalankan perintah berikut untuk update sistem billing ke versi terbaru:
+
+```bash
+# Masuk ke direktori project
+cd /var/www/billing
+
+# Pull perubahan terbaru dari GitHub
+git pull origin main
+
+# Install/update dependencies PHP
+composer install --no-dev --optimize-autoloader
+
+# Install/update dependencies Node.js dan build assets
+npm install
+npm run build
+
+# Jalankan migrasi database (jika ada)
+php artisan migrate --force
+
+# Clear dan rebuild cache
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+php artisan route:clear
+
+# (Opsional) Rebuild cache untuk production
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Restart queue worker jika menggunakan Supervisor
+sudo supervisorctl restart all
+
+# Atau jika tidak pakai Supervisor, restart manual
+pkill -f "queue:work"
+nohup php artisan queue:work redis --daemon > /dev/null 2>&1 &
+```
+
+**Script Update Cepat:**
+
+Buat file `/var/www/billing/update.sh`:
+
+```bash
+#!/bin/bash
+cd /var/www/billing
+
+echo "Pulling latest changes..."
+git pull origin main
+
+echo "Installing PHP dependencies..."
+composer install --no-dev --optimize-autoloader
+
+echo "Installing Node.js dependencies..."
+npm install
+
+echo "Building assets..."
+npm run build
+
+echo "Running migrations..."
+php artisan migrate --force
+
+echo "Clearing cache..."
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+php artisan route:clear
+
+echo "Rebuilding cache..."
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+echo "Update complete!"
+```
+
+Kemudian jalankan dengan:
+
+```bash
+chmod +x /var/www/billing/update.sh
+./update.sh
+```
 
 ### Backup PKI (OpenVPN)
 

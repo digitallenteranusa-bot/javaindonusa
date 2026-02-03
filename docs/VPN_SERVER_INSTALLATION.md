@@ -131,32 +131,65 @@ sudo visudo -c
 ### UFW (Ubuntu Firewall)
 
 ```bash
-# OpenVPN
+# OpenVPN port
 sudo ufw allow 1194/udp comment "OpenVPN"
 
-# WireGuard
+# WireGuard port
 sudo ufw allow 51820/udp comment "WireGuard"
+
+# PENTING: Izinkan traffic dari VPN subnet
+sudo ufw allow from 10.200.1.0/24 comment "VPN Subnet"
+
+# Izinkan traffic pada interface VPN
+sudo ufw allow in on wg0
+sudo ufw allow in on tun0
 
 # Reload
 sudo ufw reload
 sudo ufw status
 ```
 
-### iptables (Alternatif)
+### iptables (Tambahan)
 
 ```bash
-# OpenVPN
-sudo iptables -A INPUT -p udp --dport 1194 -j ACCEPT
+# Accept traffic dari interface VPN
+sudo iptables -A INPUT -i wg0 -j ACCEPT
+sudo iptables -A INPUT -i tun0 -j ACCEPT
 
-# WireGuard
-sudo iptables -A INPUT -p udp --dport 51820 -j ACCEPT
+# Forward traffic VPN
+sudo iptables -A FORWARD -i wg0 -j ACCEPT
+sudo iptables -A FORWARD -o wg0 -j ACCEPT
+sudo iptables -A FORWARD -i tun0 -j ACCEPT
+sudo iptables -A FORWARD -o tun0 -j ACCEPT
 
-# NAT untuk VPN clients
+# NAT untuk VPN clients (ganti eth0 dengan interface publik Anda)
 sudo iptables -t nat -A POSTROUTING -s 10.200.1.0/24 -o eth0 -j MASQUERADE
 
 # Simpan rules
 sudo apt install iptables-persistent
 sudo netfilter-persistent save
+```
+
+### Sysctl (Reverse Path Filter)
+
+Jika ping tidak bekerja meskipun handshake berhasil, disable rp_filter:
+
+```bash
+# Disable reverse path filtering untuk VPN
+sudo sysctl -w net.ipv4.conf.all.rp_filter=0
+sudo sysctl -w net.ipv4.conf.wg0.rp_filter=0
+sudo sysctl -w net.ipv4.conf.tun0.rp_filter=0
+
+# Buat permanen
+cat << EOF | sudo tee -a /etc/sysctl.conf
+# VPN - disable reverse path filter
+net.ipv4.conf.all.rp_filter=0
+net.ipv4.conf.default.rp_filter=0
+net.ipv4.conf.wg0.rp_filter=0
+net.ipv4.conf.tun0.rp_filter=0
+EOF
+
+sudo sysctl -p
 ```
 
 ---
@@ -363,6 +396,37 @@ sudo wg show
 
 # Cek log
 sudo dmesg | grep wireguard
+
+# Restart interface
+sudo wg-quick down wg0
+sudo wg-quick up wg0
+```
+
+### Handshake OK Tapi Tidak Bisa Ping
+
+Jika `sudo wg show` menunjukkan handshake berhasil tapi ping timeout:
+
+```bash
+# 1. Cek apakah paket ICMP sampai
+sudo tcpdump -i wg0 -n icmp
+
+# 2. Jika paket sampai tapi tidak ada reply, cek routing
+ip route get 10.200.1.2
+
+# 3. Jika route salah (ke eth0 bukan wg0), cek konflik route
+ip route show | grep 10.200.1
+
+# 4. Jika ada konflik OpenVPN & WireGuard (keduanya pakai 10.200.1.0/24):
+#    - Stop salah satu service
+#    - Atau gunakan subnet berbeda
+
+# 5. Disable rp_filter
+sudo sysctl -w net.ipv4.conf.all.rp_filter=0
+sudo sysctl -w net.ipv4.conf.wg0.rp_filter=0
+
+# 6. Pastikan firewall mengizinkan VPN traffic
+sudo ufw allow from 10.200.1.0/24
+sudo iptables -A INPUT -i wg0 -j ACCEPT
 ```
 
 ### Mikrotik Tidak Bisa Connect
@@ -371,6 +435,10 @@ sudo dmesg | grep wireguard
 2. Cek certificate sudah di-import dengan benar
 3. Pastikan waktu di Mikrotik sinkron (NTP)
 4. Cek routing table di Mikrotik
+5. Cek peer configuration di Mikrotik:
+   ```
+   /interface wireguard peers print detail
+   ```
 
 ### Permission Denied
 
@@ -380,6 +448,16 @@ sudo -l -U www-data
 
 # Test manual
 sudo -u www-data sudo wg show
+```
+
+### Interface wg0 Tidak Ada
+
+```bash
+# Start WireGuard
+sudo wg-quick up wg0
+
+# Enable auto-start
+sudo systemctl enable wg-quick@wg0
 ```
 
 ---
@@ -398,6 +476,10 @@ sudo -u www-data sudo wg show
 **Rekomendasi:**
 - Mikrotik v6: Gunakan **OpenVPN**
 - Mikrotik v7+: Gunakan **WireGuard** (lebih cepat)
+
+**PENTING:** Jika menggunakan OpenVPN dan WireGuard bersamaan, gunakan subnet yang berbeda untuk menghindari konflik routing:
+- OpenVPN: `10.200.1.0/24`
+- WireGuard: `10.200.2.0/24`
 
 ---
 

@@ -111,7 +111,7 @@ class CustomerController extends Controller
         return Inertia::render('Admin/Customer/Form', [
             'customer' => null,
             'packages' => Package::active()->ordered()->get(),
-            'areas' => Area::active()->with('router')->get(),
+            'areas' => Area::active()->get(),
             'routers' => Router::active()->get(),
             'collectors' => User::where('role', 'penagih')->where('is_active', true)->get(['id', 'name']),
         ]);
@@ -205,7 +205,7 @@ class CustomerController extends Controller
         return Inertia::render('Admin/Customer/Form', [
             'customer' => $customer,
             'packages' => Package::active()->ordered()->get(),
-            'areas' => Area::active()->with('router')->get(),
+            'areas' => Area::active()->get(),
             'routers' => Router::active()->get(),
             'collectors' => User::where('role', 'penagih')->where('is_active', true)->get(['id', 'name']),
         ]);

@@ -87,9 +87,9 @@ class OpenVpnService
     public function generateCaCertificate(): array
     {
         try {
+            // EASYRSA_BATCH=1 must be set inline for sudo to pass it
             $result = Process::path('/etc/openvpn/easy-rsa')
-                ->env(['EASYRSA_BATCH' => '1'])
-                ->run('sudo ./easyrsa build-ca nopass');
+                ->run('sudo EASYRSA_BATCH=1 ./easyrsa build-ca nopass');
 
             if ($result->successful()) {
                 Process::run('sudo cp ' . $this->pkiPath . '/ca.crt ' . $this->serverPath . '/');
@@ -116,9 +116,9 @@ class OpenVpnService
     public function generateServerCertificate(): array
     {
         try {
+            // EASYRSA_BATCH=1 must be set inline for sudo to pass it
             $result = Process::path('/etc/openvpn/easy-rsa')
-                ->env(['EASYRSA_BATCH' => '1'])
-                ->run('sudo ./easyrsa build-server-full server nopass');
+                ->run('sudo EASYRSA_BATCH=1 ./easyrsa build-server-full server nopass');
 
             if ($result->successful()) {
                 Process::run('sudo cp ' . $this->pkiPath . '/issued/server.crt ' . $this->serverPath . '/');
@@ -194,9 +194,9 @@ class OpenVpnService
     public function generateClientCertificate(string $commonName): array
     {
         try {
+            // EASYRSA_BATCH=1 must be set inline for sudo to pass it
             $result = Process::path('/etc/openvpn/easy-rsa')
-                ->env(['EASYRSA_BATCH' => '1'])
-                ->run("sudo ./easyrsa build-client-full {$commonName} nopass");
+                ->run("sudo EASYRSA_BATCH=1 ./easyrsa build-client-full {$commonName} nopass");
 
             if ($result->successful()) {
                 Log::info('OpenVPN client certificate generated', ['common_name' => $commonName]);
@@ -225,15 +225,14 @@ class OpenVpnService
     public function revokeClientCertificate(string $commonName): array
     {
         try {
+            // EASYRSA_BATCH=1 must be set inline for sudo to pass it
             $result = Process::path('/etc/openvpn/easy-rsa')
-                ->env(['EASYRSA_BATCH' => '1'])
-                ->run("sudo ./easyrsa revoke {$commonName}");
+                ->run("sudo EASYRSA_BATCH=1 ./easyrsa revoke {$commonName}");
 
             if ($result->successful()) {
                 // Generate CRL
                 Process::path('/etc/openvpn/easy-rsa')
-                    ->env(['EASYRSA_BATCH' => '1'])
-                    ->run('sudo ./easyrsa gen-crl');
+                    ->run('sudo EASYRSA_BATCH=1 ./easyrsa gen-crl');
 
                 Process::run('sudo cp ' . $this->pkiPath . '/crl.pem ' . $this->serverPath . '/');
 

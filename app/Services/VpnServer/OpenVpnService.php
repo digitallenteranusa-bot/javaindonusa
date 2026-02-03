@@ -85,9 +85,11 @@ class OpenVpnService
             if ($result->successful()) {
                 Process::run('sudo cp ' . $this->pkiPath . '/ca.crt ' . $this->serverPath . '/');
 
-                // Store CA cert in settings
-                $caCert = File::get($this->pkiPath . '/ca.crt');
-                Setting::setValue('vpn_server', 'ca_cert', $caCert, 'string');
+                // Store CA cert in settings (use sudo cat since files are owned by root)
+                $catResult = Process::run('sudo cat ' . $this->pkiPath . '/ca.crt');
+                if ($catResult->successful()) {
+                    Setting::setValue('vpn_server', 'ca_cert', $catResult->output(), 'string');
+                }
 
                 Log::info('OpenVPN CA certificate generated');
             }
@@ -154,9 +156,16 @@ class OpenVpnService
             $result = Process::run('sudo openvpn --genkey secret ' . $this->serverPath . '/ta.key');
 
             if ($result->successful()) {
-                $taKey = File::get($this->serverPath . '/ta.key');
-                Setting::setValue('vpn_server', 'ta_key', $taKey, 'string');
-                Log::info('OpenVPN TA key generated');
+                // Change ownership so www-data can read, or use sudo cat
+                Process::run('sudo chmod 644 ' . $this->serverPath . '/ta.key');
+
+                // Read file using sudo cat since it's owned by root
+                $catResult = Process::run('sudo cat ' . $this->serverPath . '/ta.key');
+                if ($catResult->successful()) {
+                    $taKey = $catResult->output();
+                    Setting::setValue('vpn_server', 'ta_key', $taKey, 'string');
+                    Log::info('OpenVPN TA key generated');
+                }
             }
 
             return [
@@ -183,10 +192,14 @@ class OpenVpnService
             if ($result->successful()) {
                 Log::info('OpenVPN client certificate generated', ['common_name' => $commonName]);
 
+                // Read files using sudo cat since they're owned by root
+                $certResult = Process::run('sudo cat ' . $this->pkiPath . '/issued/' . $commonName . '.crt');
+                $keyResult = Process::run('sudo cat ' . $this->pkiPath . '/private/' . $commonName . '.key');
+
                 return [
                     'success' => true,
-                    'cert' => File::get($this->pkiPath . '/issued/' . $commonName . '.crt'),
-                    'key' => File::get($this->pkiPath . '/private/' . $commonName . '.key'),
+                    'cert' => $certResult->output(),
+                    'key' => $keyResult->output(),
                 ];
             }
 
@@ -353,12 +366,15 @@ EOT;
         $clientCert = '';
         $clientKey = '';
 
-        if (File::exists($this->pkiPath . '/issued/' . $client->common_name . '.crt')) {
-            $clientCert = File::get($this->pkiPath . '/issued/' . $client->common_name . '.crt');
+        // Use sudo cat to read files owned by root
+        $certResult = Process::run('sudo cat ' . $this->pkiPath . '/issued/' . $client->common_name . '.crt 2>/dev/null');
+        if ($certResult->successful()) {
+            $clientCert = $certResult->output();
         }
 
-        if (File::exists($this->pkiPath . '/private/' . $client->common_name . '.key')) {
-            $clientKey = File::get($this->pkiPath . '/private/' . $client->common_name . '.key');
+        $keyResult = Process::run('sudo cat ' . $this->pkiPath . '/private/' . $client->common_name . '.key 2>/dev/null');
+        if ($keyResult->successful()) {
+            $clientKey = $keyResult->output();
         }
 
         return <<<EOT
@@ -543,12 +559,14 @@ EOT;
     {
         $statusFile = '/var/log/openvpn/openvpn-status.log';
 
-        if (!File::exists($statusFile)) {
-            return [];
-        }
-
         try {
-            $content = File::get($statusFile);
+            // Use sudo cat to read log file owned by root
+            $result = Process::run('sudo cat ' . $statusFile . ' 2>/dev/null');
+            if (!$result->successful()) {
+                return [];
+            }
+
+            $content = $result->output();
             $lines = explode("\n", $content);
 
             $clients = [];

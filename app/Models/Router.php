@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Router extends Model
@@ -64,6 +65,11 @@ class Router extends Model
     public function vpnConfigs(): HasMany
     {
         return $this->hasMany(VpnConfig::class);
+    }
+
+    public function vpnServerClient(): HasOne
+    {
+        return $this->hasOne(VpnServerClient::class);
     }
 
     // ================================================================

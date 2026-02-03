@@ -35,6 +35,7 @@ class Setting extends Model
     const GROUP_EXPENSE = 'expense';
     const GROUP_ISOLATION = 'isolation';
     const GROUP_SYSTEM = 'system';
+    const GROUP_VPN_SERVER = 'vpn_server';
 
     // ================================================================
     // CONSTANTS - KEYS
@@ -151,6 +152,7 @@ class Setting extends Model
             self::GROUP_EXPENSE,
             self::GROUP_ISOLATION,
             self::GROUP_SYSTEM,
+            self::GROUP_VPN_SERVER,
         ];
 
         foreach ($groups as $group) {
@@ -241,5 +243,13 @@ class Setting extends Model
     public static function isolation(): array
     {
         return self::getGroup(self::GROUP_ISOLATION);
+    }
+
+    /**
+     * Get VPN server settings
+     */
+    public static function vpnServer(): array
+    {
+        return self::getGroup(self::GROUP_VPN_SERVER);
     }
 }

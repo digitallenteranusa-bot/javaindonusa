@@ -90,6 +90,7 @@ const masterNavigation = [
 ]
 
 const systemNavigation = [
+    { name: 'VPN Server', href: '/admin/vpn-server', icon: 'vpn' },
     { name: 'Laporan', href: '/admin/reports', icon: 'chart' },
     { name: 'Audit Log', href: '/admin/audit-logs', icon: 'clipboard' },
     { name: 'Roles', href: '/admin/roles', icon: 'shield' },

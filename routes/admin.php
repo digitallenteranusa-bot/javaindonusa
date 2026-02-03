@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\OdpController;
 use App\Http\Controllers\Admin\OltController;
 use App\Http\Controllers\Admin\RadiusServerController;
 use App\Http\Controllers\Admin\VpnController;
+use App\Http\Controllers\Admin\VpnServerController;
 use App\Http\Controllers\Admin\MappingController;
 use App\Http\Controllers\Admin\RoleController;
 
@@ -281,13 +282,61 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         ->name('radius-servers.test-connection');
 
     // ================================================================
-    // VPN CONFIG
+    // VPN CONFIG (Router VPN Client)
     // ================================================================
     Route::get('/routers/{router}/vpn', [VpnController::class, 'index'])->name('routers.vpn');
     Route::post('/routers/{router}/vpn/{protocol}/generate', [VpnController::class, 'generate'])
         ->name('routers.vpn.generate');
     Route::get('/routers/{router}/vpn/{protocol}/download', [VpnController::class, 'download'])
         ->name('routers.vpn.download');
+
+    // ================================================================
+    // VPN SERVER (Server-side VPN Management)
+    // ================================================================
+    Route::prefix('vpn-server')->name('vpn-server.')->group(function () {
+        // Dashboard & Client List
+        Route::get('/', [VpnServerController::class, 'index'])->name('index');
+
+        // Settings
+        Route::get('/settings', [VpnServerController::class, 'settings'])->name('settings');
+        Route::post('/settings', [VpnServerController::class, 'updateSettings'])->name('settings.update');
+
+        // OpenVPN Setup
+        Route::post('/openvpn/init-pki', [VpnServerController::class, 'initPki'])->name('openvpn.init-pki');
+        Route::post('/openvpn/generate-ca', [VpnServerController::class, 'generateCa'])->name('openvpn.generate-ca');
+        Route::post('/openvpn/generate-server', [VpnServerController::class, 'generateServerCert'])->name('openvpn.generate-server');
+        Route::post('/openvpn/generate-dh', [VpnServerController::class, 'generateDh'])->name('openvpn.generate-dh');
+        Route::post('/openvpn/generate-ta', [VpnServerController::class, 'generateTaKey'])->name('openvpn.generate-ta');
+
+        // OpenVPN Service Control
+        Route::post('/openvpn/start', [VpnServerController::class, 'startOpenVpn'])->name('openvpn.start');
+        Route::post('/openvpn/stop', [VpnServerController::class, 'stopOpenVpn'])->name('openvpn.stop');
+        Route::post('/openvpn/restart', [VpnServerController::class, 'restartOpenVpn'])->name('openvpn.restart');
+
+        // WireGuard Setup & Control
+        Route::post('/wireguard/generate-keys', [VpnServerController::class, 'generateWgKeys'])->name('wireguard.generate-keys');
+        Route::post('/wireguard/start', [VpnServerController::class, 'startWireGuard'])->name('wireguard.start');
+        Route::post('/wireguard/stop', [VpnServerController::class, 'stopWireGuard'])->name('wireguard.stop');
+        Route::post('/wireguard/sync', [VpnServerController::class, 'syncWireGuard'])->name('wireguard.sync');
+
+        // Client Management
+        Route::get('/clients/create', [VpnServerController::class, 'createClient'])->name('clients.create');
+        Route::post('/clients', [VpnServerController::class, 'storeClient'])->name('clients.store');
+        Route::get('/clients/{client}', [VpnServerController::class, 'showClient'])->name('clients.show');
+        Route::get('/clients/{client}/edit', [VpnServerController::class, 'editClient'])->name('clients.edit');
+        Route::put('/clients/{client}', [VpnServerController::class, 'updateClient'])->name('clients.update');
+        Route::delete('/clients/{client}', [VpnServerController::class, 'destroyClient'])->name('clients.destroy');
+        Route::post('/clients/{client}/toggle', [VpnServerController::class, 'toggleClient'])->name('clients.toggle');
+        Route::post('/clients/{client}/regenerate', [VpnServerController::class, 'regenerateClient'])->name('clients.regenerate');
+
+        // Downloads
+        Route::get('/clients/{client}/download-config', [VpnServerController::class, 'downloadConfig'])->name('clients.download-config');
+        Route::get('/clients/{client}/download-script', [VpnServerController::class, 'downloadScript'])->name('clients.download-script');
+
+        // Status
+        Route::post('/refresh-status', [VpnServerController::class, 'refreshStatus'])->name('refresh-status');
+        Route::get('/live-status', [VpnServerController::class, 'liveStatus'])->name('live-status');
+    });
 
     // ================================================================
     // MAPPING (Customer & ODP Map)

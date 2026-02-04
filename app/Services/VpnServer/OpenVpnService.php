@@ -272,6 +272,102 @@ VARS;
         Log::info('Cleaned up certificate files', ['common_name' => $commonName]);
     }
 
+    /**
+     * Get client certificates for download
+     */
+    public function getClientCertificates(string $commonName): array
+    {
+        try {
+            // Read CA certificate
+            $caResult = Process::run('sudo cat ' . $this->serverPath . '/ca.crt');
+            if (!$caResult->successful()) {
+                return ['success' => false, 'message' => 'CA certificate not found'];
+            }
+
+            // Read client certificate
+            $certResult = Process::run('sudo cat ' . $this->pkiPath . '/issued/' . $commonName . '.crt');
+            if (!$certResult->successful()) {
+                return ['success' => false, 'message' => 'Client certificate not found'];
+            }
+
+            // Read client key
+            $keyResult = Process::run('sudo cat ' . $this->pkiPath . '/private/' . $commonName . '.key');
+            if (!$keyResult->successful()) {
+                return ['success' => false, 'message' => 'Client key not found'];
+            }
+
+            return [
+                'success' => true,
+                'ca' => $caResult->output(),
+                'cert' => $certResult->output(),
+                'key' => $keyResult->output(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get client certificates', [
+                'common_name' => $commonName,
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Generate PKCS#12 file for MikroTik (single file import)
+     */
+    public function generateP12Certificate(string $commonName, string $password = ''): array
+    {
+        try {
+            // Use storage temp path for better file handling
+            $tempDir = storage_path('app/temp');
+            if (!File::exists($tempDir)) {
+                File::makeDirectory($tempDir, 0755, true);
+            }
+
+            $p12Path = "{$tempDir}/{$commonName}.p12";
+
+            // Escape password for shell (empty string is ok for no password)
+            $escapedPassword = escapeshellarg($password);
+
+            // Generate PKCS#12 file using openssl
+            $cmd = "sudo openssl pkcs12 -export " .
+                "-in {$this->pkiPath}/issued/{$commonName}.crt " .
+                "-inkey {$this->pkiPath}/private/{$commonName}.key " .
+                "-certfile {$this->serverPath}/ca.crt " .
+                "-out {$p12Path} " .
+                "-passout pass:{$password}";
+
+            $result = Process::run($cmd);
+
+            if (!$result->successful()) {
+                return ['success' => false, 'message' => 'Failed to generate P12: ' . $result->errorOutput()];
+            }
+
+            // Make file readable
+            Process::run("sudo chmod 644 {$p12Path}");
+
+            // Read P12 file as binary
+            if (!File::exists($p12Path)) {
+                return ['success' => false, 'message' => 'P12 file not created'];
+            }
+
+            $p12Content = File::get($p12Path);
+
+            // Cleanup
+            File::delete($p12Path);
+
+            return [
+                'success' => true,
+                'p12' => $p12Content,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to generate P12 certificate', [
+                'common_name' => $commonName,
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
     public function revokeClientCertificate(string $commonName): array
     {
         try {
@@ -491,29 +587,45 @@ EOT;
 # Server: {$endpoint}:{$port}
 # ============================================================
 
-# STEP 1: Upload 3 file berikut ke Mikrotik via WinBox (Files):
+# ============================================================
+# METODE 1: IMPORT FILE .P12 (DISARANKAN untuk MikroTik v6)
+# ============================================================
+# File .p12 berisi semua certificate dalam 1 file
+
+# STEP 1: Download file {$certName}.p12 dari panel admin
+# STEP 2: Upload file .p12 ke Mikrotik via WinBox (Files)
+# STEP 3: Import certificate (jalankan di Terminal)
+/certificate import file-name={$certName}.p12 passphrase=""
+
+# STEP 4: Cek nama certificate hasil import
+/certificate print
+# Catat nama certificate yang memiliki flag "KT" (Key & Trusted)
+# Biasanya bernama: {$certName}.p12_0
+
+# STEP 5: Buat OVPN client interface
+# GANTI certificate= dengan nama cert dari step 4
+/interface ovpn-client add name=ovpn-billing connect-to={$endpoint} port={$port} mode=ip protocol=udp user={$certName} certificate={$certName}.p12_0 cipher=aes256-cbc auth=sha256 add-default-route=no comment="VPN to Billing Server"
+
+# STEP 6: Tambah firewall rule
+/ip firewall filter add chain=input src-address={$serverAddress} action=accept comment="Allow VPN Billing" place-before=0
+
+# STEP 7: Enable interface
+/interface ovpn-client enable ovpn-billing
+
+# ============================================================
+# METODE 2: IMPORT 3 FILE TERPISAH (Alternatif)
+# ============================================================
+# Gunakan jika metode 1 tidak berhasil
+
+# Upload 3 file berikut ke Mikrotik via WinBox (Files):
 #   - ca.crt
 #   - {$certName}.crt
 #   - {$certName}.key
 
-# STEP 2: Import certificates (jalankan satu per satu di Terminal)
-/certificate import file-name=ca.crt passphrase=""
-/certificate import file-name={$certName}.crt passphrase=""
-/certificate import file-name={$certName}.key passphrase=""
-
-# STEP 3: Cek nama certificate hasil import
-/certificate print
-# Catat nama certificate client (biasanya: {$certName}.crt_0)
-
-# STEP 4: Buat OVPN client interface
-# GANTI "cert_name" dengan nama certificate dari step 3
-/interface ovpn-client add name=ovpn-billing connect-to={$endpoint} port={$port} mode=ip protocol=udp user={$certName} certificate={$certName}.crt_0 cipher=aes256-cbc auth=sha256 add-default-route=no comment="VPN to Billing Server"
-
-# STEP 5: Tambah firewall rule
-/ip firewall filter add chain=input src-address={$serverAddress} action=accept comment="Allow VPN Billing" place-before=0
-
-# STEP 6: Enable interface
-/interface ovpn-client enable ovpn-billing
+# Import certificates (jalankan satu per satu):
+# /certificate import file-name=ca.crt passphrase=""
+# /certificate import file-name={$certName}.crt passphrase=""
+# /certificate import file-name={$certName}.key passphrase=""
 
 # ============================================================
 # Verifikasi Koneksi:
@@ -523,10 +635,17 @@ EOT;
 /ping {$serverIp}
 
 # ============================================================
+# TROUBLESHOOTING:
+# ============================================================
 # Jika Error "certificate not found":
 # 1. Jalankan: /certificate print
 # 2. Cari nama cert yang ada flag "KT" (Key & Trusted)
 # 3. Edit interface: /interface ovpn-client set ovpn-billing certificate=NAMA_CERT
+#
+# Jika koneksi gagal:
+# 1. Pastikan port {$port} UDP/TCP tidak diblokir firewall ISP
+# 2. Cek endpoint: {$endpoint}
+# 3. Pastikan certificate sudah benar (ada flag KT)
 # ============================================================
 EOT;
     }

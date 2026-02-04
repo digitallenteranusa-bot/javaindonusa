@@ -306,13 +306,35 @@ const getStatusText = () => {
 
                         <a
                             v-if="client.protocol === 'openvpn'"
+                            :href="`/admin/vpn-server/clients/${client.id}/download-p12`"
+                            class="flex items-center gap-3 p-3 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            Download .p12 (MikroTik v6)
+                        </a>
+
+                        <a
+                            v-if="client.protocol === 'openvpn'"
+                            :href="`/admin/vpn-server/clients/${client.id}/download-certificates`"
+                            class="flex items-center gap-3 p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                            Download Certificates (ZIP)
+                        </a>
+
+                        <a
+                            v-if="client.protocol === 'openvpn'"
                             :href="`/admin/vpn-server/clients/${client.id}/download-config`"
                             class="flex items-center gap-3 p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
                         >
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
-                            Download .ovpn Config
+                            Download .ovpn (All-in-One)
                         </a>
 
                         <button
@@ -342,14 +364,18 @@ const getStatusText = () => {
                     <h2 class="text-lg font-semibold mb-4">Cara Setup</h2>
                     <div class="space-y-3 text-sm">
                         <div v-if="client.protocol === 'openvpn'">
-                            <p class="font-medium text-gray-700 mb-2">OpenVPN Setup:</p>
+                            <p class="font-medium text-gray-700 mb-2">OpenVPN Setup (MikroTik v6):</p>
                             <ol class="list-decimal list-inside space-y-2 text-gray-600">
-                                <li>Download file .ovpn atau Mikrotik script</li>
-                                <li>Upload file certificate ke Mikrotik via WinBox</li>
-                                <li>Import certificates di Mikrotik</li>
+                                <li>Download file <strong>.p12</strong> (1 file saja)</li>
+                                <li>Upload file .p12 ke Mikrotik via WinBox</li>
+                                <li>Import: <code class="bg-gray-100 px-1 rounded">/certificate import file-name=nama.p12</code></li>
+                                <li>Cek: <code class="bg-gray-100 px-1 rounded">/certificate print</code></li>
                                 <li>Buat OVPN client interface</li>
                                 <li>Test koneksi ke <code class="bg-gray-100 px-1 rounded">{{ serverIp }}</code></li>
                             </ol>
+                            <p class="text-xs text-gray-500 mt-2">
+                                File .p12 berisi semua certificate dalam 1 file untuk kemudahan import.
+                            </p>
                         </div>
                         <div v-else>
                             <p class="font-medium text-gray-700 mb-2">WireGuard Setup:</p>

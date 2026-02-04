@@ -558,6 +558,46 @@ class VpnServerController extends Controller
     }
 
     /**
+     * Download certificates as ZIP (for MikroTik)
+     */
+    public function downloadCertificatesZip(VpnServerClient $client)
+    {
+        if (!$client->isOpenVpn()) {
+            return back()->with('error', 'Download certificates hanya untuk OpenVPN');
+        }
+
+        $certs = $this->openVpnService->getClientCertificates($client->common_name);
+
+        if (!$certs['success']) {
+            return back()->with('error', 'Gagal membaca sertifikat: ' . ($certs['message'] ?? 'Unknown error'));
+        }
+
+        // Create ZIP file
+        $zipFileName = $client->common_name . '-certificates.zip';
+        $zipPath = storage_path('app/temp/' . $zipFileName);
+
+        // Ensure temp directory exists
+        if (!file_exists(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0755, true);
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return back()->with('error', 'Gagal membuat file ZIP');
+        }
+
+        // Add files to ZIP
+        $zip->addFromString('ca.crt', $certs['ca']);
+        $zip->addFromString($client->common_name . '.crt', $certs['cert']);
+        $zip->addFromString($client->common_name . '.key', $certs['key']);
+
+        $zip->close();
+
+        // Return ZIP file and delete after download
+        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+    }
+
+    /**
      * Download Mikrotik script
      */
     public function downloadScript(VpnServerClient $client)
@@ -574,6 +614,29 @@ class VpnServerController extends Controller
 
         return response($script)
             ->header('Content-Type', 'text/plain')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    /**
+     * Download P12 certificate (single file for MikroTik v6)
+     */
+    public function downloadP12(Request $request, VpnServerClient $client)
+    {
+        if (!$client->isOpenVpn()) {
+            return back()->with('error', 'Download P12 hanya untuk OpenVPN');
+        }
+
+        $password = $request->get('password', '');
+        $result = $this->openVpnService->generateP12Certificate($client->common_name, $password);
+
+        if (!$result['success']) {
+            return back()->with('error', 'Gagal membuat P12: ' . ($result['message'] ?? 'Unknown error'));
+        }
+
+        $filename = $client->common_name . '.p12';
+
+        return response($result['p12'])
+            ->header('Content-Type', 'application/x-pkcs12')
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
     }
 

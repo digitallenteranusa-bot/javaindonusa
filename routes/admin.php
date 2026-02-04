@@ -520,6 +520,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         // Downloads
         Route::get('/clients/{client}/download-config', [VpnServerController::class, 'downloadConfig'])->name('clients.download-config');
         Route::get('/clients/{client}/download-script', [VpnServerController::class, 'downloadScript'])->name('clients.download-script');
+        Route::get('/clients/{client}/download-certificates', [VpnServerController::class, 'downloadCertificatesZip'])->name('clients.download-certificates');
+        Route::get('/clients/{client}/download-p12', [VpnServerController::class, 'downloadP12'])->name('clients.download-p12');
 
         // Status
         Route::post('/refresh-status', [VpnServerController::class, 'refreshStatus'])->name('refresh-status');

@@ -10,6 +10,12 @@ const props = defineProps({
 })
 
 const page = usePage()
+const permissions = computed(() => page.props.auth?.user?.permissions || [])
+
+// Check permission
+const hasPermission = (permission) => {
+    return permissions.value.includes(permission)
+}
 
 // Watch for WhatsApp URL in flash
 watch(() => page.props.flash?.whatsapp_url, (url) => {
@@ -124,16 +130,29 @@ const openMaps = (customer) => {
         <div class="min-h-screen bg-gray-100 pb-20">
             <!-- Header -->
             <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-6">
-                <div class="flex items-center gap-3">
-                    <Link :href="route('collector.dashboard')" class="p-1">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                    </Link>
-                    <div>
-                        <h1 class="text-xl font-bold">Daftar Pelanggan</h1>
-                        <p class="text-blue-100 text-sm">{{ stats?.total || 0 }} pelanggan</p>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <Link :href="route('collector.dashboard')" class="p-1">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </Link>
+                        <div>
+                            <h1 class="text-xl font-bold">Daftar Pelanggan</h1>
+                            <p class="text-blue-100 text-sm">{{ stats?.total || 0 }} pelanggan</p>
+                        </div>
                     </div>
+                    <!-- Tombol Tambah Pelanggan (jika punya permission) -->
+                    <Link
+                        v-if="hasPermission('customers.create')"
+                        href="/collector/customers-create"
+                        class="flex items-center gap-1 px-3 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Tambah
+                    </Link>
                 </div>
             </div>
 

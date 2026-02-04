@@ -4,7 +4,13 @@ import { Link, usePage, router } from '@inertiajs/vue3'
 
 const page = usePage()
 const user = computed(() => page.props.auth?.user)
+const permissions = computed(() => page.props.auth?.user?.permissions || [])
 const showProfileMenu = ref(false)
+
+// Check if user has permission
+const hasPermission = (permission) => {
+    return permissions.value.includes(permission)
+}
 
 // Check active route
 const isActive = (routeName) => {

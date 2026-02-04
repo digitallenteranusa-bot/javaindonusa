@@ -311,7 +311,12 @@ class VpnServerController extends Controller
     public function storeClient(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:100|unique:vpn_server_clients',
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('vpn_server_clients')->whereNull('deleted_at'),
+            ],
             'description' => 'nullable|string|max:255',
             'protocol' => 'required|in:openvpn,wireguard',
             'router_id' => 'nullable|exists:routers,id',
@@ -344,16 +349,7 @@ class VpnServerController extends Controller
 
         } else {
             // OpenVPN
-            $baseCommonName = 'client-' . strtolower(preg_replace('/[^a-zA-Z0-9]/', '-', $validated['name']));
-            $commonName = $baseCommonName;
-
-            // Check if common_name already exists (including soft-deleted)
-            $suffix = 1;
-            while (VpnServerClient::withTrashed()->where('common_name', $commonName)->exists()) {
-                $commonName = $baseCommonName . '-' . $suffix;
-                $suffix++;
-            }
-
+            $commonName = 'client-' . strtolower(preg_replace('/[^a-zA-Z0-9]/', '-', $validated['name']));
             $clientIp = $this->openVpnService->getNextAvailableClientIp();
 
             // Generate certificate
@@ -452,21 +448,23 @@ class VpnServerController extends Controller
     }
 
     /**
-     * Delete client
+     * Delete client (permanent delete)
      */
     public function destroyClient(VpnServerClient $client)
     {
         $clientName = $client->name;
+        $isWireGuard = $client->isWireGuard();
 
         // Revoke OpenVPN certificate if applicable
         if ($client->isOpenVpn() && $client->common_name) {
             $this->openVpnService->revokeClientCertificate($client->common_name);
         }
 
-        $client->delete();
+        // Permanent delete so name and common_name can be reused
+        $client->forceDelete();
 
         // Sync config
-        if ($client->isWireGuard()) {
+        if ($isWireGuard) {
             $this->wireGuardService->syncConfig();
         } else {
             $this->openVpnService->restartService();

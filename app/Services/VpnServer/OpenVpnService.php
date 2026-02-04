@@ -283,8 +283,7 @@ VARS;
         $baseIp = $parts[0] . '.' . $parts[1] . '.' . $parts[2] . '.';
 
         // Only get IPs from OpenVPN clients to avoid conflict with WireGuard subnet
-        $usedIps = VpnServerClient::withTrashed()
-            ->where('protocol', VpnServerClient::PROTOCOL_OPENVPN)
+        $usedIps = VpnServerClient::where('protocol', VpnServerClient::PROTOCOL_OPENVPN)
             ->pluck('client_vpn_ip')
             ->filter(fn($ip) => str_starts_with($ip, $baseIp)) // Only same subnet
             ->map(fn($ip) => (int) explode('.', $ip)[3])

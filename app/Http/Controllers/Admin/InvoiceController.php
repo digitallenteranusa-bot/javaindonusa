@@ -166,28 +166,30 @@ class InvoiceController extends Controller
      */
     public function getCustomersWithoutInvoice(Request $request)
     {
-        $periodMonth = $request->get('month', now()->month);
-        $periodYear = $request->get('year', now()->year);
-        $search = $request->get('search', '');
-        $showAll = $request->get('show_all', false);
+        $periodMonth = (int) $request->get('month', now()->month);
+        $periodYear = (int) $request->get('year', now()->year);
+        $search = trim($request->get('search', ''));
+        $showAll = $request->boolean('show_all', false);
 
+        // Start with base query - active or isolated customers
         $query = Customer::whereIn('status', ['active', 'isolated'])
-            ->with('package:id,name,price', 'area:id,name');
+            ->with(['package:id,name,price', 'area:id,name']);
+
+        // Search filter
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('customer_id', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
 
         // Only filter customers without invoice if not showing all
         if (!$showAll) {
             $query->whereDoesntHave('invoices', function ($q) use ($periodMonth, $periodYear) {
                 $q->where('period_month', $periodMonth)
                     ->where('period_year', $periodYear);
-            });
-        }
-
-        // Search filter
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('customer_id', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -209,6 +211,9 @@ class InvoiceController extends Controller
         return response()->json([
             'customers' => $customers,
             'total' => $customers->count(),
+            'period' => ['month' => $periodMonth, 'year' => $periodYear],
+            'search' => $search,
+            'show_all' => $showAll,
         ]);
     }
 

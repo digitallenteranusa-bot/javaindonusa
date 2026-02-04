@@ -188,6 +188,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // ================================================================
     // INVOICES
     // ================================================================
+    // Static routes MUST come before parameterized routes
+    Route::middleware(['permission:invoices.generate'])->group(function () {
+        Route::get('/invoices/customers-without-invoice', [InvoiceController::class, 'getCustomersWithoutInvoice'])
+            ->name('invoices.customers-without-invoice');
+        Route::post('/invoices/generate', [InvoiceController::class, 'generate'])->name('invoices.generate');
+        Route::post('/invoices/generate-selected', [InvoiceController::class, 'generateForSelected'])
+            ->name('invoices.generate-selected');
+        Route::post('/invoices/update-overdue', [InvoiceController::class, 'updateOverdueStatus'])
+            ->name('invoices.update-overdue');
+    });
     Route::middleware(['permission:invoices.view'])->group(function () {
         Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
@@ -195,15 +205,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('invoices.pdf');
         Route::get('/invoices/{invoice}/pdf/preview', [InvoiceController::class, 'streamPdf'])
             ->name('invoices.pdf.preview');
-    });
-    Route::middleware(['permission:invoices.generate'])->group(function () {
-        Route::post('/invoices/generate', [InvoiceController::class, 'generate'])->name('invoices.generate');
-        Route::post('/invoices/generate-selected', [InvoiceController::class, 'generateForSelected'])
-            ->name('invoices.generate-selected');
-        Route::get('/invoices/customers-without-invoice', [InvoiceController::class, 'getCustomersWithoutInvoice'])
-            ->name('invoices.customers-without-invoice');
-        Route::post('/invoices/update-overdue', [InvoiceController::class, 'updateOverdueStatus'])
-            ->name('invoices.update-overdue');
     });
     Route::middleware(['permission:invoices.mark-paid'])->group(function () {
         Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])

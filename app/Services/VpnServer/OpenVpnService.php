@@ -604,70 +604,59 @@ EOT;
 
         return <<<EOT
 # ============================================================
-# OpenVPN Client for Mikrotik - {$client->name}
+# OpenVPN Client for Mikrotik v6 - {$client->name}
 # VPN IP: {$client->client_vpn_ip}
 # Server: {$endpoint}:{$port}
+# Generated: {$client->last_generated_at}
 # ============================================================
 
 # ============================================================
-# METODE 1: IMPORT FILE .P12 (DISARANKAN untuk MikroTik v6)
+# LANGKAH 1: IMPORT CERTIFICATE
 # ============================================================
-# File .p12 berisi semua certificate dalam 1 file
+# Download file {$certName}.p12 dari panel admin
+# Upload file .p12 ke Mikrotik via WinBox (menu Files)
+# Jalankan perintah berikut di Terminal:
 
-# STEP 1: Download file {$certName}.p12 dari panel admin
-# STEP 2: Upload file .p12 ke Mikrotik via WinBox (Files)
-# STEP 3: Import certificate (jalankan di Terminal)
 /certificate import file-name={$certName}.p12 passphrase=""
 
-# STEP 4: Cek nama certificate hasil import
+# Cek hasil import:
 /certificate print
 # Catat nama certificate yang memiliki flag "KT" (Key & Trusted)
-# Biasanya bernama: {$certName}.p12_0
+# Contoh nama: {$certName}.p12_0
 
-# STEP 5: Buat OVPN client interface
-# GANTI certificate= dengan nama cert dari step 4
-/interface ovpn-client add name=ovpn-billing connect-to={$endpoint} port={$port} mode=ip protocol=udp user={$certName} certificate={$certName}.p12_0 cipher=aes256-cbc auth=sha256 add-default-route=no comment="VPN to Billing Server"
+# ============================================================
+# LANGKAH 2: BUAT OVPN CLIENT
+# ============================================================
+# PENTING: Ganti "NAMA_CERT" dengan nama certificate dari langkah 1
 
-# STEP 6: Tambah firewall rule
+/interface ovpn-client add name=ovpn-billing connect-to={$endpoint} port={$port} mode=ip user={$certName} certificate=NAMA_CERT cipher=aes256 auth=sha1 add-default-route=no disabled=no
+
+# ============================================================
+# LANGKAH 3: FIREWALL & ROUTING
+# ============================================================
+
 /ip firewall filter add chain=input src-address={$serverAddress} action=accept comment="Allow VPN Billing" place-before=0
 
-# STEP 7: Enable interface
-/interface ovpn-client enable ovpn-billing
-
 # ============================================================
-# METODE 2: IMPORT 3 FILE TERPISAH (Alternatif)
+# VERIFIKASI KONEKSI
 # ============================================================
-# Gunakan jika metode 1 tidak berhasil
 
-# Upload 3 file berikut ke Mikrotik via WinBox (Files):
-#   - ca.crt
-#   - {$certName}.crt
-#   - {$certName}.key
-
-# Import certificates (jalankan satu per satu):
-# /certificate import file-name=ca.crt passphrase=""
-# /certificate import file-name={$certName}.crt passphrase=""
-# /certificate import file-name={$certName}.key passphrase=""
-
-# ============================================================
-# Verifikasi Koneksi:
-# ============================================================
 /interface ovpn-client print
 /interface ovpn-client monitor ovpn-billing
 /ping {$serverIp}
 
 # ============================================================
-# TROUBLESHOOTING:
+# TROUBLESHOOTING
 # ============================================================
-# Jika Error "certificate not found":
-# 1. Jalankan: /certificate print
-# 2. Cari nama cert yang ada flag "KT" (Key & Trusted)
-# 3. Edit interface: /interface ovpn-client set ovpn-billing certificate=NAMA_CERT
+# Error "certificate not found":
+#   /certificate print
+#   Cari nama cert dengan flag "KT", lalu:
+#   /interface ovpn-client set ovpn-billing certificate=NAMA_CERT_BENAR
 #
-# Jika koneksi gagal:
-# 1. Pastikan port {$port} UDP/TCP tidak diblokir firewall ISP
-# 2. Cek endpoint: {$endpoint}
-# 3. Pastikan certificate sudah benar (ada flag KT)
+# Koneksi gagal:
+#   - Pastikan port {$port} TCP tidak diblokir
+#   - Cek endpoint: {$endpoint}
+#   - MikroTik v6 hanya support TCP untuk OVPN
 # ============================================================
 EOT;
     }

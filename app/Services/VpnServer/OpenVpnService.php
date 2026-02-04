@@ -317,33 +317,55 @@ VARS;
     public function generateP12Certificate(string $commonName, string $password = ''): array
     {
         try {
-            // Use storage temp path for better file handling
+            // Use storage temp path for file handling
             $tempDir = storage_path('app/temp');
             if (!File::exists($tempDir)) {
                 File::makeDirectory($tempDir, 0755, true);
             }
 
+            // Temp paths for certificate files
+            $tempCert = "{$tempDir}/{$commonName}.crt";
+            $tempKey = "{$tempDir}/{$commonName}.key";
+            $tempCa = "{$tempDir}/ca.crt";
             $p12Path = "{$tempDir}/{$commonName}.p12";
 
-            // Escape password for shell (empty string is ok for no password)
-            $escapedPassword = escapeshellarg($password);
+            // Read certificate files using sudo cat (already allowed in sudoers)
+            $certResult = Process::run("sudo cat {$this->pkiPath}/issued/{$commonName}.crt");
+            if (!$certResult->successful()) {
+                return ['success' => false, 'message' => 'Failed to read client certificate'];
+            }
 
-            // Generate PKCS#12 file using openssl
-            $cmd = "sudo openssl pkcs12 -export " .
-                "-in {$this->pkiPath}/issued/{$commonName}.crt " .
-                "-inkey {$this->pkiPath}/private/{$commonName}.key " .
-                "-certfile {$this->serverPath}/ca.crt " .
+            $keyResult = Process::run("sudo cat {$this->pkiPath}/private/{$commonName}.key");
+            if (!$keyResult->successful()) {
+                return ['success' => false, 'message' => 'Failed to read client key'];
+            }
+
+            $caResult = Process::run("sudo cat {$this->serverPath}/ca.crt");
+            if (!$caResult->successful()) {
+                return ['success' => false, 'message' => 'Failed to read CA certificate'];
+            }
+
+            // Write temp files (owned by www-data, no sudo needed)
+            File::put($tempCert, $certResult->output());
+            File::put($tempKey, $keyResult->output());
+            File::put($tempCa, $caResult->output());
+
+            // Generate PKCS#12 file without sudo (all files are now readable)
+            $cmd = "openssl pkcs12 -export " .
+                "-in {$tempCert} " .
+                "-inkey {$tempKey} " .
+                "-certfile {$tempCa} " .
                 "-out {$p12Path} " .
-                "-passout pass:{$password}";
+                "-passout pass:" . escapeshellarg($password);
 
             $result = Process::run($cmd);
+
+            // Cleanup temp cert files
+            File::delete([$tempCert, $tempKey, $tempCa]);
 
             if (!$result->successful()) {
                 return ['success' => false, 'message' => 'Failed to generate P12: ' . $result->errorOutput()];
             }
-
-            // Make file readable
-            Process::run("sudo chmod 644 {$p12Path}");
 
             // Read P12 file as binary
             if (!File::exists($p12Path)) {
@@ -352,7 +374,7 @@ VARS;
 
             $p12Content = File::get($p12Path);
 
-            // Cleanup
+            // Cleanup P12 file
             File::delete($p12Path);
 
             return [

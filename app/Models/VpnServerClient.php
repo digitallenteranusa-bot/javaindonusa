@@ -145,9 +145,9 @@ class VpnServerClient extends Model
         return $this->protocol === self::PROTOCOL_WIREGUARD;
     }
 
-    protected function formatBytes(int $bytes): string
+    protected function formatBytes(?int $bytes): string
     {
-        if ($bytes === 0) {
+        if ($bytes === null || $bytes === 0) {
             return '0 B';
         }
 

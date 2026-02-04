@@ -598,67 +598,37 @@ EOT;
         $serverAddress = $s['openvpn_server_address'] ?? '10.200.2.0/24';
         $networkParts = explode('.', explode('/', $serverAddress)[0]);
         $serverIp = $networkParts[0] . '.' . $networkParts[1] . '.' . $networkParts[2] . '.1';
-
-        // Simplified cert name for MikroTik (without special chars)
         $certName = $client->common_name;
 
-        return <<<EOT
-# ============================================================
-# OpenVPN Client for Mikrotik v6 - {$client->name}
-# VPN IP: {$client->client_vpn_ip}
-# Server: {$endpoint}:{$port}
-# Generated: {$client->last_generated_at}
-# ============================================================
+        // Script untuk MikroTik v6 - setiap perintah dalam 1 baris
+        $script = "# ============================================================\n";
+        $script .= "# OpenVPN Client for Mikrotik v6 - {$client->name}\n";
+        $script .= "# VPN IP: {$client->client_vpn_ip}\n";
+        $script .= "# Server: {$endpoint}:{$port}\n";
+        $script .= "# ============================================================\n\n";
 
-# ============================================================
-# LANGKAH 1: IMPORT CERTIFICATE
-# ============================================================
-# Download file {$certName}.p12 dari panel admin
-# Upload file .p12 ke Mikrotik via WinBox (menu Files)
-# Jalankan perintah berikut di Terminal:
+        $script .= "# LANGKAH 1: Import certificate\n";
+        $script .= "# Upload file {$certName}.p12 ke Mikrotik via WinBox\n";
+        $script .= "# Lalu jalankan:\n";
+        $script .= "/certificate import file-name={$certName}.p12 passphrase=\"\"\n\n";
 
-/certificate import file-name={$certName}.p12 passphrase=""
+        $script .= "# Cek nama certificate hasil import:\n";
+        $script .= "/certificate print\n";
+        $script .= "# Catat nama cert dengan flag KT (misal: {$certName}.p12_0)\n\n";
 
-# Cek hasil import:
-/certificate print
-# Catat nama certificate yang memiliki flag "KT" (Key & Trusted)
-# Contoh nama: {$certName}.p12_0
+        $script .= "# LANGKAH 2: Buat OVPN client\n";
+        $script .= "# GANTI {$certName}.p12_0 dengan nama cert dari langkah 1\n";
+        $script .= "/interface ovpn-client add name=ovpn-billing connect-to={$endpoint} port={$port} mode=ip user={$certName} certificate={$certName}.p12_0 cipher=aes256 auth=sha1 add-default-route=no disabled=no\n\n";
 
-# ============================================================
-# LANGKAH 2: BUAT OVPN CLIENT
-# ============================================================
-# PENTING: Ganti "NAMA_CERT" dengan nama certificate dari langkah 1
+        $script .= "# LANGKAH 3: Firewall\n";
+        $script .= "/ip firewall filter add chain=input src-address={$serverAddress} action=accept comment=\"Allow VPN Billing\" place-before=0\n\n";
 
-/interface ovpn-client add name=ovpn-billing connect-to={$endpoint} port={$port} mode=ip user={$certName} certificate=NAMA_CERT cipher=aes256 auth=sha1 add-default-route=no disabled=no
+        $script .= "# VERIFIKASI:\n";
+        $script .= "/interface ovpn-client print\n";
+        $script .= "/interface ovpn-client monitor ovpn-billing\n";
+        $script .= "/ping {$serverIp}\n";
 
-# ============================================================
-# LANGKAH 3: FIREWALL & ROUTING
-# ============================================================
-
-/ip firewall filter add chain=input src-address={$serverAddress} action=accept comment="Allow VPN Billing" place-before=0
-
-# ============================================================
-# VERIFIKASI KONEKSI
-# ============================================================
-
-/interface ovpn-client print
-/interface ovpn-client monitor ovpn-billing
-/ping {$serverIp}
-
-# ============================================================
-# TROUBLESHOOTING
-# ============================================================
-# Error "certificate not found":
-#   /certificate print
-#   Cari nama cert dengan flag "KT", lalu:
-#   /interface ovpn-client set ovpn-billing certificate=NAMA_CERT_BENAR
-#
-# Koneksi gagal:
-#   - Pastikan port {$port} TCP tidak diblokir
-#   - Cek endpoint: {$endpoint}
-#   - MikroTik v6 hanya support TCP untuk OVPN
-# ============================================================
-EOT;
+        return $script;
     }
 
     // ================================================================

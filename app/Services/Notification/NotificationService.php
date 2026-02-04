@@ -105,9 +105,22 @@ class NotificationService
 
     /**
      * Send invoice notification to customer
+     * TIDAK kirim jika: pelanggan tidak punya hutang, atau invoice bulan berjalan
      */
     public function sendInvoiceNotification(Customer $customer, Invoice $invoice): array
     {
+        // Jangan kirim jika pelanggan tidak punya hutang
+        if ($customer->total_debt <= 0) {
+            return ['success' => false, 'message' => 'Customer has no debt, notification skipped'];
+        }
+
+        // Jangan kirim notifikasi untuk invoice bulan berjalan (baru di-generate)
+        $currentMonth = now()->month;
+        $currentYear = now()->year;
+        if ($invoice->period_month == $currentMonth && $invoice->period_year == $currentYear) {
+            return ['success' => false, 'message' => 'Current month invoice, notification skipped'];
+        }
+
         $message = $this->buildInvoiceMessage($customer, $invoice);
 
         return $this->sendWhatsApp($customer->phone, $message);
@@ -118,6 +131,11 @@ class NotificationService
      */
     public function sendPaymentReminder(Customer $customer, int $daysBeforeDue = 3): array
     {
+        // Jangan kirim jika tidak punya hutang
+        if ($customer->total_debt <= 0) {
+            return ['success' => false, 'message' => 'Customer has no debt, notification skipped'];
+        }
+
         $message = $this->buildReminderMessage($customer, $daysBeforeDue);
 
         return $this->sendWhatsApp($customer->phone, $message);
@@ -128,9 +146,63 @@ class NotificationService
      */
     public function sendOverdueNotice(Customer $customer): array
     {
+        // Jangan kirim jika tidak punya hutang
+        if ($customer->total_debt <= 0) {
+            return ['success' => false, 'message' => 'Customer has no debt, notification skipped'];
+        }
+
         $message = $this->buildOverdueMessage($customer);
 
         return $this->sendWhatsApp($customer->phone, $message);
+    }
+
+    /**
+     * Send severe overdue notice (tunggakan lebih dari 3 bulan)
+     */
+    public function sendSevereOverdueNotice(Customer $customer): array
+    {
+        // Jangan kirim jika tidak punya hutang
+        if ($customer->total_debt <= 0) {
+            return ['success' => false, 'message' => 'Customer has no debt, notification skipped'];
+        }
+
+        // Hitung jumlah bulan tunggakan
+        $overdueMonths = $this->calculateOverdueMonths($customer);
+
+        // Hanya kirim jika tunggakan >= 4 bulan (lebih dari 3 bulan)
+        if ($overdueMonths < 4) {
+            return ['success' => false, 'message' => 'Overdue less than 4 months, notification skipped'];
+        }
+
+        $message = $this->buildSevereOverdueMessage($customer, $overdueMonths);
+
+        return $this->sendWhatsApp($customer->phone, $message);
+    }
+
+    /**
+     * Hitung jumlah bulan tunggakan pelanggan
+     */
+    protected function calculateOverdueMonths(Customer $customer): int
+    {
+        // Ambil invoice tertua yang belum lunas
+        $oldestUnpaidInvoice = Invoice::where('customer_id', $customer->id)
+            ->whereIn('status', ['pending', 'partial', 'overdue'])
+            ->orderBy('period_year', 'asc')
+            ->orderBy('period_month', 'asc')
+            ->first();
+
+        if (!$oldestUnpaidInvoice) {
+            return 0;
+        }
+
+        // Hitung selisih bulan dari invoice tertua hingga sekarang
+        $invoiceDate = \Carbon\Carbon::create(
+            $oldestUnpaidInvoice->period_year,
+            $oldestUnpaidInvoice->period_month,
+            1
+        );
+
+        return $invoiceDate->diffInMonths(now());
     }
 
     /**
@@ -303,6 +375,64 @@ class NotificationService
             "📞 " . ($this->ispInfo?->phone_primary ?? '') . "\n" .
             "💬 WA: " . ($this->ispInfo?->whatsapp_number ?? '') . "\n\n" .
             "_{$companyName}_";
+    }
+
+    protected function buildSevereOverdueMessage(Customer $customer, int $overdueMonths): string
+    {
+        $companyName = $this->ispInfo?->company_name ?? 'ISP';
+        $totalDebt = number_format($customer->total_debt, 0, ',', '.');
+
+        // Ambil detail tunggakan per bulan
+        $overdueDetail = $this->getOverdueDetail($customer);
+
+        return "📋 *PEMBERITAHUAN TUNGGAKAN*\n\n" .
+            "Yth. Bapak/Ibu *{$customer->name}*,\n\n" .
+            "Dengan hormat,\n" .
+            "Kami ingin menyampaikan bahwa tagihan internet Anda telah menunggak selama *{$overdueMonths} bulan*.\n\n" .
+            "📊 *Rincian Tunggakan:*\n" .
+            $overdueDetail . "\n" .
+            "💰 *Total Tunggakan:* Rp {$totalDebt}\n\n" .
+            "Kami memahami bahwa setiap pelanggan memiliki kondisi yang berbeda. " .
+            "Jika Bapak/Ibu mengalami kendala dalam pembayaran, kami dengan senang hati dapat membantu mencari solusi terbaik.\n\n" .
+            "Silakan hubungi kami untuk konsultasi:\n" .
+            "📞 " . ($this->ispInfo?->phone_primary ?? '') . "\n" .
+            "💬 WA: " . ($this->ispInfo?->whatsapp_number ?? '') . "\n\n" .
+            "💳 *Pembayaran dapat dilakukan ke:*\n" .
+            $this->formatPaymentInfo() . "\n\n" .
+            "ID Pelanggan: *{$customer->customer_id}*\n\n" .
+            "Terima kasih atas perhatian dan kerjasamanya.\n\n" .
+            "Hormat kami,\n" .
+            "_{$companyName}_";
+    }
+
+    /**
+     * Ambil detail tunggakan per bulan
+     */
+    protected function getOverdueDetail(Customer $customer): string
+    {
+        $unpaidInvoices = Invoice::where('customer_id', $customer->id)
+            ->whereIn('status', ['pending', 'partial', 'overdue'])
+            ->orderBy('period_year', 'asc')
+            ->orderBy('period_month', 'asc')
+            ->get();
+
+        if ($unpaidInvoices->isEmpty()) {
+            return "- Tidak ada tunggakan\n";
+        }
+
+        $monthNames = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+
+        $details = $unpaidInvoices->map(function ($invoice) use ($monthNames) {
+            $monthName = $monthNames[$invoice->period_month] ?? $invoice->period_month;
+            $amount = number_format($invoice->remaining_amount, 0, ',', '.');
+            return "• {$monthName} {$invoice->period_year}: Rp {$amount}";
+        });
+
+        return $details->join("\n") . "\n";
     }
 
     protected function buildAccessOpenedMessage(Customer $customer): string

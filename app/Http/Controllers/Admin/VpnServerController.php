@@ -344,7 +344,16 @@ class VpnServerController extends Controller
 
         } else {
             // OpenVPN
-            $commonName = 'client-' . strtolower(preg_replace('/[^a-zA-Z0-9]/', '-', $validated['name']));
+            $baseCommonName = 'client-' . strtolower(preg_replace('/[^a-zA-Z0-9]/', '-', $validated['name']));
+            $commonName = $baseCommonName;
+
+            // Check if common_name already exists (including soft-deleted)
+            $suffix = 1;
+            while (VpnServerClient::withTrashed()->where('common_name', $commonName)->exists()) {
+                $commonName = $baseCommonName . '-' . $suffix;
+                $suffix++;
+            }
+
             $clientIp = $this->openVpnService->getNextAvailableClientIp();
 
             // Generate certificate

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -9,6 +9,14 @@ const props = defineProps({
 
 const showConfig = ref(false)
 const showScript = ref(false)
+
+// Calculate server IP based on client VPN IP (server is always .1 in same subnet)
+const serverIp = computed(() => {
+    if (!props.client.client_vpn_ip) return '-'
+    const parts = props.client.client_vpn_ip.split('.')
+    if (parts.length !== 4) return '-'
+    return `${parts[0]}.${parts[1]}.${parts[2]}.1`
+})
 
 // Copy to clipboard
 const copyToClipboard = (text, message = 'Copied!') => {
@@ -340,7 +348,7 @@ const getStatusText = () => {
                                 <li>Upload file certificate ke Mikrotik via WinBox</li>
                                 <li>Import certificates di Mikrotik</li>
                                 <li>Buat OVPN client interface</li>
-                                <li>Test koneksi ke 10.200.1.1</li>
+                                <li>Test koneksi ke <code class="bg-gray-100 px-1 rounded">{{ serverIp }}</code></li>
                             </ol>
                         </div>
                         <div v-else>
@@ -349,9 +357,17 @@ const getStatusText = () => {
                                 <li>Pastikan RouterOS v7+</li>
                                 <li>Copy script ke terminal Mikrotik</li>
                                 <li>Atau setup manual dengan private key di atas</li>
-                                <li>Test koneksi ke 10.200.1.1</li>
+                                <li>Test koneksi ke <code class="bg-gray-100 px-1 rounded">{{ serverIp }}</code></li>
                             </ol>
                         </div>
+                    </div>
+
+                    <!-- Server Info -->
+                    <div class="mt-4 pt-4 border-t">
+                        <p class="text-xs text-gray-500">
+                            Server VPN IP: <code class="bg-gray-100 px-1 rounded">{{ serverIp }}</code><br>
+                            Client VPN IP: <code class="bg-gray-100 px-1 rounded">{{ client.client_vpn_ip }}</code>
+                        </p>
                     </div>
                 </div>
             </div>

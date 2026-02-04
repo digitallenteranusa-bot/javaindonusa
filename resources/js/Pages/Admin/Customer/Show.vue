@@ -164,8 +164,8 @@ const recalculateDebt = () => {
                             <p class="font-medium font-mono">{{ customer.mac_address || '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-gray-500">ONU Serial</p>
-                            <p class="font-medium font-mono">{{ customer.onu_serial || '-' }}</p>
+                            <p class="text-gray-500">Merk Router</p>
+                            <p class="font-medium">{{ customer.onu_serial || '-' }}</p>
                         </div>
                     </div>
                 </div>

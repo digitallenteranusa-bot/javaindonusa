@@ -508,10 +508,11 @@ const submit = () => {
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">ONU Serial</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Merk Router</label>
                         <input
                             v-model="form.onu_serial"
                             type="text"
+                            placeholder="Contoh: TP-Link, Totolink, ZTE F609"
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
                     </div>

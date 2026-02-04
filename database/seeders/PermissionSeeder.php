@@ -24,6 +24,9 @@ class PermissionSeeder extends Seeder
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         $permissions = [
+            // Dashboard
+            ['name' => 'dashboard.view', 'group' => 'dashboard', 'description' => 'Melihat dashboard'],
+
             // Customer Management
             ['name' => 'customers.view', 'group' => 'customers', 'description' => 'Melihat daftar pelanggan'],
             ['name' => 'customers.create', 'group' => 'customers', 'description' => 'Menambah pelanggan baru'],
@@ -31,6 +34,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'customers.delete', 'group' => 'customers', 'description' => 'Menghapus pelanggan'],
             ['name' => 'customers.adjust-debt', 'group' => 'customers', 'description' => 'Menyesuaikan hutang pelanggan'],
             ['name' => 'customers.write-off', 'group' => 'customers', 'description' => 'Write-off hutang pelanggan'],
+            ['name' => 'customers.collect', 'group' => 'customers', 'description' => 'Melakukan penagihan ke pelanggan'],
 
             // Invoice Management
             ['name' => 'invoices.view', 'group' => 'invoices', 'description' => 'Melihat daftar tagihan'],
@@ -38,12 +42,19 @@ class PermissionSeeder extends Seeder
             ['name' => 'invoices.mark-paid', 'group' => 'invoices', 'description' => 'Tandai tagihan lunas'],
             ['name' => 'invoices.cancel', 'group' => 'invoices', 'description' => 'Batalkan tagihan'],
             ['name' => 'invoices.export', 'group' => 'invoices', 'description' => 'Export data tagihan'],
+            ['name' => 'invoices.manage', 'group' => 'invoices', 'description' => 'Kelola tagihan (CRUD penuh)'],
 
             // Payment Management
             ['name' => 'payments.view', 'group' => 'payments', 'description' => 'Melihat daftar pembayaran'],
             ['name' => 'payments.create', 'group' => 'payments', 'description' => 'Input pembayaran baru'],
             ['name' => 'payments.cancel', 'group' => 'payments', 'description' => 'Batalkan pembayaran'],
             ['name' => 'payments.export', 'group' => 'payments', 'description' => 'Export data pembayaran'],
+            ['name' => 'payments.manage', 'group' => 'payments', 'description' => 'Kelola pembayaran (CRUD penuh)'],
+
+            // Collector Management
+            ['name' => 'collectors.view', 'group' => 'collectors', 'description' => 'Melihat daftar penagih'],
+            ['name' => 'collectors.manage', 'group' => 'collectors', 'description' => 'Kelola data penagih'],
+            ['name' => 'collectors.own-data', 'group' => 'collectors', 'description' => 'Akses data sendiri saja'],
 
             // Package Management
             ['name' => 'packages.view', 'group' => 'packages', 'description' => 'Melihat daftar paket'],

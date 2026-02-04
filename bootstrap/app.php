@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias middleware
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
+            'permission' => \App\Http\Middleware\CheckPermission::class,
             'customer.auth' => \App\Http\Middleware\CustomerAuth::class,
         ]);
     })

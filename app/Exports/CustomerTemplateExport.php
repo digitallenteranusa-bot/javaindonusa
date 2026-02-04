@@ -38,7 +38,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
                 'password123',          // pppoe_password
                 '192.168.1.100',        // ip_address
                 'AA:BB:CC:DD:EE:FF',    // mac_address
-                'ZTEG12345678',         // onu_serial
+                'TP-Link Archer C6',    // merk_router
                 'active',               // status (active/isolated/suspended/terminated)
                 '0',                    // hutang
                 '2024-01-15',           // tanggal_gabung (YYYY-MM-DD)
@@ -75,7 +75,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
             'pppoe_password',
             'ip_address',
             'mac_address',
-            'onu_serial',
+            'merk_router',
             'status',
             'hutang',
             'tanggal_gabung',

@@ -454,10 +454,12 @@ class VpnServerController extends Controller
     {
         $clientName = $client->name;
         $isWireGuard = $client->isWireGuard();
+        $commonName = $client->common_name;
 
-        // Revoke OpenVPN certificate if applicable
-        if ($client->isOpenVpn() && $client->common_name) {
-            $this->openVpnService->revokeClientCertificate($client->common_name);
+        // Revoke and cleanup OpenVPN certificate if applicable
+        if ($client->isOpenVpn() && $commonName) {
+            $this->openVpnService->revokeClientCertificate($commonName);
+            $this->openVpnService->cleanupClientFiles($commonName);
         }
 
         // Permanent delete so name and common_name can be reused

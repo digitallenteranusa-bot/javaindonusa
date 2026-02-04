@@ -213,6 +213,9 @@ VARS;
     public function generateClientCertificate(string $commonName): array
     {
         try {
+            // Clean up any existing certificate files for this common name
+            $this->cleanupClientCertificateFiles($commonName);
+
             // EASYRSA_BATCH is set in pki/vars file created during init
             $result = Process::path('/etc/openvpn/easy-rsa')
                 ->run("sudo ./easyrsa build-client-full {$commonName} nopass");
@@ -239,6 +242,34 @@ VARS;
             ]);
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Clean up existing certificate files for a client (internal use)
+     */
+    protected function cleanupClientCertificateFiles(string $commonName): void
+    {
+        $this->cleanupClientFiles($commonName);
+    }
+
+    /**
+     * Clean up all certificate files for a client (public method)
+     */
+    public function cleanupClientFiles(string $commonName): void
+    {
+        // Remove request file
+        Process::run("sudo rm -f {$this->pkiPath}/reqs/{$commonName}.req");
+
+        // Remove issued certificate
+        Process::run("sudo rm -f {$this->pkiPath}/issued/{$commonName}.crt");
+
+        // Remove private key
+        Process::run("sudo rm -f {$this->pkiPath}/private/{$commonName}.key");
+
+        // Remove CCD file
+        Process::run("sudo rm -f {$this->serverPath}/ccd/{$commonName}");
+
+        Log::info('Cleaned up certificate files', ['common_name' => $commonName]);
     }
 
     public function revokeClientCertificate(string $commonName): array

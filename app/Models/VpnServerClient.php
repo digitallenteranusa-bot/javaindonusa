@@ -80,11 +80,9 @@ class VpnServerClient extends Model
     public function getIsConnectedAttribute(): bool
     {
         // For WireGuard: use last_handshake (must be within last 3 minutes)
-        if ($this->last_handshake) {
-            // Compare timestamps directly to avoid timezone issues
-            $handshakeTime = $this->last_handshake->timestamp;
-            $threeMinutesAgo = time() - 180;
-            return $handshakeTime > $threeMinutesAgo;
+        if ($this->protocol === self::PROTOCOL_WIREGUARD && $this->last_handshake) {
+            // Use Carbon's comparison to handle timezone correctly
+            return $this->last_handshake->diffInSeconds(now()) < 180;
         }
 
         // For OpenVPN or fallback: use connected_at/disconnected_at
@@ -97,9 +95,7 @@ class VpnServerClient extends Model
         }
 
         // Also check if connected_at is recent (within last 5 minutes)
-        $connectedTime = $this->connected_at->timestamp;
-        $fiveMinutesAgo = time() - 300;
-        return $connectedTime > $fiveMinutesAgo;
+        return $this->connected_at->diffInSeconds(now()) < 300;
     }
 
     public function getStatusAttribute(): string

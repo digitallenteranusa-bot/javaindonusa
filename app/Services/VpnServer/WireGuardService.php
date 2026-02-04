@@ -381,13 +381,13 @@ EOT;
             if (isset($liveStatus[$client->public_key])) {
                 $info = $liveStatus[$client->public_key];
 
-                // Convert Unix timestamp to Carbon datetime
+                // Convert Unix timestamp to Carbon datetime in UTC then convert to app timezone
                 $lastHandshakeTimestamp = $info['last_handshake'];
                 $lastHandshake = $lastHandshakeTimestamp
-                    ? \Carbon\Carbon::createFromTimestamp($lastHandshakeTimestamp)
+                    ? \Carbon\Carbon::createFromTimestampUTC($lastHandshakeTimestamp)->setTimezone(config('app.timezone'))
                     : null;
 
-                // Consider connected if handshake within last 3 minutes (compare timestamps directly)
+                // Consider connected if handshake within last 3 minutes
                 $isConnected = $lastHandshakeTimestamp && ($lastHandshakeTimestamp > (time() - 180));
 
                 $client->update([

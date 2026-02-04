@@ -162,21 +162,27 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Get customers without invoice for period (for selection modal)
+     * Get customers for invoice generation (for selection modal)
      */
     public function getCustomersWithoutInvoice(Request $request)
     {
         $periodMonth = $request->get('month', now()->month);
         $periodYear = $request->get('year', now()->year);
         $search = $request->get('search', '');
+        $showAll = $request->get('show_all', false);
 
         $query = Customer::whereIn('status', ['active', 'isolated'])
-            ->whereDoesntHave('invoices', function ($q) use ($periodMonth, $periodYear) {
-                $q->where('period_month', $periodMonth)
-                    ->where('period_year', $periodYear);
-            })
             ->with('package:id,name,price', 'area:id,name');
 
+        // Only filter customers without invoice if not showing all
+        if (!$showAll) {
+            $query->whereDoesntHave('invoices', function ($q) use ($periodMonth, $periodYear) {
+                $q->where('period_month', $periodMonth)
+                    ->where('period_year', $periodYear);
+            });
+        }
+
+        // Search filter
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -188,6 +194,17 @@ class InvoiceController extends Controller
         $customers = $query->orderBy('name')->limit(100)->get([
             'id', 'customer_id', 'name', 'phone', 'status', 'package_id', 'area_id'
         ]);
+
+        // Mark customers that already have invoice for this period
+        $customersWithInvoice = Invoice::where('period_month', $periodMonth)
+            ->where('period_year', $periodYear)
+            ->pluck('customer_id')
+            ->toArray();
+
+        $customers = $customers->map(function ($customer) use ($customersWithInvoice) {
+            $customer->has_invoice = in_array($customer->id, $customersWithInvoice);
+            return $customer;
+        });
 
         return response()->json([
             'customers' => $customers,

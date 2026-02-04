@@ -99,6 +99,7 @@ const availableCustomers = ref([])
 const selectedCustomerIds = ref([])
 const loadingCustomers = ref(false)
 const generatingInvoices = ref(false)
+const showAllCustomers = ref(false)
 
 // Month names in Indonesian
 const monthNames = [
@@ -122,6 +123,7 @@ const fetchAvailableCustomers = async () => {
                 month: selectPeriodMonth.value,
                 year: selectPeriodYear.value,
                 search: customerSearch.value,
+                show_all: showAllCustomers.value ? 1 : 0,
             }
         })
         availableCustomers.value = response.data.customers
@@ -134,7 +136,7 @@ const fetchAvailableCustomers = async () => {
 }
 
 // Watch for period changes
-watch([selectPeriodMonth, selectPeriodYear], () => {
+watch([selectPeriodMonth, selectPeriodYear, showAllCustomers], () => {
     selectedCustomerIds.value = []
     fetchAvailableCustomers()
 })
@@ -158,10 +160,11 @@ const toggleCustomerSelection = (customerId) => {
 }
 
 const toggleSelectAllCustomers = () => {
-    if (selectedCustomerIds.value.length === availableCustomers.value.length) {
+    const selectableCustomers = availableCustomers.value.filter(c => !c.has_invoice)
+    if (selectedCustomerIds.value.length === selectableCustomers.length && selectableCustomers.length > 0) {
         selectedCustomerIds.value = []
     } else {
-        selectedCustomerIds.value = availableCustomers.value.map(c => c.id)
+        selectedCustomerIds.value = selectableCustomers.map(c => c.id)
     }
 }
 
@@ -705,6 +708,16 @@ const toggleSelectAll = () => {
                         placeholder="Cari nama, ID, atau telepon pelanggan..."
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
+
+                    <!-- Show All Toggle -->
+                    <label class="flex items-center gap-2 mt-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            v-model="showAllCustomers"
+                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        >
+                        <span class="text-sm text-gray-600">Tampilkan semua pelanggan (termasuk yang sudah ada invoice)</span>
+                    </label>
                 </div>
 
                 <!-- Customer List -->
@@ -730,14 +743,18 @@ const toggleSelectAll = () => {
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input
                                     type="checkbox"
-                                    :checked="selectedCustomerIds.length === availableCustomers.length && availableCustomers.length > 0"
+                                    :checked="selectedCustomerIds.length === availableCustomers.filter(c => !c.has_invoice).length && availableCustomers.filter(c => !c.has_invoice).length > 0"
                                     @change="toggleSelectAllCustomers"
-                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    :disabled="availableCustomers.filter(c => !c.has_invoice).length === 0"
+                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                                 >
                                 <span class="font-medium">Pilih Semua</span>
                             </label>
                             <span class="text-sm text-gray-500">
-                                {{ availableCustomers.length }} pelanggan tersedia
+                                {{ availableCustomers.filter(c => !c.has_invoice).length }} pelanggan belum ada invoice
+                                <span v-if="showAllCustomers && availableCustomers.filter(c => c.has_invoice).length > 0" class="text-green-600">
+                                    · {{ availableCustomers.filter(c => c.has_invoice).length }} sudah ada
+                                </span>
                             </span>
                         </div>
 
@@ -746,17 +763,27 @@ const toggleSelectAll = () => {
                             <label
                                 v-for="customer in availableCustomers"
                                 :key="customer.id"
-                                class="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                                :class="{ 'border-blue-500 bg-blue-50': selectedCustomerIds.includes(customer.id) }"
+                                class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer"
+                                :class="{
+                                    'border-blue-500 bg-blue-50': selectedCustomerIds.includes(customer.id),
+                                    'border-green-300 bg-green-50': customer.has_invoice && !selectedCustomerIds.includes(customer.id),
+                                    'hover:bg-gray-50': !customer.has_invoice && !selectedCustomerIds.includes(customer.id)
+                                }"
                             >
                                 <input
                                     type="checkbox"
                                     :checked="selectedCustomerIds.includes(customer.id)"
                                     @change="toggleCustomerSelection(customer.id)"
-                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    :disabled="customer.has_invoice"
+                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                                 >
                                 <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-gray-900">{{ customer.name }}</p>
+                                    <div class="flex items-center gap-2">
+                                        <p class="font-medium text-gray-900">{{ customer.name }}</p>
+                                        <span v-if="customer.has_invoice" class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                                            Sudah ada invoice
+                                        </span>
+                                    </div>
                                     <p class="text-sm text-gray-500">
                                         {{ customer.customer_id }} · {{ customer.phone }}
                                     </p>

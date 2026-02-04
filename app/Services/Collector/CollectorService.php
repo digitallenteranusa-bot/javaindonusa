@@ -10,17 +10,21 @@ use App\Models\Expense;
 use App\Models\Settlement;
 use App\Models\CollectionLog;
 use App\Services\Billing\DebtIsolationService;
+use App\Services\Notification\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 
 class CollectorService
 {
     protected DebtIsolationService $debtService;
+    protected NotificationService $notificationService;
 
-    public function __construct(DebtIsolationService $debtService)
+    public function __construct(DebtIsolationService $debtService, NotificationService $notificationService)
     {
         $this->debtService = $debtService;
+        $this->notificationService = $notificationService;
     }
 
     // ================================================================
@@ -237,7 +241,7 @@ class CollectorService
             throw new \Exception('Anda tidak memiliki akses ke pelanggan ini');
         }
 
-        return DB::transaction(function () use ($collector, $customer, $amount, $notes) {
+        $result = DB::transaction(function () use ($collector, $customer, $amount, $notes) {
             // 1. Proses pembayaran
             $result = $this->debtService->processPayment(
                 $customer,
@@ -262,6 +266,11 @@ class CollectorService
 
             return $result;
         });
+
+        // 3. Kirim notifikasi WA ke pelanggan (di luar transaction agar tidak rollback jika gagal)
+        $this->sendPaymentNotification($customer, $result);
+
+        return $result;
     }
 
     /**
@@ -279,7 +288,7 @@ class CollectorService
             throw new \Exception('Anda tidak memiliki akses ke pelanggan ini');
         }
 
-        return DB::transaction(function () use ($collector, $customer, $amount, $transferProofPath, $notes) {
+        $result = DB::transaction(function () use ($collector, $customer, $amount, $transferProofPath, $notes) {
             // 1. Proses pembayaran
             $result = $this->debtService->processPayment(
                 $customer,
@@ -305,6 +314,11 @@ class CollectorService
 
             return $result;
         });
+
+        // 3. Kirim notifikasi WA ke pelanggan (di luar transaction agar tidak rollback jika gagal)
+        $this->sendPaymentNotification($customer, $result);
+
+        return $result;
     }
 
     /**
@@ -475,6 +489,38 @@ class CollectorService
     protected function isCustomerAssigned(User $collector, Customer $customer): bool
     {
         return $customer->collector_id === $collector->id;
+    }
+
+    /**
+     * Kirim notifikasi pembayaran ke pelanggan via WhatsApp
+     */
+    protected function sendPaymentNotification(Customer $customer, array $paymentResult): void
+    {
+        try {
+            // Refresh customer untuk mendapatkan data terbaru (total_debt)
+            $customer->refresh();
+
+            // Kirim konfirmasi pembayaran
+            $this->notificationService->sendPaymentConfirmation($customer, $paymentResult['payment']);
+
+            // Jika akses dibuka (dari isolir), kirim notifikasi tambahan
+            if ($paymentResult['access_opened'] ?? false) {
+                $this->notificationService->sendAccessOpenedNotice($customer);
+            }
+
+            Log::info('Payment notification sent', [
+                'customer_id' => $customer->id,
+                'payment_id' => $paymentResult['payment']->id,
+                'access_opened' => $paymentResult['access_opened'] ?? false,
+            ]);
+        } catch (\Exception $e) {
+            // Log error tapi jangan gagalkan proses pembayaran
+            Log::error('Failed to send payment notification', [
+                'customer_id' => $customer->id,
+                'payment_id' => $paymentResult['payment']->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

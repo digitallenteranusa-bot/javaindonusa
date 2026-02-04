@@ -162,6 +162,105 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Get customers without invoice for period (for selection modal)
+     */
+    public function getCustomersWithoutInvoice(Request $request)
+    {
+        $periodMonth = $request->get('month', now()->month);
+        $periodYear = $request->get('year', now()->year);
+        $search = $request->get('search', '');
+
+        $query = Customer::whereIn('status', ['active', 'isolated'])
+            ->whereDoesntHave('invoices', function ($q) use ($periodMonth, $periodYear) {
+                $q->where('period_month', $periodMonth)
+                    ->where('period_year', $periodYear);
+            })
+            ->with('package:id,name,price', 'area:id,name');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('customer_id', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $customers = $query->orderBy('name')->limit(100)->get([
+            'id', 'customer_id', 'name', 'phone', 'status', 'package_id', 'area_id'
+        ]);
+
+        return response()->json([
+            'customers' => $customers,
+            'total' => $customers->count(),
+        ]);
+    }
+
+    /**
+     * Generate invoices for selected customers
+     */
+    public function generateForSelected(Request $request)
+    {
+        $validated = $request->validate([
+            'customer_ids' => 'required|array|min:1',
+            'customer_ids.*' => 'exists:customers,id',
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2020|max:2099',
+        ]);
+
+        $periodMonth = $validated['month'];
+        $periodYear = $validated['year'];
+
+        $customers = Customer::whereIn('id', $validated['customer_ids'])
+            ->whereIn('status', ['active', 'isolated'])
+            ->with('package')
+            ->get();
+
+        $generated = 0;
+        $skipped = 0;
+        $errors = [];
+
+        foreach ($customers as $customer) {
+            try {
+                // Check if invoice already exists
+                $exists = Invoice::where('customer_id', $customer->id)
+                    ->where('period_month', $periodMonth)
+                    ->where('period_year', $periodYear)
+                    ->exists();
+
+                if ($exists) {
+                    $skipped++;
+                    continue;
+                }
+
+                $result = $this->billingService->addMonthlyDebtForCustomer(
+                    $customer,
+                    $periodMonth,
+                    $periodYear
+                );
+
+                if ($result['added']) {
+                    $generated++;
+                }
+            } catch (\Exception $e) {
+                $errors[] = [
+                    'customer_id' => $customer->customer_id,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        $message = "Berhasil generate {$generated} invoice";
+        if ($skipped > 0) {
+            $message .= ", {$skipped} dilewati (sudah ada)";
+        }
+        if (count($errors) > 0) {
+            $message .= ", " . count($errors) . " gagal";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
      * Mark invoice as paid manually
      */
     public function markPaid(Request $request, Invoice $invoice)

@@ -198,6 +198,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     });
     Route::middleware(['permission:invoices.generate'])->group(function () {
         Route::post('/invoices/generate', [InvoiceController::class, 'generate'])->name('invoices.generate');
+        Route::post('/invoices/generate-selected', [InvoiceController::class, 'generateForSelected'])
+            ->name('invoices.generate-selected');
+        Route::get('/invoices/customers-without-invoice', [InvoiceController::class, 'getCustomersWithoutInvoice'])
+            ->name('invoices.customers-without-invoice');
         Route::post('/invoices/update-overdue', [InvoiceController::class, 'updateOverdueStatus'])
             ->name('invoices.update-overdue');
     });

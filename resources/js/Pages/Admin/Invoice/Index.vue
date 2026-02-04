@@ -1,7 +1,8 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import axios from 'axios'
 
 const props = defineProps({
     invoices: Object,
@@ -87,6 +88,107 @@ const generateInvoices = () => {
 // Update overdue status
 const updateOverdue = () => {
     router.post('/admin/invoices/update-overdue')
+}
+
+// ========== Generate Invoice for Selected Customers ==========
+const showSelectCustomerModal = ref(false)
+const selectPeriodMonth = ref(new Date().getMonth() + 1)
+const selectPeriodYear = ref(new Date().getFullYear())
+const customerSearch = ref('')
+const availableCustomers = ref([])
+const selectedCustomerIds = ref([])
+const loadingCustomers = ref(false)
+const generatingInvoices = ref(false)
+
+// Month names in Indonesian
+const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+]
+
+const openSelectCustomerModal = () => {
+    showSelectCustomerModal.value = true
+    selectPeriodMonth.value = new Date().getMonth() + 1
+    selectPeriodYear.value = new Date().getFullYear()
+    selectedCustomerIds.value = []
+    fetchAvailableCustomers()
+}
+
+const fetchAvailableCustomers = async () => {
+    loadingCustomers.value = true
+    try {
+        const response = await axios.get('/admin/invoices/customers-without-invoice', {
+            params: {
+                month: selectPeriodMonth.value,
+                year: selectPeriodYear.value,
+                search: customerSearch.value,
+            }
+        })
+        availableCustomers.value = response.data.customers
+    } catch (error) {
+        console.error('Failed to fetch customers:', error)
+        availableCustomers.value = []
+    } finally {
+        loadingCustomers.value = false
+    }
+}
+
+// Watch for period changes
+watch([selectPeriodMonth, selectPeriodYear], () => {
+    selectedCustomerIds.value = []
+    fetchAvailableCustomers()
+})
+
+// Debounce search
+let searchTimeout = null
+const searchCustomers = () => {
+    clearTimeout(searchTimeout)
+    searchTimeout = setTimeout(() => {
+        fetchAvailableCustomers()
+    }, 300)
+}
+
+const toggleCustomerSelection = (customerId) => {
+    const index = selectedCustomerIds.value.indexOf(customerId)
+    if (index > -1) {
+        selectedCustomerIds.value.splice(index, 1)
+    } else {
+        selectedCustomerIds.value.push(customerId)
+    }
+}
+
+const toggleSelectAllCustomers = () => {
+    if (selectedCustomerIds.value.length === availableCustomers.value.length) {
+        selectedCustomerIds.value = []
+    } else {
+        selectedCustomerIds.value = availableCustomers.value.map(c => c.id)
+    }
+}
+
+const generateForSelected = () => {
+    if (selectedCustomerIds.value.length === 0) {
+        alert('Pilih minimal 1 pelanggan')
+        return
+    }
+
+    if (!confirm(`Generate invoice untuk ${selectedCustomerIds.value.length} pelanggan periode ${monthNames[selectPeriodMonth.value - 1]} ${selectPeriodYear.value}?`)) {
+        return
+    }
+
+    generatingInvoices.value = true
+    router.post('/admin/invoices/generate-selected', {
+        customer_ids: selectedCustomerIds.value,
+        month: selectPeriodMonth.value,
+        year: selectPeriodYear.value,
+    }, {
+        onSuccess: () => {
+            showSelectCustomerModal.value = false
+            selectedCustomerIds.value = []
+        },
+        onFinish: () => {
+            generatingInvoices.value = false
+        }
+    })
 }
 
 // Mark as paid
@@ -261,7 +363,16 @@ const toggleSelectAll = () => {
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
-                        Generate Invoice
+                        Generate Semua
+                    </button>
+                    <button
+                        @click="openSelectCustomerModal"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        Generate Pilihan
                     </button>
                 </div>
             </div>
@@ -539,6 +650,156 @@ const toggleSelectAll = () => {
                         >
                             Batalkan Invoice
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Select Customer Modal -->
+        <div
+            v-if="showSelectCustomerModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            @click.self="showSelectCustomerModal = false"
+        >
+            <div class="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+                <!-- Header -->
+                <div class="p-4 border-b">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Generate Invoice Pelanggan Pilihan</h3>
+                        <button @click="showSelectCustomerModal = false" class="text-gray-500 hover:text-gray-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Period Selection -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Bulan</label>
+                            <select
+                                v-model="selectPeriodMonth"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option v-for="(name, idx) in monthNames" :key="idx" :value="idx + 1">
+                                    {{ name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
+                            <select
+                                v-model="selectPeriodYear"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Search -->
+                    <input
+                        v-model="customerSearch"
+                        @input="searchCustomers"
+                        type="text"
+                        placeholder="Cari nama, ID, atau telepon pelanggan..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
+
+                <!-- Customer List -->
+                <div class="flex-1 overflow-y-auto p-4">
+                    <div v-if="loadingCustomers" class="flex items-center justify-center py-8">
+                        <svg class="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span class="ml-2 text-gray-600">Memuat pelanggan...</span>
+                    </div>
+
+                    <div v-else-if="availableCustomers.length === 0" class="text-center py-8 text-gray-500">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p>Semua pelanggan sudah memiliki invoice untuk periode ini</p>
+                    </div>
+
+                    <div v-else>
+                        <!-- Select All -->
+                        <div class="flex items-center justify-between mb-3 pb-3 border-b">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    :checked="selectedCustomerIds.length === availableCustomers.length && availableCustomers.length > 0"
+                                    @change="toggleSelectAllCustomers"
+                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                >
+                                <span class="font-medium">Pilih Semua</span>
+                            </label>
+                            <span class="text-sm text-gray-500">
+                                {{ availableCustomers.length }} pelanggan tersedia
+                            </span>
+                        </div>
+
+                        <!-- Customer Items -->
+                        <div class="space-y-2">
+                            <label
+                                v-for="customer in availableCustomers"
+                                :key="customer.id"
+                                class="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                                :class="{ 'border-blue-500 bg-blue-50': selectedCustomerIds.includes(customer.id) }"
+                            >
+                                <input
+                                    type="checkbox"
+                                    :checked="selectedCustomerIds.includes(customer.id)"
+                                    @change="toggleCustomerSelection(customer.id)"
+                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                >
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-gray-900">{{ customer.name }}</p>
+                                    <p class="text-sm text-gray-500">
+                                        {{ customer.customer_id }} · {{ customer.phone }}
+                                    </p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-medium text-gray-900">
+                                        {{ customer.package?.name || '-' }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ formatCurrency(customer.package?.price) }}
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-4 border-t bg-gray-50">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">
+                            {{ selectedCustomerIds.length }} pelanggan dipilih
+                        </span>
+                        <div class="flex gap-3">
+                            <button
+                                @click="showSelectCustomerModal = false"
+                                class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                @click="generateForSelected"
+                                :disabled="selectedCustomerIds.length === 0 || generatingInvoices"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                <svg v-if="generatingInvoices" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                <span v-if="generatingInvoices">Memproses...</span>
+                                <span v-else>Generate {{ selectedCustomerIds.length }} Invoice</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

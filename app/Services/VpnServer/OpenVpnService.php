@@ -481,47 +481,53 @@ EOT;
         $networkParts = explode('.', explode('/', $serverAddress)[0]);
         $serverIp = $networkParts[0] . '.' . $networkParts[1] . '.' . $networkParts[2] . '.1';
 
+        // Simplified cert name for MikroTik (without special chars)
+        $certName = $client->common_name;
+
         return <<<EOT
 # ============================================================
 # OpenVPN Client for Mikrotik - {$client->name}
 # VPN IP: {$client->client_vpn_ip}
-# Generated: {$client->last_generated_at}
+# Server: {$endpoint}:{$port}
 # ============================================================
 
-# STEP 1: Upload certificates to Mikrotik
-# Upload these files via WinBox or FTP:
-# - ca.crt
-# - {$client->common_name}.crt
-# - {$client->common_name}.key
+# STEP 1: Upload 3 file berikut ke Mikrotik via WinBox (Files):
+#   - ca.crt
+#   - {$certName}.crt
+#   - {$certName}.key
 
-# STEP 2: Import certificates
+# STEP 2: Import certificates (jalankan satu per satu di Terminal)
 /certificate import file-name=ca.crt passphrase=""
-/certificate import file-name={$client->common_name}.crt passphrase=""
-/certificate import file-name={$client->common_name}.key passphrase=""
+/certificate import file-name={$certName}.crt passphrase=""
+/certificate import file-name={$certName}.key passphrase=""
 
-# STEP 3: Create OVPN client interface
-/interface ovpn-client add name=ovpn-billing \\
-    connect-to={$endpoint} port={$port} \\
-    mode=ip protocol=udp \\
-    user={$client->common_name} \\
-    certificate={$client->common_name}.crt_0 \\
-    cipher=aes256-cbc auth=sha256 \\
-    add-default-route=no \\
-    comment="VPN to Billing Server"
+# STEP 3: Cek nama certificate hasil import
+/certificate print
+# Catat nama certificate client (biasanya: {$certName}.crt_0)
 
-# STEP 4: Add firewall rule to allow VPN traffic
-/ip firewall filter add chain=input src-address={$serverAddress} action=accept \\
-    comment="Allow VPN Billing" place-before=0
+# STEP 4: Buat OVPN client interface
+# GANTI "cert_name" dengan nama certificate dari step 3
+/interface ovpn-client add name=ovpn-billing connect-to={$endpoint} port={$port} mode=ip protocol=udp user={$certName} certificate={$certName}.crt_0 cipher=aes256-cbc auth=sha256 add-default-route=no comment="VPN to Billing Server"
 
-# STEP 5: Enable interface
+# STEP 5: Tambah firewall rule
+/ip firewall filter add chain=input src-address={$serverAddress} action=accept comment="Allow VPN Billing" place-before=0
+
+# STEP 6: Enable interface
 /interface ovpn-client enable ovpn-billing
 
 # ============================================================
-# Verification Commands:
+# Verifikasi Koneksi:
 # ============================================================
-# /interface ovpn-client print
-# /interface ovpn-client monitor ovpn-billing
-# /ping {$serverIp}
+/interface ovpn-client print
+/interface ovpn-client monitor ovpn-billing
+/ping {$serverIp}
+
+# ============================================================
+# Jika Error "certificate not found":
+# 1. Jalankan: /certificate print
+# 2. Cari nama cert yang ada flag "KT" (Key & Trusted)
+# 3. Edit interface: /interface ovpn-client set ovpn-billing certificate=NAMA_CERT
+# ============================================================
 EOT;
     }
 

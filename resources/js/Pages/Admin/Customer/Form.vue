@@ -36,6 +36,7 @@ const form = useForm({
     area_id: props.customer?.area_id || '',
     router_id: props.customer?.router_id || '',
     collector_id: props.customer?.collector_id || '',
+    connection_type: props.customer?.connection_type || 'pppoe',
     pppoe_username: props.customer?.pppoe_username || '',
     pppoe_password: props.customer?.pppoe_password || '',
     ip_address: props.customer?.ip_address || '',
@@ -469,35 +470,82 @@ const submit = () => {
                 <h2 class="text-lg font-semibold mb-4">Data Koneksi</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">PPPoE Username</label>
-                        <input
-                            v-model="form.pppoe_username"
-                            type="text"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
+                    <!-- Tipe Koneksi -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipe Koneksi *</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    v-model="form.connection_type"
+                                    value="pppoe"
+                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                >
+                                <span class="text-sm text-gray-700">PPPoE</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    v-model="form.connection_type"
+                                    value="static"
+                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                >
+                                <span class="text-sm text-gray-700">Static IP</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    v-model="form.connection_type"
+                                    value="hotspot"
+                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                >
+                                <span class="text-sm text-gray-700">Hotspot</span>
+                            </label>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">PPPoE Password</label>
-                        <input
-                            v-model="form.pppoe_password"
-                            type="text"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                    </div>
+                    <!-- PPPoE Fields (show when pppoe or hotspot) -->
+                    <template v-if="form.connection_type === 'pppoe' || form.connection_type === 'hotspot'">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ form.connection_type === 'hotspot' ? 'Hotspot Username' : 'PPPoE Username' }}
+                            </label>
+                            <input
+                                v-model="form.pppoe_username"
+                                type="text"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                :placeholder="form.connection_type === 'hotspot' ? 'Username hotspot' : 'Username PPPoE'"
+                            >
+                        </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ form.connection_type === 'hotspot' ? 'Hotspot Password' : 'PPPoE Password' }}
+                            </label>
+                            <input
+                                v-model="form.pppoe_password"
+                                type="text"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                :placeholder="form.connection_type === 'hotspot' ? 'Password hotspot' : 'Password PPPoE'"
+                            >
+                        </div>
+                    </template>
+
+                    <!-- Static IP Field (show when static) -->
+                    <div v-if="form.connection_type === 'static'">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">IP Address Pelanggan *</label>
                         <input
                             v-model="form.ip_address"
                             type="text"
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            :class="{ 'border-red-500': form.errors.ip_address }"
                             placeholder="192.168.x.x"
                         >
+                        <p v-if="form.errors.ip_address" class="text-red-500 text-sm mt-1">{{ form.errors.ip_address }}</p>
                     </div>
 
-                    <div>
+                    <!-- MAC Address (show for static) -->
+                    <div v-if="form.connection_type === 'static'">
                         <label class="block text-sm font-medium text-gray-700 mb-1">MAC Address</label>
                         <input
                             v-model="form.mac_address"
@@ -507,6 +555,7 @@ const submit = () => {
                         >
                     </div>
 
+                    <!-- Merk Router (always visible) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Merk Router</label>
                         <input

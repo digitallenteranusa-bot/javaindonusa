@@ -417,6 +417,91 @@ class CollectorService
     }
 
     /**
+     * Hitung semua pembayaran yang BELUM disetor
+     * Berbeda dengan calculateFinalSettlement yang berdasarkan periode,
+     * method ini menghitung dari settlement terakhir yang sudah verified/settled
+     */
+    public function calculateUnsettledAmount(User $collector): array
+    {
+        // Cari settlement terakhir yang sudah diverifikasi/selesai
+        $lastSettlement = Settlement::where('collector_id', $collector->id)
+            ->whereIn('status', [Settlement::STATUS_SETTLED, Settlement::STATUS_VERIFIED])
+            ->orderBy('period_end', 'desc')
+            ->first();
+
+        // Tanggal mulai = setelah settlement terakhir, atau dari awal jika belum pernah setor
+        $startDate = $lastSettlement
+            ? Carbon::parse($lastSettlement->period_end)->addDay()->startOfDay()
+            : Carbon::create(2020, 1, 1)->startOfDay();
+
+        $endDate = Carbon::now();
+
+        // Total pembayaran cash yang belum disetor
+        $cashCollection = Payment::where('collector_id', $collector->id)
+            ->where('created_at', '>=', $startDate)
+            ->where('created_at', '<=', $endDate)
+            ->where('payment_method', 'cash')
+            ->whereNotIn('status', ['rejected', 'cancelled'])
+            ->sum('amount');
+
+        // Total pembayaran transfer (info saja, tidak perlu disetor)
+        $transferCollection = Payment::where('collector_id', $collector->id)
+            ->where('created_at', '>=', $startDate)
+            ->where('created_at', '<=', $endDate)
+            ->where('payment_method', 'transfer')
+            ->whereNotIn('status', ['rejected', 'cancelled'])
+            ->sum('amount');
+
+        // Total semua collection
+        $totalCollection = $cashCollection + $transferCollection;
+
+        // Pengeluaran yang disetujui dan belum di-settle
+        $approvedExpense = Expense::where('user_id', $collector->id)
+            ->where('expense_date', '>=', $startDate->toDateString())
+            ->where('expense_date', '<=', $endDate->toDateString())
+            ->where('status', 'approved')
+            ->sum('amount');
+
+        // Pengeluaran pending
+        $pendingExpense = Expense::where('user_id', $collector->id)
+            ->where('expense_date', '>=', $startDate->toDateString())
+            ->where('expense_date', '<=', $endDate->toDateString())
+            ->where('status', 'pending')
+            ->sum('amount');
+
+        // Komisi penagih (jika ada)
+        $commissionRate = $collector->commission_rate ?? 0;
+        $commissionAmount = $totalCollection * ($commissionRate / 100);
+
+        // Yang harus disetor = Cash - Pengeluaran disetujui - Komisi
+        $mustSettle = $cashCollection - $approvedExpense - $commissionAmount;
+
+        // Hitung jumlah transaksi
+        $paymentCount = Payment::where('collector_id', $collector->id)
+            ->where('created_at', '>=', $startDate)
+            ->where('created_at', '<=', $endDate)
+            ->whereNotIn('status', ['rejected', 'cancelled'])
+            ->count();
+
+        return [
+            'period' => [
+                'start' => $startDate->toDateString(),
+                'end' => $endDate->toDateString(),
+                'last_settlement' => $lastSettlement?->period_end?->toDateString(),
+            ],
+            'total_collection' => $totalCollection,
+            'cash_collection' => $cashCollection,
+            'transfer_collection' => $transferCollection,
+            'approved_expense' => $approvedExpense,
+            'pending_expense' => $pendingExpense,
+            'commission_rate' => $commissionRate,
+            'commission_amount' => $commissionAmount,
+            'must_settle' => max(0, $mustSettle),
+            'payment_count' => $paymentCount,
+        ];
+    }
+
+    /**
      * Ambil ringkasan harian penagih
      */
     public function getDailySummary(User $collector, ?Carbon $date = null): array

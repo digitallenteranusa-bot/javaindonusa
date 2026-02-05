@@ -262,6 +262,45 @@ class ExpenseService
     }
 
     /**
+     * Buat settlement dari data unsettled yang sudah dihitung
+     */
+    public function createSettlementFromUnsettled(
+        User $collector,
+        Carbon $periodStart,
+        Carbon $periodEnd,
+        array $unsettledData,
+        float $actualAmount,
+        ?string $notes = null
+    ): Settlement {
+        return DB::transaction(function () use (
+            $collector, $periodStart, $periodEnd, $unsettledData, $actualAmount, $notes
+        ) {
+            $expectedAmount = $unsettledData['must_settle'];
+            $difference = $actualAmount - $expectedAmount;
+
+            return Settlement::create([
+                'collector_id' => $collector->id,
+                'settlement_number' => $this->generateSettlementNumber(),
+                'settlement_date' => Carbon::today(),
+                'period_start' => $periodStart,
+                'period_end' => $periodEnd,
+                'total_collection' => $unsettledData['total_collection'],
+                'cash_collection' => $unsettledData['cash_collection'],
+                'transfer_collection' => $unsettledData['transfer_collection'],
+                'total_expense' => $unsettledData['approved_expense'] + $unsettledData['pending_expense'],
+                'approved_expense' => $unsettledData['approved_expense'],
+                'commission_rate' => $unsettledData['commission_rate'],
+                'commission_amount' => $unsettledData['commission_amount'],
+                'expected_amount' => $expectedAmount,
+                'actual_amount' => $actualAmount,
+                'difference' => $difference,
+                'status' => 'pending',
+                'notes' => $notes,
+            ]);
+        });
+    }
+
+    /**
      * Verifikasi settlement oleh admin
      */
     public function verifySettlement(

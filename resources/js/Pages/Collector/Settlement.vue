@@ -40,24 +40,14 @@ const formatDateTime = (date) => {
     })
 }
 
-// Get today's date in YYYY-MM-DD format
-const getTodayDate = () => {
-    const today = new Date()
-    return today.toISOString().split('T')[0]
-}
-
 // Settlement modal
 const showSettlementModal = ref(false)
 const form = useForm({
-    period_start: getTodayDate(),
-    period_end: getTodayDate(),
     actual_amount: props.pendingSettlement?.must_settle || 0,
     notes: '',
 })
 
 const openSettlementModal = () => {
-    form.period_start = getTodayDate()
-    form.period_end = getTodayDate()
     form.actual_amount = props.pendingSettlement?.must_settle || 0
     form.notes = ''
     showSettlementModal.value = true
@@ -111,13 +101,32 @@ const canSettle = computed(() => {
             <!-- Pending Settlement Card -->
             <div class="px-4 -mt-4">
                 <div class="bg-white rounded-xl shadow-sm p-4">
-                    <h3 class="text-sm font-medium text-gray-500 mb-3">Ringkasan Hari Ini</h3>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-medium text-gray-500">Belum Disetor</h3>
+                        <span class="text-xs text-gray-400">
+                            {{ pendingSettlement?.payment_count || 0 }} transaksi
+                        </span>
+                    </div>
+
+                    <!-- Period info -->
+                    <div v-if="pendingSettlement?.period" class="mb-3 p-2 bg-gray-50 rounded-lg text-xs text-gray-500">
+                        <span v-if="pendingSettlement.period.last_settlement">
+                            Sejak: {{ formatDate(pendingSettlement.period.last_settlement) }}
+                        </span>
+                        <span v-else>Belum pernah setor</span>
+                    </div>
 
                     <div class="space-y-3">
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-600">Tagihan Cash Masuk</span>
+                            <span class="text-gray-600">Tagihan Cash</span>
                             <span class="font-semibold text-green-600">
                                 {{ formatCurrency(pendingSettlement?.cash_collection || 0) }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Tagihan Transfer</span>
+                            <span class="font-semibold text-blue-600">
+                                {{ formatCurrency(pendingSettlement?.transfer_collection || 0) }}
                             </span>
                         </div>
                         <div class="flex justify-between items-center">
@@ -133,6 +142,7 @@ const canSettle = computed(() => {
                                 {{ formatCurrency(pendingSettlement?.must_settle || 0) }}
                             </span>
                         </div>
+                        <p class="text-xs text-gray-400 text-right">*Hanya cash yang perlu disetor</p>
                     </div>
 
                     <!-- Settle Button -->
@@ -257,8 +267,12 @@ const canSettle = computed(() => {
                                 <span class="text-blue-700">Tagihan Cash</span>
                                 <span class="font-medium">{{ formatCurrency(pendingSettlement?.cash_collection) }}</span>
                             </div>
+                            <div class="flex justify-between text-sm text-gray-500">
+                                <span>Tagihan Transfer</span>
+                                <span>{{ formatCurrency(pendingSettlement?.transfer_collection) }}</span>
+                            </div>
                             <div class="flex justify-between text-sm">
-                                <span class="text-blue-700">Belanja</span>
+                                <span class="text-blue-700">Belanja Disetujui</span>
                                 <span class="font-medium">-{{ formatCurrency(pendingSettlement?.approved_expense) }}</span>
                             </div>
                             <hr class="border-blue-200">

@@ -126,12 +126,8 @@ class ExpenseController extends Controller
         // Histori settlement (paginated)
         $settlements = $this->expenseService->getSettlementHistory($collector);
 
-        // Pending settlement calculation - hari ini
-        $pendingSettlement = $this->collectorService->calculateFinalSettlement(
-            $collector,
-            Carbon::today()->startOfDay(),
-            Carbon::today()->endOfDay()
-        );
+        // Pending settlement - SEMUA yang belum disetor (bukan hanya hari ini)
+        $pendingSettlement = $this->collectorService->calculateUnsettledAmount($collector);
 
         return Inertia::render('Collector/Settlement', [
             'dailySummary' => $dailySummary,
@@ -147,8 +143,6 @@ class ExpenseController extends Controller
     public function requestSettlement(Request $request)
     {
         $request->validate([
-            'period_start' => 'required|date',
-            'period_end' => 'required|date|after_or_equal:period_start',
             'actual_amount' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -156,12 +150,19 @@ class ExpenseController extends Controller
         $collector = auth()->user();
 
         try {
-            $settlement = $this->expenseService->createSettlement(
+            // Ambil periode dari unsettled calculation
+            $unsettled = $this->collectorService->calculateUnsettledAmount($collector);
+
+            if ($unsettled['must_settle'] <= 0) {
+                return back()->with('error', 'Tidak ada yang perlu disetor.');
+            }
+
+            $settlement = $this->expenseService->createSettlementFromUnsettled(
                 $collector,
-                Carbon::parse($request->period_start),
-                Carbon::parse($request->period_end),
+                Carbon::parse($unsettled['period']['start']),
+                Carbon::parse($unsettled['period']['end']),
+                $unsettled,
                 $request->actual_amount,
-                null,
                 $request->notes
             );
 

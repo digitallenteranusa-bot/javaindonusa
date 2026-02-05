@@ -93,6 +93,17 @@ const rejectExpense = () => {
         },
     })
 }
+
+// Image preview modal
+const showImagePreview = ref(false)
+
+const openImagePreview = () => {
+    showImagePreview.value = true
+}
+
+const closeImagePreview = () => {
+    showImagePreview.value = false
+}
 </script>
 
 <template>
@@ -155,8 +166,10 @@ const rejectExpense = () => {
                     <img
                         :src="`/storage/${expense.receipt_photo}`"
                         alt="Receipt"
-                        class="max-w-full rounded-lg border"
+                        class="max-w-full rounded-lg border cursor-pointer hover:opacity-90 transition"
+                        @click="openImagePreview"
                     >
+                    <p class="text-xs text-gray-400 mt-2 text-center">Klik gambar untuk memperbesar</p>
                 </div>
 
                 <!-- Rejection Reason (if rejected) -->
@@ -315,6 +328,41 @@ const rejectExpense = () => {
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Image Preview Modal -->
+        <div
+            v-if="showImagePreview"
+            class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+            @click="closeImagePreview"
+        >
+            <!-- Close Button -->
+            <button
+                @click="closeImagePreview"
+                class="absolute top-4 right-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white z-10"
+            >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <!-- Back Button -->
+            <button
+                @click="closeImagePreview"
+                class="absolute top-4 left-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white z-10"
+            >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </button>
+
+            <!-- Image -->
+            <img
+                :src="`/storage/${expense.receipt_photo}`"
+                alt="Bukti Pengeluaran"
+                class="max-w-full max-h-full object-contain p-4"
+                @click.stop
+            >
         </div>
     </AdminLayout>
 </template>

@@ -71,6 +71,20 @@ const getStatusBadge = (status) => {
     return badges[status] || { class: 'bg-gray-100 text-gray-600', text: status }
 }
 
+// Image preview modal
+const showImagePreview = ref(false)
+const previewImageUrl = ref('')
+
+const openImagePreview = (imagePath) => {
+    previewImageUrl.value = `/storage/${imagePath}`
+    showImagePreview.value = true
+}
+
+const closeImagePreview = () => {
+    showImagePreview.value = false
+    previewImageUrl.value = ''
+}
+
 </script>
 
 <template>
@@ -170,9 +184,15 @@ const getStatusBadge = (status) => {
 
                                 <!-- Receipt photo -->
                                 <div v-if="expense.receipt_photo" class="mt-2">
-                                    <a :href="`/storage/${expense.receipt_photo}`" target="_blank" class="text-blue-600 text-sm hover:underline">
+                                    <button
+                                        @click="openImagePreview(expense.receipt_photo)"
+                                        class="text-blue-600 text-sm hover:underline flex items-center gap-1"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
                                         Lihat Bukti
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -272,6 +292,41 @@ const getStatusBadge = (status) => {
                         </button>
                     </form>
                 </div>
+            </div>
+
+            <!-- Image Preview Modal -->
+            <div
+                v-if="showImagePreview"
+                class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+                @click="closeImagePreview"
+            >
+                <!-- Close Button -->
+                <button
+                    @click="closeImagePreview"
+                    class="absolute top-4 right-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white z-10"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <!-- Back Button -->
+                <button
+                    @click="closeImagePreview"
+                    class="absolute top-4 left-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white z-10"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </button>
+
+                <!-- Image -->
+                <img
+                    :src="previewImageUrl"
+                    alt="Bukti"
+                    class="max-w-full max-h-full object-contain p-4"
+                    @click.stop
+                >
             </div>
 
         </div>

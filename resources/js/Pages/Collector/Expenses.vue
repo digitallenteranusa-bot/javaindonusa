@@ -170,7 +170,7 @@ const getStatusBadge = (status) => {
 
                                 <!-- Receipt photo -->
                                 <div v-if="expense.receipt_photo" class="mt-2">
-                                    <a :href="expense.receipt_photo" target="_blank" class="text-blue-600 text-sm hover:underline">
+                                    <a :href="`/storage/${expense.receipt_photo}`" target="_blank" class="text-blue-600 text-sm hover:underline">
                                         Lihat Bukti
                                     </a>
                                 </div>

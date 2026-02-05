@@ -70,9 +70,9 @@ const openMapPicker = async () => {
         await import('leaflet/dist/leaflet.css')
     }
 
-    // Default center (Trenggalek or customer location)
-    const defaultLat = form.latitude || -8.0654
-    const defaultLng = form.longitude || 111.7085
+    // Default center (Kantor Kecamatan Pule or customer location)
+    const defaultLat = form.latitude || -8.1228
+    const defaultLng = form.longitude || 111.5617
 
     map = L.map(mapContainer.value).setView([defaultLat, defaultLng], 17)
 

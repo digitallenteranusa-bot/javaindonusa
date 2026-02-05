@@ -257,10 +257,10 @@ class MappingController extends Controller
             ];
         }
 
-        // Default to Trenggalek, Jawa Timur
+        // Default to Kantor Kecamatan Pule, Trenggalek
         return [
-            'lat' => -8.0505,
-            'lng' => 111.7083,
+            'lat' => -8.1228,
+            'lng' => 111.5617,
         ];
     }
 

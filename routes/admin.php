@@ -253,6 +253,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:expenses.view'])->group(function () {
         Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
         Route::get('/expenses/pending', [ExpenseController::class, 'pending'])->name('expenses.pending');
+        Route::get('/expenses/export', [ExpenseController::class, 'export'])->name('expenses.export');
         Route::get('/expenses/collector-summary', [ExpenseController::class, 'collectorSummary'])
             ->name('expenses.collector-summary');
         Route::get('/expenses/{expense}', [ExpenseController::class, 'show'])->name('expenses.show');

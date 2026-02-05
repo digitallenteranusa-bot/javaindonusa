@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\User;
+use App\Exports\ExpenseExport;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ExpenseController extends Controller
 {
@@ -190,5 +192,30 @@ class ExpenseController extends Controller
             'summary' => $summary,
             'grand_total' => $summary->sum('total_amount'),
         ]);
+    }
+
+    /**
+     * Export expenses to Excel
+     */
+    public function export(Request $request)
+    {
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        $status = $request->get('status');
+        $userId = $request->filled('user_id') ? (int) $request->user_id : null;
+        $category = $request->get('category');
+
+        $filename = 'pengeluaran';
+        if ($startDate && $endDate) {
+            $filename .= "_{$startDate}_to_{$endDate}";
+        } elseif ($startDate) {
+            $filename .= "_from_{$startDate}";
+        }
+        $filename .= '_' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(
+            new ExpenseExport($startDate, $endDate, $status, $userId, $category),
+            $filename
+        );
     }
 }

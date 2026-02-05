@@ -10,16 +10,15 @@ const appName = import.meta.env.VITE_APP_NAME || 'ISP Billing';
 
 // Initialize Capacitor plugins (native app only)
 const initCapacitor = async () => {
-    try {
-        const { Capacitor } = await import('@capacitor/core');
-
-        if (Capacitor.isNativePlatform()) {
+    // Only run if we're in a Capacitor native app (window.Capacitor is injected by native shell)
+    if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        try {
             // Hide splash screen after app is ready
             const { SplashScreen } = await import('@capacitor/splash-screen');
             await SplashScreen.hide();
 
             // Setup status bar (Android)
-            if (Capacitor.getPlatform() === 'android') {
+            if (window.Capacitor.getPlatform() === 'android') {
                 const { StatusBar, Style } = await import('@capacitor/status-bar');
                 await StatusBar.setStyle({ style: Style.Dark });
                 await StatusBar.setBackgroundColor({ color: '#1e40af' });
@@ -34,9 +33,10 @@ const initCapacitor = async () => {
                     App.exitApp();
                 }
             });
+        } catch (e) {
+            // Capacitor plugins not available
+            console.log('Capacitor plugins not available:', e.message);
         }
-    } catch (e) {
-        // Capacitor not available (running in web browser)
     }
 };
 

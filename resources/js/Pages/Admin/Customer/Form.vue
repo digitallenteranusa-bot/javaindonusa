@@ -9,6 +9,7 @@ const props = defineProps({
     areas: Array,
     routers: Array,
     collectors: Array,
+    odps: Array,
 })
 
 const isEdit = computed(() => !!props.customer)
@@ -36,6 +37,7 @@ const form = useForm({
     area_id: props.customer?.area_id || '',
     router_id: props.customer?.router_id || '',
     collector_id: props.customer?.collector_id || '',
+    odp_id: props.customer?.odp_id || '',
     connection_type: props.customer?.connection_type || 'pppoe',
     pppoe_username: props.customer?.pppoe_username || '',
     pppoe_password: props.customer?.pppoe_password || '',
@@ -50,6 +52,13 @@ const form = useForm({
     notes: props.customer?.notes || '',
     latitude: props.customer?.latitude || '',
     longitude: props.customer?.longitude || '',
+})
+
+// Filtered ODPs based on selected area
+const filteredOdps = computed(() => {
+    if (!props.odps) return []
+    if (!form.area_id) return props.odps
+    return props.odps.filter(odp => odp.area_id === form.area_id)
 })
 
 // Auto-select router when area changes
@@ -502,6 +511,32 @@ const submit = () => {
                                 <span class="text-sm text-gray-700">Hotspot</span>
                             </label>
                         </div>
+                    </div>
+
+                    <!-- ODP Selection (only for PPPoE) -->
+                    <div v-if="form.connection_type === 'pppoe'" class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ODP (Optical Distribution Point)</label>
+                        <select
+                            v-model="form.odp_id"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Pilih ODP (Opsional)</option>
+                            <option
+                                v-for="odp in filteredOdps"
+                                :key="odp.id"
+                                :value="odp.id"
+                                :disabled="odp.capacity - odp.used_ports <= 0"
+                            >
+                                {{ odp.name }} ({{ odp.code }}) - {{ odp.area?.name || 'Tanpa Area' }}
+                                [{{ odp.capacity - odp.used_ports }}/{{ odp.capacity }} port tersedia]
+                                <template v-if="odp.capacity - odp.used_ports <= 0"> (PENUH)</template>
+                            </option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            ODP digunakan untuk menghubungkan pelanggan fiber ke jaringan.
+                            <span v-if="form.area_id">Menampilkan ODP di area yang dipilih.</span>
+                            <span v-else>Pilih area terlebih dahulu untuk memfilter ODP.</span>
+                        </p>
                     </div>
 
                     <!-- PPPoE Fields (show when pppoe or hotspot) -->

@@ -152,16 +152,37 @@ const recalculateDebt = () => {
 
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                            <p class="text-gray-500">PPPoE Username</p>
+                            <p class="text-gray-500">Tipe Koneksi</p>
+                            <p class="font-medium">
+                                <span :class="[
+                                    'px-2 py-0.5 text-xs rounded-full',
+                                    customer.connection_type === 'pppoe' ? 'bg-blue-100 text-blue-700' :
+                                    customer.connection_type === 'static' ? 'bg-purple-100 text-purple-700' :
+                                    'bg-orange-100 text-orange-700'
+                                ]">
+                                    {{ customer.connection_type === 'pppoe' ? 'PPPoE' :
+                                       customer.connection_type === 'static' ? 'Static IP' : 'Hotspot' }}
+                                </span>
+                            </p>
+                        </div>
+                        <div v-if="customer.connection_type === 'pppoe' || customer.connection_type === 'hotspot'">
+                            <p class="text-gray-500">{{ customer.connection_type === 'hotspot' ? 'Hotspot Username' : 'PPPoE Username' }}</p>
                             <p class="font-medium font-mono">{{ customer.pppoe_username || '-' }}</p>
                         </div>
-                        <div>
+                        <div v-if="customer.connection_type === 'static'">
                             <p class="text-gray-500">IP Address</p>
                             <p class="font-medium font-mono">{{ customer.ip_address || '-' }}</p>
                         </div>
-                        <div>
+                        <div v-if="customer.connection_type === 'static'">
                             <p class="text-gray-500">MAC Address</p>
                             <p class="font-medium font-mono">{{ customer.mac_address || '-' }}</p>
+                        </div>
+                        <div v-if="customer.connection_type === 'pppoe'">
+                            <p class="text-gray-500">ODP</p>
+                            <p v-if="customer.odp" class="font-medium">
+                                {{ customer.odp.name }} ({{ customer.odp.code }})
+                            </p>
+                            <p v-else class="text-gray-400">Belum ditentukan</p>
                         </div>
                         <div>
                             <p class="text-gray-500">Merk Router</p>

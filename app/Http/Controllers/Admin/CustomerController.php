@@ -8,6 +8,7 @@ use App\Models\Package;
 use App\Models\Area;
 use App\Models\Router;
 use App\Models\User;
+use App\Models\Odp;
 use App\Services\Billing\DebtService;
 use App\Imports\CustomerImport;
 use App\Exports\CustomerTemplateExport;
@@ -114,6 +115,7 @@ class CustomerController extends Controller
             'areas' => Area::active()->get(),
             'routers' => Router::active()->get(),
             'collectors' => User::where('role', 'penagih')->where('is_active', true)->get(['id', 'name']),
+            'odps' => Odp::active()->with('area:id,name')->get(['id', 'name', 'code', 'capacity', 'used_ports', 'area_id']),
         ]);
     }
 
@@ -129,6 +131,7 @@ class CustomerController extends Controller
             'latitude' => $request->latitude ?: null,
             'longitude' => $request->longitude ?: null,
             'collector_id' => $request->collector_id ?: null,
+            'odp_id' => $request->odp_id ?: null,
         ]);
 
         $validated = $request->validate([
@@ -145,6 +148,7 @@ class CustomerController extends Controller
             'area_id' => 'required|exists:areas,id',
             'router_id' => 'required|exists:routers,id',
             'collector_id' => 'nullable|exists:users,id',
+            'odp_id' => 'nullable|exists:odps,id',
             'connection_type' => 'required|in:pppoe,static,hotspot',
             'pppoe_username' => 'nullable|string|max:100|unique:customers,pppoe_username',
             'pppoe_password' => 'nullable|string|max:100',
@@ -160,6 +164,11 @@ class CustomerController extends Controller
             'longitude' => 'nullable|numeric',
         ]);
 
+        // Clear ODP if not PPPoE
+        if ($validated['connection_type'] !== 'pppoe') {
+            $validated['odp_id'] = null;
+        }
+
         // Generate customer ID
         $lastCustomer = Customer::orderBy('id', 'desc')->first();
         $sequence = $lastCustomer ? intval(substr($lastCustomer->customer_id, -5)) + 1 : 1;
@@ -170,6 +179,11 @@ class CustomerController extends Controller
         $validated['total_debt'] = 0;
 
         $customer = Customer::create($validated);
+
+        // Update ODP used_ports if assigned
+        if ($customer->odp_id) {
+            $customer->odp->recalculateUsedPorts();
+        }
 
         return redirect()->route('admin.customers.show', $customer)
             ->with('success', 'Pelanggan berhasil ditambahkan');
@@ -185,6 +199,7 @@ class CustomerController extends Controller
             'area',
             'router',
             'collector',
+            'odp:id,name,code',
             'invoices' => fn($q) => $q->orderBy('period_year', 'desc')->orderBy('period_month', 'desc')->limit(12),
             'payments' => fn($q) => $q->orderBy('created_at', 'desc')->limit(10),
             'debtHistories' => fn($q) => $q->orderBy('created_at', 'desc')->limit(20),
@@ -204,11 +219,12 @@ class CustomerController extends Controller
     public function edit(Customer $customer)
     {
         return Inertia::render('Admin/Customer/Form', [
-            'customer' => $customer,
+            'customer' => $customer->load('odp:id,name,code'),
             'packages' => Package::active()->ordered()->get(),
             'areas' => Area::active()->get(),
             'routers' => Router::active()->get(),
             'collectors' => User::where('role', 'penagih')->where('is_active', true)->get(['id', 'name']),
+            'odps' => Odp::active()->with('area:id,name')->get(['id', 'name', 'code', 'capacity', 'used_ports', 'area_id']),
         ]);
     }
 
@@ -224,6 +240,7 @@ class CustomerController extends Controller
             'latitude' => $request->latitude ?: null,
             'longitude' => $request->longitude ?: null,
             'collector_id' => $request->collector_id ?: null,
+            'odp_id' => $request->odp_id ?: null,
         ]);
 
         $validated = $request->validate([
@@ -240,6 +257,7 @@ class CustomerController extends Controller
             'area_id' => 'required|exists:areas,id',
             'router_id' => 'required|exists:routers,id',
             'collector_id' => 'nullable|exists:users,id',
+            'odp_id' => 'nullable|exists:odps,id',
             'connection_type' => 'required|in:pppoe,static,hotspot',
             'pppoe_username' => ['nullable', 'string', 'max:100', Rule::unique('customers')->ignore($customer->id)],
             'pppoe_password' => 'nullable|string|max:100',
@@ -256,7 +274,26 @@ class CustomerController extends Controller
             'longitude' => 'nullable|numeric',
         ]);
 
+        // Clear ODP if not PPPoE
+        if ($validated['connection_type'] !== 'pppoe') {
+            $validated['odp_id'] = null;
+        }
+
+        // Track old ODP for recalculation
+        $oldOdpId = $customer->odp_id;
+
         $customer->update($validated);
+
+        // Recalculate used_ports for old and new ODP
+        if ($oldOdpId && $oldOdpId != $customer->odp_id) {
+            $oldOdp = Odp::find($oldOdpId);
+            if ($oldOdp) {
+                $oldOdp->recalculateUsedPorts();
+            }
+        }
+        if ($customer->odp_id) {
+            $customer->odp->recalculateUsedPorts();
+        }
 
         return redirect()->route('admin.customers.show', $customer)
             ->with('success', 'Data pelanggan berhasil diperbarui');

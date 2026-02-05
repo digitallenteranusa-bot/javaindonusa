@@ -217,7 +217,7 @@ const printReceipt = () => {
                         </div>
                         <div v-if="payment.transfer_proof" class="flex justify-between">
                             <span class="text-gray-500">Bukti Transfer</span>
-                            <a :href="payment.transfer_proof" target="_blank" class="text-blue-600 hover:underline">
+                            <a :href="`/storage/${payment.transfer_proof}`" target="_blank" class="text-blue-600 hover:underline">
                                 Lihat
                             </a>
                         </div>

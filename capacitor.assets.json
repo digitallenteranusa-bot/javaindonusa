@@ -1,0 +1,19 @@
+{
+  "$schema": "https://capacitorjs.com/docs/assets-schema.json",
+  "assets": {
+    "android": {
+      "icon": "resources/mobile/icon.svg",
+      "splash": "resources/mobile/splash.svg",
+      "iconBackgroundColor": "#1e40af",
+      "iconBackgroundColorDark": "#1e3a8a",
+      "splashBackgroundColor": "#1e40af",
+      "splashBackgroundColorDark": "#1e3a8a"
+    },
+    "ios": {
+      "icon": "resources/mobile/icon.svg",
+      "splash": "resources/mobile/splash.svg",
+      "iconBackgroundColor": "#1e40af",
+      "splashBackgroundColor": "#1e40af"
+    }
+  }
+}

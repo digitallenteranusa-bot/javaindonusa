@@ -5,7 +5,16 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "cap:init": "npx cap init",
+        "cap:add:android": "npx cap add android",
+        "cap:add:ios": "npx cap add ios",
+        "cap:sync": "npx cap sync",
+        "cap:open:android": "npx cap open android",
+        "cap:open:ios": "npx cap open ios",
+        "build:android": "npm run build && npx cap sync android",
+        "build:ios": "npm run build && npx cap sync ios",
+        "build:mobile": "npm run build && npx cap sync"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^1.0.0",
@@ -16,10 +25,22 @@
         "laravel-vite-plugin": "^1.0.0",
         "postcss": "^8.4.32",
         "tailwindcss": "^3.4.0",
+        "typescript": "^5.9.3",
         "vite": "^5.0.0",
         "vue": "^3.4.0"
     },
     "dependencies": {
+        "@capacitor/android": "^6.0.0",
+        "@capacitor/app": "^6.0.0",
+        "@capacitor/cli": "^6.0.0",
+        "@capacitor/core": "^6.0.0",
+        "@capacitor/haptics": "^6.0.0",
+        "@capacitor/ios": "^6.0.0",
+        "@capacitor/keyboard": "^6.0.0",
+        "@capacitor/network": "^6.0.0",
+        "@capacitor/push-notifications": "^6.0.0",
+        "@capacitor/splash-screen": "^6.0.0",
+        "@capacitor/status-bar": "^6.0.0",
         "@headlessui/vue": "^1.7.16",
         "@heroicons/vue": "^2.1.1",
         "chart.js": "^4.4.1",

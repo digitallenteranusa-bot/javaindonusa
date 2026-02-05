@@ -24,3 +24,10 @@ yarn-error.log
 tmpclaude-*
 *.tmp
 *.temp
+
+# Mobile (Capacitor) - generated folders
+/android
+/ios
+*.apk
+*.ipa
+*.keystore

@@ -26,18 +26,22 @@ call npm run build
 
 REM Add Android platform jika belum ada
 if not exist "android" (
-    echo [3/5] Adding Android platform...
+    echo [3/6] Adding Android platform...
     call npx cap add android
 ) else (
-    echo [3/5] Android platform sudah ada
+    echo [3/6] Android platform sudah ada
 )
 
+REM Copy custom MainActivity.java untuk fix cookie
+echo [4/6] Applying cookie fix...
+copy /Y "resources\android-overrides\MainActivity.java" "android\app\src\main\java\com\javaindonusa\billing\MainActivity.java"
+
 REM Sync
-echo [4/5] Syncing Capacitor...
+echo [5/6] Syncing Capacitor...
 call npx cap sync android
 
 REM Build APK
-echo [5/5] Building APK...
+echo [6/6] Building APK...
 cd android
 call gradlew.bat assembleDebug
 cd ..

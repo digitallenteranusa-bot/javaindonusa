@@ -7,6 +7,7 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://javaindonusa.my.id',
     cleartext: true,
+    androidScheme: 'https',
   },
   plugins: {
     SplashScreen: {

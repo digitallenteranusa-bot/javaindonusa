@@ -151,10 +151,12 @@ class PermissionSeeder extends Seeder
         // Default permissions for 'penagih' role
         $penagihPermissions = [
             'customers.view',
+            'customers.collect',
             'invoices.view',
             'payments.view',
             'payments.create',
             'areas.view',
+            'mapping.view',
         ];
 
         // Default permissions for 'teknisi' role (if exists)

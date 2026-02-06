@@ -99,4 +99,13 @@ Route::middleware(['auth', 'role:penagih'])->prefix('collector')->name('collecto
         Route::get('/reports/settlement', [ReportController::class, 'settlementReport'])->name('reports.settlement');
         Route::get('/reports/print', [ReportController::class, 'printPreview'])->name('reports.print');
     });
+
+    // ================================================================
+    // MAPPING / PETA (mapping.view)
+    // ================================================================
+    Route::middleware(['permission:mapping.view'])->group(function () {
+        Route::get('/mapping', [DashboardController::class, 'mapping'])->name('mapping');
+        Route::get('/mapping/customers', [DashboardController::class, 'getMappingCustomers'])->name('mapping.customers');
+        Route::get('/mapping/odps', [DashboardController::class, 'getMappingOdps'])->name('mapping.odps');
+    });
 });

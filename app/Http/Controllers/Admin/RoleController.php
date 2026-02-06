@@ -120,6 +120,7 @@ class RoleController extends Controller
                 'payments.create',
                 'areas.view',
                 'collectors.own-data',
+                'mapping.view',
             ],
             'technician' => [
                 'dashboard.view',

@@ -7,6 +7,8 @@ use App\Services\Collector\CollectorService;
 use App\Services\Collector\ExpenseService;
 use App\Models\Customer;
 use App\Models\CollectionLog;
+use App\Models\Odp;
+use App\Models\Area;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -313,5 +315,184 @@ class DashboardController extends Controller
         return collect($accounts)->map(function ($acc) {
             return "{$acc['bank']} {$acc['account']} a.n {$acc['name']}";
         })->join(' / ');
+    }
+
+    // ================================================================
+    // MAPPING / PETA
+    // ================================================================
+
+    /**
+     * Tampilkan halaman mapping untuk penagih
+     */
+    public function mapping(Request $request)
+    {
+        $collector = auth()->user();
+        $areas = Area::active()->orderBy('name')->get(['id', 'name']);
+
+        // Get center point from first customer with coordinates
+        $centerPoint = $this->getMappingCenterPoint($collector);
+
+        return Inertia::render('Collector/Mapping', [
+            'areas' => $areas,
+            'centerPoint' => $centerPoint,
+            'filters' => $request->only(['area_id', 'show_customers', 'show_odps', 'status']),
+        ]);
+    }
+
+    /**
+     * Get customers dengan koordinat untuk map (hanya pelanggan penagih ini)
+     */
+    public function getMappingCustomers(Request $request)
+    {
+        $collector = auth()->user();
+
+        $query = Customer::select([
+            'id',
+            'customer_id',
+            'name',
+            'address',
+            'phone',
+            'status',
+            'latitude',
+            'longitude',
+            'odp_id',
+            'area_id',
+            'package_id',
+            'total_debt',
+        ])
+            ->where('collector_id', $collector->id)
+            ->with(['package:id,name', 'area:id,name', 'odp:id,name,code'])
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude');
+
+        if ($request->filled('area_id')) {
+            $query->where('area_id', $request->area_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('bounds')) {
+            $bounds = $request->bounds;
+            $query->whereBetween('latitude', [$bounds['south'], $bounds['north']])
+                ->whereBetween('longitude', [$bounds['west'], $bounds['east']]);
+        }
+
+        $customers = $query->limit(500)->get()->map(function ($customer) {
+            return [
+                'id' => $customer->id,
+                'customer_id' => $customer->customer_id,
+                'name' => $customer->name,
+                'address' => $customer->address,
+                'phone' => $customer->phone,
+                'status' => $customer->status,
+                'lat' => (float) $customer->latitude,
+                'lng' => (float) $customer->longitude,
+                'package' => $customer->package?->name,
+                'area' => $customer->area?->name,
+                'total_debt' => $customer->total_debt,
+                'odp' => $customer->odp ? [
+                    'id' => $customer->odp->id,
+                    'name' => $customer->odp->name,
+                    'code' => $customer->odp->code,
+                ] : null,
+            ];
+        });
+
+        return response()->json(['customers' => $customers]);
+    }
+
+    /**
+     * Get ODPs dengan koordinat untuk map
+     */
+    public function getMappingOdps(Request $request)
+    {
+        $query = Odp::select([
+            'id',
+            'name',
+            'code',
+            'latitude',
+            'longitude',
+            'pole_type',
+            'capacity',
+            'used_ports',
+            'area_id',
+            'is_active',
+        ])
+            ->with(['area:id,name'])
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude');
+
+        if ($request->filled('area_id')) {
+            $query->where('area_id', $request->area_id);
+        }
+
+        if ($request->has('active_only')) {
+            $query->active();
+        }
+
+        if ($request->filled('bounds')) {
+            $bounds = $request->bounds;
+            $query->whereBetween('latitude', [$bounds['south'], $bounds['north']])
+                ->whereBetween('longitude', [$bounds['west'], $bounds['east']]);
+        }
+
+        $odps = $query->limit(200)->get()->map(function ($odp) {
+            return [
+                'id' => $odp->id,
+                'name' => $odp->name,
+                'code' => $odp->code,
+                'lat' => (float) $odp->latitude,
+                'lng' => (float) $odp->longitude,
+                'pole_type' => $odp->pole_type,
+                'pole_type_label' => $odp->pole_type_label,
+                'capacity' => $odp->capacity,
+                'used_ports' => $odp->used_ports,
+                'available_ports' => $odp->available_ports,
+                'usage_percentage' => $odp->usage_percentage,
+                'area' => $odp->area?->name,
+                'is_active' => $odp->is_active,
+            ];
+        });
+
+        return response()->json(['odps' => $odps]);
+    }
+
+    /**
+     * Get center point untuk initial map view
+     */
+    protected function getMappingCenterPoint($collector): array
+    {
+        // Try to get first customer with coordinates
+        $customer = Customer::where('collector_id', $collector->id)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->first(['latitude', 'longitude']);
+
+        if ($customer) {
+            return [
+                'lat' => (float) $customer->latitude,
+                'lng' => (float) $customer->longitude,
+            ];
+        }
+
+        // Try to get first ODP with coordinates
+        $odp = Odp::whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->first(['latitude', 'longitude']);
+
+        if ($odp) {
+            return [
+                'lat' => (float) $odp->latitude,
+                'lng' => (float) $odp->longitude,
+            ];
+        }
+
+        // Default to Kantor Kecamatan Pule, Trenggalek
+        return [
+            'lat' => -8.1228,
+            'lng' => 111.5617,
+        ];
     }
 }

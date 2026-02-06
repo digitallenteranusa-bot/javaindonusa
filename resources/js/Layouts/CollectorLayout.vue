@@ -18,6 +18,7 @@ const isActive = (routeName) => {
     const routes = {
         'dashboard': '/collector',
         'customers': '/collector/customers',
+        'mapping': '/collector/mapping',
         'expenses': '/collector/expenses',
         'settlement': '/collector/settlement',
     }
@@ -27,6 +28,11 @@ const isActive = (routeName) => {
     }
     return currentUrl.startsWith(routes[routeName])
 }
+
+// Check if user has mapping permission
+const canViewMapping = computed(() => {
+    return permissions.value.includes('mapping.view')
+})
 
 // Logout
 const logout = () => {
@@ -61,6 +67,17 @@ const logout = () => {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <span class="text-xs mt-1">Pelanggan</span>
+                </Link>
+                <Link
+                    v-if="canViewMapping"
+                    href="/collector/mapping"
+                    class="flex flex-col items-center py-1 px-3"
+                    :class="isActive('mapping') ? 'text-blue-600' : 'text-gray-500'"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    <span class="text-xs mt-1">Peta</span>
                 </Link>
                 <Link
                     href="/collector/expenses"

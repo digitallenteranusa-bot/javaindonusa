@@ -38,21 +38,63 @@ const submit = () => {
     }
 }
 
-// Get current location
+// Location state
+const locating = ref(false)
+const locationError = ref('')
+const locationSuccess = ref(false)
+
+// Get current location with better error handling
 const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                form.latitude = position.coords.latitude
-                form.longitude = position.coords.longitude
-            },
-            (error) => {
-                alert('Gagal mendapatkan lokasi: ' + error.message)
-            }
-        )
-    } else {
-        alert('Browser tidak mendukung geolocation')
+    if (!navigator.geolocation) {
+        locationError.value = 'Browser/aplikasi tidak mendukung geolocation. Silakan input koordinat manual.'
+        return
     }
+
+    locating.value = true
+    locationError.value = ''
+    locationSuccess.value = false
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            form.latitude = position.coords.latitude.toFixed(6)
+            form.longitude = position.coords.longitude.toFixed(6)
+            locating.value = false
+            locationSuccess.value = true
+
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                locationSuccess.value = false
+            }, 3000)
+        },
+        (error) => {
+            locating.value = false
+
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    locationError.value = 'Akses lokasi ditolak. Silakan izinkan akses lokasi di pengaturan browser/aplikasi, atau input koordinat manual.'
+                    break
+                case error.POSITION_UNAVAILABLE:
+                    locationError.value = 'Informasi lokasi tidak tersedia. Pastikan GPS aktif atau input koordinat manual.'
+                    break
+                case error.TIMEOUT:
+                    locationError.value = 'Waktu permintaan lokasi habis. Coba lagi atau input koordinat manual.'
+                    break
+                default:
+                    locationError.value = 'Gagal mendapatkan lokasi. Silakan input koordinat manual.'
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        }
+    )
+}
+
+// Dismiss error/success messages
+const dismissMessage = () => {
+    locationError.value = ''
+    locationSuccess.value = false
 }
 </script>
 
@@ -243,6 +285,44 @@ const getCurrentLocation = () => {
                     <h2 class="font-semibold text-gray-800 mb-4">Lokasi</h2>
 
                     <div class="space-y-4">
+                        <!-- Success Message -->
+                        <div
+                            v-if="locationSuccess"
+                            class="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between"
+                        >
+                            <div class="flex items-center gap-2 text-green-700">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span class="text-sm">Lokasi berhasil didapatkan!</span>
+                            </div>
+                            <button @click="dismissMessage" class="text-green-500">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div
+                            v-if="locationError"
+                            class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex items-start gap-2 text-yellow-800">
+                                    <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <span class="text-sm">{{ locationError }}</span>
+                                </div>
+                                <button @click="dismissMessage" class="text-yellow-600 flex-shrink-0">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
@@ -250,7 +330,7 @@ const getCurrentLocation = () => {
                                     v-model="form.latitude"
                                     type="text"
                                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="-6.xxxxx"
+                                    placeholder="-8.xxxxx"
                                 >
                             </div>
                             <div>
@@ -259,7 +339,7 @@ const getCurrentLocation = () => {
                                     v-model="form.longitude"
                                     type="text"
                                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="106.xxxxx"
+                                    placeholder="111.xxxxx"
                                 >
                             </div>
                         </div>
@@ -267,14 +347,24 @@ const getCurrentLocation = () => {
                         <button
                             type="button"
                             @click="getCurrentLocation"
-                            class="w-full py-3 border border-blue-500 text-blue-600 rounded-lg font-medium flex items-center justify-center gap-2"
+                            :disabled="locating"
+                            class="w-full py-3 border border-blue-500 text-blue-600 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg v-if="locating" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            Ambil Lokasi Saat Ini
+                            {{ locating ? 'Mencari Lokasi...' : 'Ambil Lokasi Saat Ini' }}
                         </button>
+
+                        <p class="text-xs text-gray-500 text-center">
+                            Jika lokasi tidak bisa didapatkan, Anda dapat memasukkan koordinat secara manual.
+                            Koordinat bisa didapat dari Google Maps.
+                        </p>
                     </div>
                 </div>
 

@@ -156,13 +156,19 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             $odpId = $this->findOdpId($row['odp']);
         }
 
-        // Parse join date
+        // Parse join date (format: DD-MM-YYYY)
         $joinDate = null;
         if (!empty($row['tanggal_gabung'])) {
             try {
-                $joinDate = Carbon::parse($row['tanggal_gabung']);
+                // Try DD-MM-YYYY format first
+                $joinDate = Carbon::createFromFormat('d-m-Y', $row['tanggal_gabung']);
             } catch (\Exception $e) {
-                $joinDate = now();
+                try {
+                    // Fallback to auto-parse
+                    $joinDate = Carbon::parse($row['tanggal_gabung']);
+                } catch (\Exception $e2) {
+                    $joinDate = now();
+                }
             }
         }
 

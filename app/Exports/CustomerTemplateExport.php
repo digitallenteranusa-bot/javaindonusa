@@ -34,7 +34,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
                 '10.10.10.100',         // static_ip (untuk tipe koneksi static)
                 'active',               // status (active/isolated/suspended/terminated)
                 '0',                    // hutang
-                '2024-01-15',           // tanggal_gabung (YYYY-MM-DD)
+                '15-01-2024',           // tanggal_gabung (DD-MM-YYYY)
                 '1',                    // tanggal_tagih (1-28)
                 '3',                    // rapel_bulan (jumlah bulan toleransi rapel)
             ],
@@ -114,7 +114,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
         $sheet->getComment('K1')->getText()->createTextRun('Untuk tipe koneksi PPPoE');
         $sheet->getComment('L1')->getText()->createTextRun('Untuk tipe koneksi static');
         $sheet->getComment('M1')->getText()->createTextRun('active, isolated, suspended, terminated');
-        $sheet->getComment('O1')->getText()->createTextRun('Format: YYYY-MM-DD');
+        $sheet->getComment('O1')->getText()->createTextRun('Format: DD-MM-YYYY (contoh: 02-01-2025)');
         $sheet->getComment('P1')->getText()->createTextRun('Tanggal 1-28');
         $sheet->getComment('Q1')->getText()->createTextRun('Jumlah bulan toleransi rapel (default 3)');
 

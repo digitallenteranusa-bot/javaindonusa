@@ -119,7 +119,7 @@ class DebtIsolationService
             // Hitung periode
             $periodStart = Carbon::create($periodYear, $periodMonth, 1)->startOfMonth();
             $periodEnd = $periodStart->copy()->endOfMonth();
-            $dueDays = Setting::getValue('billing', 'due_days', 20);
+            $dueDays = (int) Setting::getValue('billing', 'due_days', 20);
             $dueDate = $periodStart->copy()->addDays($dueDays);
 
             // Generate invoice
@@ -272,8 +272,8 @@ class DebtIsolationService
      */
     public function checkAndProcessIsolation(): array
     {
-        $overdueMonths = Setting::getValue('isolation', 'overdue_months', 2);
-        $graceDays = Setting::getValue('isolation', 'grace_days_after_due', 7);
+        $overdueMonths = (int) Setting::getValue('isolation', 'overdue_months', 2);
+        $graceDays = (int) Setting::getValue('isolation', 'grace_days_after_due', 7);
 
         $results = [
             'checked' => 0,

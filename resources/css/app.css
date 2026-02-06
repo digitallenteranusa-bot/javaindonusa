@@ -64,3 +64,15 @@ textarea:focus {
 .badge-secondary {
     @apply bg-gray-100 text-gray-800;
 }
+
+/* Leaflet attribution - make smaller and subtle */
+.leaflet-control-attribution {
+    font-size: 9px !important;
+    padding: 2px 5px !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+    color: #666 !important;
+}
+
+.leaflet-control-attribution a {
+    color: #666 !important;
+}

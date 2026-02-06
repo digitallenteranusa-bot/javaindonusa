@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import CollectorLayout from '@/Layouts/CollectorLayout.vue'
 
@@ -8,6 +8,7 @@ const props = defineProps({
     packages: Array,
     areas: Array,
     routers: Array,
+    odps: Array,
 })
 
 const isEditing = computed(() => !!props.customer?.id)
@@ -16,18 +17,34 @@ const form = useForm({
     name: props.customer?.name || '',
     phone: props.customer?.phone || '',
     address: props.customer?.address || '',
+    kelurahan: props.customer?.kelurahan || '',
     package_id: props.customer?.package_id || '',
     area_id: props.customer?.area_id || '',
     router_id: props.customer?.router_id || '',
+    odp_id: props.customer?.odp_id || '',
     pppoe_username: props.customer?.pppoe_username || '',
-    pppoe_password: props.customer?.pppoe_password || '',
     ip_address: props.customer?.ip_address || '',
     onu_serial: props.customer?.onu_serial || '',
     connection_type: props.customer?.connection_type || 'pppoe',
     billing_date: props.customer?.billing_date || 1,
+    total_debt: props.customer?.total_debt || 0,
+    rapel_months: props.customer?.rapel_months || '',
     notes: props.customer?.notes || '',
     latitude: props.customer?.latitude || '',
     longitude: props.customer?.longitude || '',
+})
+
+// Filter ODPs by selected area
+const filteredOdps = computed(() => {
+    if (!form.area_id) return props.odps || []
+    return (props.odps || []).filter(odp => odp.area_id === form.area_id)
+})
+
+// Reset ODP when area changes
+watch(() => form.area_id, () => {
+    if (!isEditing.value) {
+        form.odp_id = ''
+    }
 })
 
 const submit = () => {
@@ -157,6 +174,16 @@ const dismissMessage = () => {
                             ></textarea>
                             <p v-if="form.errors.address" class="text-red-500 text-sm mt-1">{{ form.errors.address }}</p>
                         </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Kelurahan/Desa</label>
+                            <input
+                                v-model="form.kelurahan"
+                                type="text"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                placeholder="Nama kelurahan/desa"
+                            >
+                        </div>
                     </div>
                 </div>
 
@@ -209,6 +236,20 @@ const dismissMessage = () => {
                         </div>
 
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ODP</label>
+                            <select
+                                v-model="form.odp_id"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Pilih ODP</option>
+                                <option v-for="odp in filteredOdps" :key="odp.id" :value="odp.id">
+                                    {{ odp.name }} ({{ odp.code }})
+                                </option>
+                            </select>
+                            <p v-if="!form.area_id" class="text-gray-500 text-xs mt-1">Pilih area terlebih dahulu</p>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Tagih *</label>
                             <select
                                 v-model="form.billing_date"
@@ -217,6 +258,30 @@ const dismissMessage = () => {
                             >
                                 <option v-for="d in 28" :key="d" :value="d">Tanggal {{ d }}</option>
                             </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Hutang Awal (Rp)</label>
+                            <input
+                                v-model="form.total_debt"
+                                type="number"
+                                min="0"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                placeholder="0"
+                            >
+                            <p class="text-gray-500 text-xs mt-1">Kosongkan jika tidak ada hutang</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Rapel (Bulan)</label>
+                            <select
+                                v-model="form.rapel_months"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Tidak Rapel</option>
+                                <option v-for="m in 12" :key="m" :value="m">{{ m }} Bulan</option>
+                            </select>
+                            <p class="text-gray-500 text-xs mt-1">Toleransi pembayaran rapel (jika berlaku)</p>
                         </div>
                     </div>
                 </div>
@@ -246,16 +311,7 @@ const dismissMessage = () => {
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 placeholder="username@domain"
                             >
-                        </div>
-
-                        <div v-if="form.connection_type === 'pppoe'">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Password PPPoE</label>
-                            <input
-                                v-model="form.pppoe_password"
-                                type="text"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Password"
-                            >
+                            <p class="text-gray-500 text-xs mt-1">Password otomatis: client001</p>
                         </div>
 
                         <div v-if="form.connection_type === 'static'">

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Collector;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\Customer;
+use App\Models\Odp;
 use App\Models\Package;
 use App\Models\Router;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class CustomerController extends Controller
             'packages' => Package::where('is_active', true)->orderBy('name')->get(),
             'areas' => Area::where('is_active', true)->orderBy('name')->get(),
             'routers' => Router::where('is_active', true)->orderBy('name')->get(),
+            'odps' => Odp::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code', 'area_id']),
         ]);
     }
 
@@ -36,15 +38,18 @@ class CustomerController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'address' => 'required|string|max:500',
+            'kelurahan' => 'nullable|string|max:100',
             'package_id' => 'required|exists:packages,id',
             'area_id' => 'required|exists:areas,id',
             'router_id' => 'nullable|exists:routers,id',
+            'odp_id' => 'nullable|exists:odps,id',
             'pppoe_username' => 'nullable|string|max:100',
-            'pppoe_password' => 'nullable|string|max:100',
             'ip_address' => 'nullable|string|max:45',
             'onu_serial' => 'nullable|string|max:100',
             'connection_type' => 'required|in:pppoe,static',
             'billing_date' => 'required|integer|min:1|max:28',
+            'total_debt' => 'nullable|numeric|min:0',
+            'rapel_months' => 'nullable|integer|min:0|max:12',
             'notes' => 'nullable|string|max:1000',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
@@ -55,16 +60,19 @@ class CustomerController extends Controller
         $nextNumber = $lastCustomer ? $lastCustomer->id + 1 : 1;
         $validated['customer_id'] = 'CUST' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
 
-        // Set defaults
+        // Set defaults - otomatis
         $validated['status'] = 'active';
-        $validated['billing_type'] = 'postpaid';
-        $validated['total_debt'] = 0;
+        $validated['kecamatan'] = 'Pule'; // Otomatis Pule
+        $validated['billing_type'] = 'prepaid'; // Otomatis bayar di muka
+        $validated['pppoe_password'] = Crypt::encryptString('client001'); // Otomatis client001
+        $validated['total_debt'] = $validated['total_debt'] ?? 0;
         $validated['join_date'] = now();
         $validated['collector_id'] = Auth::id(); // Assign to current collector
 
-        // Encrypt PPPoE password
-        if (!empty($validated['pppoe_password'])) {
-            $validated['pppoe_password'] = Crypt::encryptString($validated['pppoe_password']);
+        // Set rapel jika ada rapel_months
+        if (!empty($validated['rapel_months']) && $validated['rapel_months'] > 0) {
+            $validated['is_rapel'] = true;
+            $validated['payment_behavior'] = 'rapel';
         }
 
         $customer = Customer::create($validated);
@@ -99,6 +107,7 @@ class CustomerController extends Controller
             'packages' => Package::where('is_active', true)->orderBy('name')->get(),
             'areas' => Area::where('is_active', true)->orderBy('name')->get(),
             'routers' => Router::where('is_active', true)->orderBy('name')->get(),
+            'odps' => Odp::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code', 'area_id']),
         ]);
     }
 
@@ -117,25 +126,30 @@ class CustomerController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'address' => 'required|string|max:500',
+            'kelurahan' => 'nullable|string|max:100',
             'package_id' => 'required|exists:packages,id',
             'area_id' => 'required|exists:areas,id',
             'router_id' => 'nullable|exists:routers,id',
+            'odp_id' => 'nullable|exists:odps,id',
             'pppoe_username' => 'nullable|string|max:100',
-            'pppoe_password' => 'nullable|string|max:100',
             'ip_address' => 'nullable|string|max:45',
             'onu_serial' => 'nullable|string|max:100',
             'connection_type' => 'required|in:pppoe,static',
             'billing_date' => 'required|integer|min:1|max:28',
+            'total_debt' => 'nullable|numeric|min:0',
+            'rapel_months' => 'nullable|integer|min:0|max:12',
             'notes' => 'nullable|string|max:1000',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
         ]);
 
-        // Encrypt PPPoE password if changed
-        if (!empty($validated['pppoe_password'])) {
-            $validated['pppoe_password'] = Crypt::encryptString($validated['pppoe_password']);
+        // Set rapel jika ada rapel_months
+        if (!empty($validated['rapel_months']) && $validated['rapel_months'] > 0) {
+            $validated['is_rapel'] = true;
+            $validated['payment_behavior'] = 'rapel';
         } else {
-            unset($validated['pppoe_password']);
+            $validated['is_rapel'] = false;
+            $validated['rapel_months'] = null;
         }
 
         $customer->update($validated);

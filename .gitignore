@@ -31,3 +31,4 @@ tmpclaude-*
 *.apk
 *.ipa
 *.keystore
+.claude/settings.local.json

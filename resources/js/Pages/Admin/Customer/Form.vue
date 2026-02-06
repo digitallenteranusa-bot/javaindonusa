@@ -28,7 +28,7 @@ const form = useForm({
     address: props.customer?.address || '',
     rt_rw: props.customer?.rt_rw || '',
     kelurahan: props.customer?.kelurahan || '',
-    kecamatan: props.customer?.kecamatan || '',
+    kecamatan: props.customer?.kecamatan || 'Pule', // Default: Pule
     phone: props.customer?.phone || '',
     phone_alt: props.customer?.phone_alt || '',
     email: props.customer?.email || '',
@@ -40,12 +40,12 @@ const form = useForm({
     odp_id: props.customer?.odp_id || '',
     connection_type: props.customer?.connection_type || 'pppoe',
     pppoe_username: props.customer?.pppoe_username || '',
-    pppoe_password: props.customer?.pppoe_password || '',
+    pppoe_password: props.customer?.pppoe_password || 'client001', // Default: client001
     ip_address: props.customer?.ip_address || '',
     mac_address: props.customer?.mac_address || '',
     onu_serial: props.customer?.onu_serial || '',
     status: props.customer?.status || 'active',
-    billing_type: props.customer?.billing_type || 'postpaid',
+    billing_type: props.customer?.billing_type || 'prepaid', // Default: Bayar Di Muka
     billing_date: props.customer?.billing_date || 1,
     is_rapel: props.customer?.is_rapel || false,
     rapel_months: props.customer?.rapel_months || 3,
@@ -614,8 +614,8 @@ const submit = () => {
                             v-model="form.billing_type"
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value="postpaid">Postpaid (Bayar Setelah)</option>
                             <option value="prepaid">Prepaid (Bayar Di Muka)</option>
+                            <option value="postpaid">Postpaid (Bayar Setelah)</option>
                         </select>
                     </div>
 

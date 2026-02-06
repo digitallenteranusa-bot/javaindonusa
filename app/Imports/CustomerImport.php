@@ -19,10 +19,11 @@ use Maatwebsite\Excel\Concerns\Importable;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
-class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnError, SkipsOnFailure, WithBatchInserts, WithChunkReading, WithMapping
+class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnError, SkipsOnFailure, WithBatchInserts, WithChunkReading, WithMapping, SkipsEmptyRows
 {
     use Importable, SkipsErrors, SkipsFailures;
 
@@ -64,7 +65,7 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'router' => $row['router'] ?? null,
             'odp' => $row['odp'] ?? null,
             'penagih' => $row['penagih'] ?? null,
-            'tipe_koneksi' => $row['tipe_koneksi'] ?? 'pppoe',
+            'tipe_koneksi' => $this->parseConnectionType($row['tipe_koneksi'] ?? null),
             'pppoe_username' => $row['pppoe_username'] ?? null,
             'static_ip' => $row['static_ip'] ?? null,
             'status' => $row['status'] ?? 'active',
@@ -73,6 +74,31 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'tanggal_tagih' => $row['tanggal_tagih'] ?? 1,
             'rapel_bulan' => $row['rapel_bulan'] ?? 3,
         ];
+    }
+
+    /**
+     * Parse connection type from various formats
+     */
+    protected function parseConnectionType(?string $type): string
+    {
+        if (empty($type)) {
+            return 'pppoe';
+        }
+
+        $type = strtolower(trim($type));
+
+        // Check for static IP indicators
+        if (in_array($type, ['static', 'static ip', 'staticip', 'static_ip', 'statis', 'ip statis'])) {
+            return 'static';
+        }
+
+        // Check for pppoe indicators
+        if (in_array($type, ['pppoe', 'ppp', 'ppoe'])) {
+            return 'pppoe';
+        }
+
+        // Default to pppoe if unrecognized
+        return 'pppoe';
     }
 
     /**
@@ -149,8 +175,14 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
         $routerId = $this->findRouterId($row['router'] ?? null);
         $collectorId = $this->findCollectorId($row['penagih'] ?? null);
 
-        // ODP lookup - only for PPPoE connection type
+        // Determine connection type
+        // If static_ip has value, assume static connection
         $connectionType = $row['tipe_koneksi'] ?? 'pppoe';
+        if (!empty($row['static_ip']) && empty($row['pppoe_username'])) {
+            $connectionType = 'static';
+        }
+
+        // ODP lookup - only for PPPoE connection type
         $odpId = null;
         if ($connectionType === 'pppoe' && !empty($row['odp'])) {
             $odpId = $this->findOdpId($row['odp']);
@@ -205,11 +237,12 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
 
     /**
      * Validation rules
+     * Note: nama validation moved to model() to allow skipping empty rows
      */
     public function rules(): array
     {
         return [
-            'nama' => 'required|string|max:100',
+            'nama' => 'nullable|string|max:100',
             'telepon' => 'nullable|max:20',
             'email' => 'nullable|email|max:100',
         ];

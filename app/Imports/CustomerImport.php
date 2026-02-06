@@ -188,21 +188,8 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             $odpId = $this->findOdpId($row['odp']);
         }
 
-        // Parse join date (format: DD-MM-YYYY)
-        $joinDate = null;
-        if (!empty($row['tanggal_gabung'])) {
-            try {
-                // Try DD-MM-YYYY format first
-                $joinDate = Carbon::createFromFormat('d-m-Y', $row['tanggal_gabung']);
-            } catch (\Exception $e) {
-                try {
-                    // Fallback to auto-parse
-                    $joinDate = Carbon::parse($row['tanggal_gabung']);
-                } catch (\Exception $e2) {
-                    $joinDate = now();
-                }
-            }
-        }
+        // Parse join date (various formats)
+        $joinDate = $this->parseDate($row['tanggal_gabung'] ?? null);
 
         // Determine rapel status based on rapel_bulan
         $rapelMonths = (int) ($row['rapel_bulan'] ?? 3);
@@ -446,6 +433,73 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
         }
 
         return $phone;
+    }
+
+    /**
+     * Parse date from various formats
+     */
+    protected function parseDate($value): ?\Carbon\Carbon
+    {
+        if (empty($value)) {
+            return now();
+        }
+
+        // If it's already a Carbon/DateTime instance
+        if ($value instanceof \Carbon\Carbon || $value instanceof \DateTime) {
+            return Carbon::instance($value);
+        }
+
+        // If it's a numeric value (Excel serial date)
+        if (is_numeric($value)) {
+            // Excel serial date: days since 1900-01-01
+            // Excel incorrectly considers 1900 as a leap year, so we subtract 2
+            try {
+                $unixTimestamp = ($value - 25569) * 86400;
+                if ($unixTimestamp > 0) {
+                    return Carbon::createFromTimestamp($unixTimestamp);
+                }
+            } catch (\Exception $e) {
+                // Fall through to string parsing
+            }
+        }
+
+        $value = trim((string) $value);
+
+        // Try various date formats
+        $formats = [
+            'd/m/Y',      // 15/12/2025
+            'd-m-Y',      // 15-12-2025
+            'd.m.Y',      // 15.12.2025
+            'Y-m-d',      // 2025-12-15
+            'Y/m/d',      // 2025/12/15
+            'd/m/y',      // 15/12/25
+            'd-m-y',      // 15-12-25
+            'd M Y',      // 15 Dec 2025
+            'd F Y',      // 15 December 2025
+        ];
+
+        foreach ($formats as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $value);
+                if ($date && $date->year > 1970) {
+                    return $date;
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        // Last resort: try Carbon::parse
+        try {
+            $date = Carbon::parse($value);
+            if ($date && $date->year > 1970) {
+                return $date;
+            }
+        } catch (\Exception $e) {
+            // Return current date if all parsing fails
+        }
+
+        return now();
     }
 
     /**

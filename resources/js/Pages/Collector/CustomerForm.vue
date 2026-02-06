@@ -125,6 +125,9 @@ const openMapPicker = async () => {
     showMapPicker.value = true
     await nextTick()
 
+    // Small delay to ensure DOM is ready
+    await new Promise(resolve => setTimeout(resolve, 100))
+
     if (!L) {
         L = await import('leaflet')
         await import('leaflet/dist/leaflet.css')
@@ -134,11 +137,13 @@ const openMapPicker = async () => {
     const defaultLat = form.latitude || -8.1228
     const defaultLng = form.longitude || 111.5617
 
-    map = L.map(mapContainer.value).setView([defaultLat, defaultLng], 17)
+    map = L.map(mapContainer.value, {
+        zoomControl: true,
+        attributionControl: false
+    }).setView([defaultLat, defaultLng], 17)
 
     // Satellite layer
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri',
         maxZoom: 19
     }).addTo(map)
 
@@ -147,6 +152,11 @@ const openMapPicker = async () => {
         maxZoom: 19,
         pane: 'shadowPane'
     }).addTo(map)
+
+    // Force map to recalculate size
+    setTimeout(() => {
+        map.invalidateSize()
+    }, 200)
 
     // Add marker if coordinates exist
     if (form.latitude && form.longitude) {
@@ -545,58 +555,50 @@ const dismissMessage = () => {
 
         <!-- Map Picker Modal -->
         <Teleport to="body">
-            <div v-if="showMapPicker" class="fixed inset-0 z-50 overflow-y-auto">
-                <div class="flex items-center justify-center min-h-screen">
-                    <!-- Backdrop -->
-                    <div class="fixed inset-0 bg-black bg-opacity-50" @click="closeMapPicker"></div>
+            <div v-if="showMapPicker" class="fixed inset-0 z-[9999] bg-white">
+                <!-- Header -->
+                <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b bg-white">
+                    <h3 class="text-lg font-semibold">Pilih Lokasi Pelanggan</h3>
+                    <button type="button" @click="closeMapPicker" class="p-2 text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
 
-                    <!-- Modal -->
-                    <div class="relative bg-white w-full h-full max-h-screen flex flex-col">
-                        <!-- Header -->
-                        <div class="flex items-center justify-between p-4 border-b bg-white">
-                            <h3 class="text-lg font-semibold">Pilih Lokasi Pelanggan</h3>
-                            <button type="button" @click="closeMapPicker" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+                <!-- Map Container - Full height minus header and footer -->
+                <div ref="mapContainer" class="absolute top-[60px] bottom-[140px] left-0 right-0"></div>
+
+                <!-- Footer -->
+                <div class="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+                    <div class="flex flex-col gap-3">
+                        <div class="text-sm text-gray-600 text-center">
+                            <span v-if="form.latitude && form.longitude">
+                                📍 {{ form.latitude }}, {{ form.longitude }}
+                            </span>
+                            <span v-else class="text-gray-400">Ketuk peta untuk memilih lokasi</span>
                         </div>
-
-                        <!-- Map -->
-                        <div ref="mapContainer" class="flex-1 w-full"></div>
-
-                        <!-- Footer -->
-                        <div class="p-4 border-t bg-white safe-area-bottom">
-                            <div class="flex flex-col gap-3">
-                                <div class="text-sm text-gray-600 text-center">
-                                    <span v-if="form.latitude && form.longitude">
-                                        📍 {{ form.latitude }}, {{ form.longitude }}
-                                    </span>
-                                    <span v-else class="text-gray-400">Ketuk peta untuk memilih lokasi</span>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button
-                                        type="button"
-                                        @click="getLocation"
-                                        :disabled="locating"
-                                        class="flex-1 py-3 bg-green-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50"
-                                    >
-                                        <svg class="w-5 h-5" :class="{ 'animate-pulse': locating }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        {{ locating ? 'Mencari...' : 'Lokasi Saya' }}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        @click="confirmLocation"
-                                        :disabled="!form.latitude || !form.longitude"
-                                        class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
-                                    >
-                                        Konfirmasi Lokasi
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="flex gap-2">
+                            <button
+                                type="button"
+                                @click="getLocation"
+                                :disabled="locating"
+                                class="flex-1 py-3 bg-green-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                <svg class="w-5 h-5" :class="{ 'animate-pulse': locating }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                {{ locating ? 'Mencari...' : 'Lokasi Saya' }}
+                            </button>
+                            <button
+                                type="button"
+                                @click="confirmLocation"
+                                :disabled="!form.latitude || !form.longitude"
+                                class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
+                            >
+                                Konfirmasi Lokasi
+                            </button>
                         </div>
                     </div>
                 </div>

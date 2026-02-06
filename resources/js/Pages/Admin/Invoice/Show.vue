@@ -255,6 +255,38 @@ const deleteInvoice = () => {
                     </div>
                 </div>
 
+                <!-- Debt Summary -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold mb-4">Total Hutang Pelanggan</h2>
+
+                    <div class="text-center mb-4">
+                        <p class="text-3xl font-bold" :class="invoice.customer?.total_debt > 0 ? 'text-red-600' : 'text-green-600'">
+                            {{ formatCurrency(invoice.customer?.total_debt || 0) }}
+                        </p>
+                        <p v-if="invoice.customer?.total_debt > 0" class="text-sm text-gray-500 mt-1">
+                            Termasuk invoice ini
+                        </p>
+                    </div>
+
+                    <div class="space-y-2 text-sm border-t pt-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Tagihan Ini</span>
+                            <span class="font-medium">{{ formatCurrency(invoice.remaining_amount) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Hutang Lainnya</span>
+                            <span class="font-medium">{{ formatCurrency((invoice.customer?.total_debt || 0) - (invoice.remaining_amount || 0)) }}</span>
+                        </div>
+                    </div>
+
+                    <Link
+                        :href="`/admin/customers/${invoice.customer?.id}`"
+                        class="mt-4 w-full py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 flex items-center justify-center gap-2"
+                    >
+                        Lihat Detail Hutang
+                    </Link>
+                </div>
+
                 <!-- Invoice Info -->
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <h2 class="text-lg font-semibold mb-4">Informasi</h2>

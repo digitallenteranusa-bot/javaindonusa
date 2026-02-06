@@ -105,7 +105,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice)
     {
         $invoice->load([
-            'customer:id,customer_id,name,address,phone,email',
+            'customer:id,customer_id,name,address,phone,email,total_debt',
             'customer.package:id,name,price',
             'payments' => fn($q) => $q->orderBy('created_at', 'desc'),
         ]);

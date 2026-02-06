@@ -48,7 +48,17 @@ class CustomerPortalService
         // Generate OTP (6 digit)
         $otp = $this->generateOTP();
 
-        // Simpan OTP dengan expiry 5 menit
+        // Kirim OTP via WhatsApp terlebih dahulu
+        $sendResult = $this->sendOTPViaWhatsApp($customer, $otp);
+
+        if (!$sendResult['success']) {
+            return [
+                'success' => false,
+                'message' => 'Gagal mengirim OTP: ' . ($sendResult['message'] ?? 'WhatsApp tidak tersedia'),
+            ];
+        }
+
+        // Simpan OTP dengan expiry 5 menit (hanya jika berhasil kirim)
         $token = CustomerToken::updateOrCreate(
             ['customer_id' => $customer->id],
             [
@@ -58,9 +68,6 @@ class CustomerPortalService
                 'expires_at' => now()->addHours(24),
             ]
         );
-
-        // Kirim OTP via WhatsApp
-        $this->sendOTPViaWhatsApp($customer, $otp);
 
         return [
             'success' => true,
@@ -357,14 +364,17 @@ class CustomerPortalService
         return $months[$month] . ' ' . $year;
     }
 
-    protected function sendOTPViaWhatsApp(Customer $customer, string $otp): void
+    protected function sendOTPViaWhatsApp(Customer $customer, string $otp): array
     {
-        $message = "Kode OTP Login Portal Pelanggan Anda: *{$otp}*\n\n" .
+        $companyName = IspInfo::first()?->company_name ?? 'ISP';
+
+        $message = "🔐 *KODE OTP*\n\n" .
+            "Kode OTP Login Portal Pelanggan: *{$otp}*\n\n" .
             "Kode ini berlaku selama 5 menit.\n" .
             "Jangan berikan kode ini kepada siapapun.\n\n" .
-            "Jika Anda tidak meminta kode ini, abaikan pesan ini.";
+            "_{$companyName}_";
 
-        $this->notification->sendWhatsApp($customer->phone, $message);
+        return $this->notification->sendWhatsApp($customer->phone, $message);
     }
 
     /**

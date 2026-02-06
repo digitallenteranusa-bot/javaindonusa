@@ -1,10 +1,13 @@
 <script setup>
 import { ref } from 'vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm, usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
     isp_info: Object,
 })
+
+const page = usePage()
+const flashError = ref(page.props.flash?.error || null)
 
 const form = useForm({
     phone: '',
@@ -52,6 +55,13 @@ const formatPhone = (event) => {
             <p class="text-gray-500 text-center text-sm mb-6">
                 Masukkan nomor HP yang terdaftar
             </p>
+
+            <!-- Error Message -->
+            <div v-if="flashError || $page.props.flash?.error" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                <p class="text-red-700 text-sm text-center">
+                    {{ flashError || $page.props.flash?.error }}
+                </p>
+            </div>
 
             <form @submit.prevent="submit" class="space-y-4">
                 <div>

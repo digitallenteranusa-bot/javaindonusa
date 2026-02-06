@@ -33,6 +33,8 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
     protected array $collectorCache = [];
     protected array $odpCacheByName = [];
     protected array $odpCacheByCode = [];
+    protected int $customerIdCounter = 0;
+    protected string $customerIdPrefix = '';
 
     public function __construct()
     {
@@ -47,6 +49,18 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
         foreach ($odps as $odp) {
             $this->odpCacheByName[$odp->name] = $odp->id;
             $this->odpCacheByCode[$odp->code] = $odp->id;
+        }
+
+        // Initialize customer ID counter
+        $this->customerIdPrefix = 'CUST' . now()->format('ym');
+        $lastCustomer = Customer::where('customer_id', 'like', "{$this->customerIdPrefix}%")
+            ->orderBy('customer_id', 'desc')
+            ->first();
+
+        if ($lastCustomer) {
+            $this->customerIdCounter = (int) substr($lastCustomer->customer_id, -4);
+        } else {
+            $this->customerIdCounter = 0;
         }
     }
 
@@ -269,24 +283,12 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
 
     /**
      * Generate unique customer ID
+     * Uses counter to avoid duplicates in batch imports
      */
     protected function generateCustomerId(): string
     {
-        $prefix = 'CUST';
-        $date = now()->format('ym');
-
-        $lastCustomer = Customer::where('customer_id', 'like', "{$prefix}{$date}%")
-            ->orderBy('customer_id', 'desc')
-            ->first();
-
-        if ($lastCustomer) {
-            $lastNumber = (int) substr($lastCustomer->customer_id, -4);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-
-        return sprintf('%s%s%04d', $prefix, $date, $newNumber);
+        $this->customerIdCounter++;
+        return sprintf('%s%04d', $this->customerIdPrefix, $this->customerIdCounter);
     }
 
     /**

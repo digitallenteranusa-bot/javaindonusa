@@ -221,10 +221,20 @@ class DebtIsolationService
                 'transfer_proof' => $transferProof,
                 'allocated_to_invoice' => $amount - $remainingPayment,
                 'allocated_to_debt' => $remainingPayment,
+                'allocated_invoices' => $allocations,
                 'collector_id' => $collectorId,
                 'received_by' => auth()->id(),
                 'notes' => $notes,
             ]);
+
+            // 2b. Sync alokasi ke pivot table invoice_payment
+            if (!empty($allocations)) {
+                $syncData = [];
+                foreach ($allocations as $alloc) {
+                    $syncData[$alloc['invoice_id']] = ['amount' => $alloc['amount']];
+                }
+                $payment->invoices()->sync($syncData);
+            }
 
             // 3. Kurangi total hutang
             $this->debtService->reduceDebt(

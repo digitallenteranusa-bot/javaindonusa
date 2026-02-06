@@ -7,6 +7,7 @@ use App\Models\Package;
 use App\Models\Area;
 use App\Models\Router;
 use App\Models\User;
+use App\Models\Odp;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
@@ -29,6 +30,8 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
     protected array $areaCache = [];
     protected array $routerCache = [];
     protected array $collectorCache = [];
+    protected array $odpCacheByName = [];
+    protected array $odpCacheByCode = [];
 
     public function __construct()
     {
@@ -37,6 +40,13 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
         $this->areaCache = Area::pluck('id', 'name')->toArray();
         $this->routerCache = Router::pluck('id', 'name')->toArray();
         $this->collectorCache = User::where('role', 'penagih')->pluck('id', 'name')->toArray();
+
+        // ODP cache by name and code
+        $odps = Odp::all(['id', 'name', 'code']);
+        foreach ($odps as $odp) {
+            $this->odpCacheByName[$odp->name] = $odp->id;
+            $this->odpCacheByCode[$odp->code] = $odp->id;
+        }
     }
 
     /**
@@ -58,17 +68,23 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'paket' => $row['paket'] ?? null,
             'area' => $row['area'] ?? null,
             'router' => $row['router'] ?? null,
+            'odp' => $row['odp'] ?? null,
             'penagih' => $row['penagih'] ?? null,
+            'tipe_koneksi' => $row['tipe_koneksi'] ?? 'pppoe',
             'pppoe_username' => $row['pppoe_username'] ?? null,
             'pppoe_password' => $row['pppoe_password'] ?? null,
             'ip_address' => $row['ip_address'] ?? null,
+            'static_ip' => $row['static_ip'] ?? null,
             'mac_address' => $row['mac_address'] ?? null,
-            'onu_serial' => $row['merk_router'] ?? $row['onu_serial'] ?? null,
+            'onu_serial' => $row['onu_serial'] ?? $row['merk_router'] ?? null,
             'status' => $row['status'] ?? 'active',
+            'tipe_billing' => $row['tipe_billing'] ?? 'postpaid',
             'hutang' => $row['hutang'] ?? 0,
             'tanggal_gabung' => $row['tanggal_gabung'] ?? null,
             'tanggal_tagih' => $row['tanggal_tagih'] ?? 1,
-            'tipe_koneksi' => $row['tipe_koneksi'] ?? 'pppoe',
+            'perilaku_bayar' => $row['perilaku_bayar'] ?? 'regular',
+            'is_rapel' => $row['is_rapel'] ?? 0,
+            'rapel_bulan' => $row['rapel_bulan'] ?? 3,
             'catatan' => $row['catatan'] ?? null,
             'latitude' => $this->formatCoordinate($row['latitude'] ?? null),
             'longitude' => $this->formatCoordinate($row['longitude'] ?? null),
@@ -149,6 +165,13 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
         $routerId = $this->findRouterId($row['router'] ?? null);
         $collectorId = $this->findCollectorId($row['penagih'] ?? null);
 
+        // ODP lookup - only for PPPoE connection type
+        $connectionType = $row['tipe_koneksi'] ?? 'pppoe';
+        $odpId = null;
+        if ($connectionType === 'pppoe' && !empty($row['odp'])) {
+            $odpId = $this->findOdpId($row['odp']);
+        }
+
         // Parse join date
         $joinDate = null;
         if (!empty($row['tanggal_gabung'])) {
@@ -173,17 +196,23 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'package_id' => $packageId,
             'area_id' => $areaId,
             'router_id' => $routerId,
+            'odp_id' => $odpId,
             'collector_id' => $collectorId,
+            'connection_type' => $connectionType,
             'pppoe_username' => $row['pppoe_username'] ?? null,
             'pppoe_password' => $row['pppoe_password'] ?? null,
             'ip_address' => $row['ip_address'] ?? null,
+            'static_ip' => $row['static_ip'] ?? null,
             'mac_address' => $row['mac_address'] ?? null,
-            'onu_serial' => $row['merk_router'] ?? $row['onu_serial'] ?? null,
+            'onu_serial' => $row['onu_serial'] ?? null,
             'status' => $this->parseStatus($row['status'] ?? 'active'),
+            'billing_type' => $this->parseBillingType($row['tipe_billing'] ?? 'postpaid'),
             'total_debt' => (float) ($row['hutang'] ?? 0),
             'join_date' => $joinDate ?? now(),
             'billing_date' => (int) ($row['tanggal_tagih'] ?? 1),
-            'connection_type' => $row['tipe_koneksi'] ?? 'pppoe',
+            'payment_behavior' => $this->parsePaymentBehavior($row['perilaku_bayar'] ?? 'regular'),
+            'is_rapel' => (bool) ($row['is_rapel'] ?? 0),
+            'rapel_months' => (int) ($row['rapel_bulan'] ?? 3),
             'notes' => $row['catatan'] ?? null,
             'latitude' => $row['latitude'] ?? null,
             'longitude' => $row['longitude'] ?? null,
@@ -339,6 +368,42 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
     }
 
     /**
+     * Find ODP ID by name or code
+     */
+    protected function findOdpId(?string $nameOrCode): ?int
+    {
+        if (empty($nameOrCode)) return null;
+
+        $nameOrCode = trim($nameOrCode);
+
+        // Try exact match by code first
+        if (isset($this->odpCacheByCode[$nameOrCode])) {
+            return $this->odpCacheByCode[$nameOrCode];
+        }
+
+        // Try exact match by name
+        if (isset($this->odpCacheByName[$nameOrCode])) {
+            return $this->odpCacheByName[$nameOrCode];
+        }
+
+        // Try case-insensitive search by code
+        foreach ($this->odpCacheByCode as $code => $id) {
+            if (strtolower($code) === strtolower($nameOrCode)) {
+                return $id;
+            }
+        }
+
+        // Try case-insensitive search by name
+        foreach ($this->odpCacheByName as $name => $id) {
+            if (strtolower($name) === strtolower($nameOrCode)) {
+                return $id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Format phone number
      */
     protected function formatPhone($phone): ?string
@@ -379,6 +444,35 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'suspend', 'suspended' => 'suspended',
             'terminated', 'berhenti' => 'terminated',
             default => 'active',
+        };
+    }
+
+    /**
+     * Parse billing type
+     */
+    protected function parseBillingType(?string $type): string
+    {
+        $type = strtolower(trim($type ?? ''));
+
+        return match ($type) {
+            'prepaid', 'prabayar' => 'prepaid',
+            'postpaid', 'pascabayar' => 'postpaid',
+            default => 'postpaid',
+        };
+    }
+
+    /**
+     * Parse payment behavior
+     */
+    protected function parsePaymentBehavior(?string $behavior): string
+    {
+        $behavior = strtolower(trim($behavior ?? ''));
+
+        return match ($behavior) {
+            'regular', 'reguler' => 'regular',
+            'rapel' => 'rapel',
+            'problematic', 'bermasalah' => 'problematic',
+            default => 'regular',
         };
     }
 

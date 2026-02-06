@@ -33,17 +33,23 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
                 'Paket 10 Mbps',        // paket (harus sesuai nama paket di sistem)
                 'Area Utara',           // area (harus sesuai nama area di sistem)
                 'Router Pusat',         // router (harus sesuai nama router di sistem)
+                'ODP-001',              // odp (harus sesuai nama/kode ODP di sistem, khusus PPPoE)
                 'Penagih A',            // penagih (harus sesuai nama penagih di sistem)
-                'john_pppoe',           // pppoe_username
-                'password123',          // pppoe_password
+                'pppoe',                // tipe_koneksi (pppoe/static/hotspot)
+                'john_pppoe',           // pppoe_username (untuk PPPoE)
+                'password123',          // pppoe_password (untuk PPPoE)
                 '192.168.1.100',        // ip_address
+                '10.10.10.100',         // static_ip (untuk tipe koneksi static)
                 'AA:BB:CC:DD:EE:FF',    // mac_address
-                'TP-Link Archer C6',    // merk_router
+                'ZTE-F609',             // onu_serial
                 'active',               // status (active/isolated/suspended/terminated)
+                'postpaid',             // tipe_billing (prepaid/postpaid)
                 '0',                    // hutang
                 '2024-01-15',           // tanggal_gabung (YYYY-MM-DD)
                 '1',                    // tanggal_tagih (1-28)
-                'pppoe',                // tipe_koneksi (pppoe/static)
+                'regular',              // perilaku_bayar (regular/rapel/problematic)
+                '0',                    // is_rapel (0/1)
+                '3',                    // rapel_bulan (jumlah bulan toleransi rapel)
                 'Catatan pelanggan',    // catatan
                 '-6.123456',            // latitude
                 '106.123456',           // longitude
@@ -70,17 +76,23 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
             'paket',
             'area',
             'router',
+            'odp',
             'penagih',
+            'tipe_koneksi',
             'pppoe_username',
             'pppoe_password',
             'ip_address',
+            'static_ip',
             'mac_address',
-            'merk_router',
+            'onu_serial',
             'status',
+            'tipe_billing',
             'hutang',
             'tanggal_gabung',
             'tanggal_tagih',
-            'tipe_koneksi',
+            'perilaku_bayar',
+            'is_rapel',
+            'rapel_bulan',
             'catatan',
             'latitude',
             'longitude',
@@ -92,8 +104,8 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
      */
     public function styles(Worksheet $sheet)
     {
-        // Style header row
-        $sheet->getStyle('A1:AA1')->applyFromArray([
+        // Style header row (A-AG = 33 columns)
+        $sheet->getStyle('A1:AG1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -110,7 +122,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
         ]);
 
         // Style data row (sample)
-        $sheet->getStyle('A2:AA2')->applyFromArray([
+        $sheet->getStyle('A2:AG2')->applyFromArray([
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
                 'startColor' => ['rgb' => 'FEF3C7'],
@@ -128,9 +140,19 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
         $sheet->getComment('G1')->getText()->createTextRun('Format: 08xxxxxxxxxx');
         $sheet->getComment('K1')->getText()->createTextRun('Harus sesuai nama paket di sistem');
         $sheet->getComment('L1')->getText()->createTextRun('Harus sesuai nama area di sistem');
-        $sheet->getComment('T1')->getText()->createTextRun('active, isolated, suspended, terminated');
-        $sheet->getComment('V1')->getText()->createTextRun('Format: YYYY-MM-DD');
-        $sheet->getComment('W1')->getText()->createTextRun('Tanggal 1-28');
+        $sheet->getComment('M1')->getText()->createTextRun('Harus sesuai nama router di sistem');
+        $sheet->getComment('N1')->getText()->createTextRun('Harus sesuai nama/kode ODP di sistem (khusus PPPoE)');
+        $sheet->getComment('O1')->getText()->createTextRun('Harus sesuai nama penagih di sistem');
+        $sheet->getComment('P1')->getText()->createTextRun('pppoe, static, atau hotspot');
+        $sheet->getComment('Q1')->getText()->createTextRun('Untuk tipe koneksi PPPoE');
+        $sheet->getComment('T1')->getText()->createTextRun('Untuk tipe koneksi static');
+        $sheet->getComment('W1')->getText()->createTextRun('active, isolated, suspended, terminated');
+        $sheet->getComment('X1')->getText()->createTextRun('prepaid atau postpaid');
+        $sheet->getComment('Z1')->getText()->createTextRun('Format: YYYY-MM-DD');
+        $sheet->getComment('AA1')->getText()->createTextRun('Tanggal 1-28');
+        $sheet->getComment('AB1')->getText()->createTextRun('regular, rapel, atau problematic');
+        $sheet->getComment('AC1')->getText()->createTextRun('0 = tidak, 1 = ya');
+        $sheet->getComment('AD1')->getText()->createTextRun('Jumlah bulan toleransi rapel (default 3)');
 
         return [];
     }
@@ -154,20 +176,26 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
             'K' => 20,  // paket
             'L' => 20,  // area
             'M' => 20,  // router
-            'N' => 20,  // penagih
-            'O' => 20,  // pppoe_username
-            'P' => 15,  // pppoe_password
-            'Q' => 15,  // ip_address
-            'R' => 20,  // mac_address
-            'S' => 20,  // onu_serial
-            'T' => 12,  // status
-            'U' => 15,  // hutang
-            'V' => 15,  // tanggal_gabung
-            'W' => 12,  // tanggal_tagih
-            'X' => 12,  // tipe_koneksi
-            'Y' => 30,  // catatan
-            'Z' => 12,  // latitude
-            'AA' => 12, // longitude
+            'N' => 15,  // odp
+            'O' => 20,  // penagih
+            'P' => 12,  // tipe_koneksi
+            'Q' => 20,  // pppoe_username
+            'R' => 15,  // pppoe_password
+            'S' => 15,  // ip_address
+            'T' => 15,  // static_ip
+            'U' => 20,  // mac_address
+            'V' => 20,  // onu_serial
+            'W' => 12,  // status
+            'X' => 12,  // tipe_billing
+            'Y' => 15,  // hutang
+            'Z' => 15,  // tanggal_gabung
+            'AA' => 12, // tanggal_tagih
+            'AB' => 14, // perilaku_bayar
+            'AC' => 10, // is_rapel
+            'AD' => 12, // rapel_bulan
+            'AE' => 30, // catatan
+            'AF' => 12, // latitude
+            'AG' => 12, // longitude
         ];
     }
 

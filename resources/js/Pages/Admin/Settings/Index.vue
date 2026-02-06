@@ -17,9 +17,9 @@ const testingWa = ref(false)
 
 // Billing settings form
 const billingForm = useForm({
-    billing_due_days: props.settings.billing_due_days || 20,
+    billing_due_date: props.settings.billing_due_date || 20,
     billing_grace_days: props.settings.billing_grace_days || 7,
-    isolation_threshold_months: props.settings.isolation_threshold_months || 2,
+    isolation_threshold_months: props.settings.isolation_threshold_months || 3,
     rapel_tolerance_months: props.settings.rapel_tolerance_months || 3,
     recent_payment_days: props.settings.recent_payment_days || 30,
 })
@@ -230,15 +230,15 @@ const tabs = [
                     <form @submit.prevent="saveBilling" class="space-y-6">
                         <div class="grid grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Jatuh Tempo (Hari)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Jatuh Tempo</label>
                                 <input
-                                    v-model="billingForm.billing_due_days"
+                                    v-model="billingForm.billing_due_date"
                                     type="number"
                                     min="1"
-                                    max="30"
+                                    max="28"
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 >
-                                <p class="text-xs text-gray-500 mt-1">Tanggal jatuh tempo setiap bulan</p>
+                                <p class="text-xs text-gray-500 mt-1">Tanggal jatuh tempo tagihan setiap bulan (1-28)</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Grace Period (Hari)</label>
@@ -260,7 +260,7 @@ const tabs = [
                                     max="12"
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 >
-                                <p class="text-xs text-gray-500 mt-1">Jumlah bulan overdue sebelum isolasi</p>
+                                <p class="text-xs text-gray-500 mt-1">Jumlah bulan overdue sebelum isolasi (pelanggan rapel dikecualikan)</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Toleransi Rapel (Bulan)</label>
@@ -271,7 +271,7 @@ const tabs = [
                                     max="12"
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 >
-                                <p class="text-xs text-gray-500 mt-1">Toleransi tambahan untuk pelanggan rapel</p>
+                                <p class="text-xs text-gray-500 mt-1">Toleransi khusus untuk pelanggan dengan tipe pembayaran rapel</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Pembayaran Terakhir (Hari)</label>
@@ -284,6 +284,22 @@ const tabs = [
                                 >
                                 <p class="text-xs text-gray-500 mt-1">Jika ada pembayaran dalam X hari, tidak diisolasi</p>
                             </div>
+                        </div>
+
+                        <!-- Info Box -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                            <p class="font-medium mb-2">Alur Isolasi Otomatis:</p>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Tagihan dikirim tanggal 1 setiap bulan</li>
+                                <li>Jatuh tempo sesuai pengaturan (default tanggal 20)</li>
+                                <li>Grace period: toleransi keterlambatan setelah jatuh tempo</li>
+                                <li>Isolasi otomatis jika tunggakan melebihi ambang (default 3 bulan)</li>
+                            </ul>
+                            <p class="font-medium mt-3 mb-2">Pengecualian Isolasi:</p>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Pelanggan Rapel:</strong> Tidak diisolasi selama masih dalam batas toleransi rapel</li>
+                                <li><strong>Pembayaran Baru:</strong> Jika ada pembayaran dalam X hari terakhir</li>
+                            </ul>
                         </div>
 
                         <div class="flex justify-end">

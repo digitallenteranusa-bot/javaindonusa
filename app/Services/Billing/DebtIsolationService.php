@@ -119,8 +119,10 @@ class DebtIsolationService
             // Hitung periode
             $periodStart = Carbon::create($periodYear, $periodMonth, 1)->startOfMonth();
             $periodEnd = $periodStart->copy()->endOfMonth();
-            $dueDays = (int) Setting::getValue('billing', 'due_days', 20);
-            $dueDate = $periodStart->copy()->addDays($dueDays);
+            $dueDay = (int) Setting::getValue('billing', 'billing_due_date', 20);
+            // Pastikan tanggal jatuh tempo tidak melebihi akhir bulan
+            $dueDay = min($dueDay, $periodEnd->day);
+            $dueDate = Carbon::create($periodYear, $periodMonth, $dueDay);
 
             // Generate invoice
             $invoice = Invoice::create([
@@ -279,11 +281,13 @@ class DebtIsolationService
     /**
      * Cek dan proses isolir untuk semua pelanggan
      * Dijalankan setiap hari via scheduler
+     *
+     * Pelanggan rapel dikecualikan dari isolasi otomatis
      */
     public function checkAndProcessIsolation(): array
     {
-        $overdueMonths = (int) Setting::getValue('isolation', 'overdue_months', 2);
-        $graceDays = (int) Setting::getValue('isolation', 'grace_days_after_due', 7);
+        $overdueMonths = (int) Setting::getValue('isolation', 'isolation_threshold_months', 3);
+        $graceDays = (int) Setting::getValue('billing', 'billing_grace_days', 7);
 
         $results = [
             'checked' => 0,
@@ -341,10 +345,13 @@ class DebtIsolationService
     /**
      * Tentukan apakah pelanggan harus diisolir
      * Dengan pengecualian untuk pelanggan rapel
+     *
+     * Pelanggan dengan tipe pembayaran rapel (is_rapel=true atau payment_behavior='rapel')
+     * akan mendapat toleransi khusus sesuai setting rapel_tolerance_months
      */
     public function shouldIsolateCustomer(
         Customer $customer,
-        int $overdueMonths = 2,
+        int $overdueMonths = 3,
         int $graceDays = 7
     ): array {
         $now = Carbon::now();
@@ -354,32 +361,36 @@ class DebtIsolationService
         $isRapelCustomer = $customer->is_rapel || $customer->payment_behavior === 'rapel';
 
         if ($isRapelCustomer) {
-            $rapelMonths = $customer->rapel_months ?: 3; // Default 3 bulan
+            // Prioritas: customer setting > global setting > default 3 bulan
+            $globalRapelMonths = (int) Setting::getValue('isolation', 'rapel_tolerance_months', 3);
+            $rapelMonths = $customer->rapel_months ?: $globalRapelMonths;
 
             // Hitung jumlah invoice belum bayar
             $unpaidCount = $customer->invoices
                 ->whereIn('status', ['pending', 'partial', 'overdue'])
                 ->count();
 
-            // Jika masih dalam batas rapel, jangan isolir
+            // Jika masih dalam batas rapel, JANGAN ISOLIR
             if ($unpaidCount <= $rapelMonths) {
                 return [
                     'isolate' => false,
                     'reason' => 'rapel_customer',
-                    'message' => "Pelanggan rapel, hutang {$unpaidCount} bulan (batas: {$rapelMonths})",
+                    'message' => "Pelanggan rapel dikecualikan dari isolasi, hutang {$unpaidCount} bulan (batas: {$rapelMonths})",
                 ];
             }
         }
 
-        // 2. CEK PENGECUALIAN: Ada pembayaran dalam 30 hari terakhir
+        // 2. CEK PENGECUALIAN: Ada pembayaran dalam X hari terakhir (dari setting)
+        $recentPaymentDays = (int) Setting::getValue('isolation', 'recent_payment_days', 30);
+
         if ($customer->last_payment_date) {
             $daysSincePayment = $customer->last_payment_date->diffInDays($now);
 
-            if ($daysSincePayment <= 30) {
+            if ($daysSincePayment <= $recentPaymentDays) {
                 return [
                     'isolate' => false,
                     'reason' => 'recent_payment',
-                    'message' => "Ada pembayaran {$daysSincePayment} hari lalu",
+                    'message' => "Ada pembayaran {$daysSincePayment} hari lalu (toleransi: {$recentPaymentDays} hari)",
                 ];
             }
         }

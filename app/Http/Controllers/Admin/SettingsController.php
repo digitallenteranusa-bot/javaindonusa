@@ -173,16 +173,26 @@ class SettingsController extends Controller
     public function updateGeneral(Request $request)
     {
         $validated = $request->validate([
-            'billing_due_days' => 'required|integer|min:1|max:30',
+            'billing_due_date' => 'required|integer|min:1|max:28',
             'billing_grace_days' => 'required|integer|min:0|max:30',
             'isolation_threshold_months' => 'required|integer|min:1|max:12',
             'rapel_tolerance_months' => 'required|integer|min:1|max:12',
             'recent_payment_days' => 'required|integer|min:1|max:90',
         ]);
 
+        // Group mapping for settings
+        $groupMapping = [
+            'billing_due_date' => 'billing',
+            'billing_grace_days' => 'billing',
+            'isolation_threshold_months' => 'isolation',
+            'rapel_tolerance_months' => 'isolation',
+            'recent_payment_days' => 'isolation',
+        ];
+
         foreach ($validated as $key => $value) {
+            $group = $groupMapping[$key] ?? 'billing';
             Setting::updateOrCreate(
-                ['group' => 'billing', 'key' => $key],
+                ['group' => $group, 'key' => $key],
                 ['value' => $value]
             );
         }

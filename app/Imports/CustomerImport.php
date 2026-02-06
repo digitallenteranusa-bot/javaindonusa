@@ -55,16 +55,10 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
     public function map($row): array
     {
         return [
-            'id_pelanggan' => $row['id_pelanggan'] ?? null,
             'nama' => $row['nama'] ?? null,
             'alamat' => $row['alamat'] ?? null,
-            'rt_rw' => isset($row['rt_rw']) ? (string) $row['rt_rw'] : null,
             'kelurahan' => $row['kelurahan'] ?? null,
-            'kecamatan' => $row['kecamatan'] ?? null,
             'telepon' => $this->formatPhone($row['telepon'] ?? null),
-            'telepon_alternatif' => $this->formatPhone($row['telepon_alternatif'] ?? null),
-            'email' => $row['email'] ?? null,
-            'nik' => isset($row['nik']) ? (string) $row['nik'] : null,
             'paket' => $row['paket'] ?? null,
             'area' => $row['area'] ?? null,
             'router' => $row['router'] ?? null,
@@ -72,22 +66,12 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'penagih' => $row['penagih'] ?? null,
             'tipe_koneksi' => $row['tipe_koneksi'] ?? 'pppoe',
             'pppoe_username' => $row['pppoe_username'] ?? null,
-            'pppoe_password' => $row['pppoe_password'] ?? null,
-            'ip_address' => $row['ip_address'] ?? null,
             'static_ip' => $row['static_ip'] ?? null,
-            'mac_address' => $row['mac_address'] ?? null,
-            'onu_serial' => $row['onu_serial'] ?? $row['merk_router'] ?? null,
             'status' => $row['status'] ?? 'active',
-            'tipe_billing' => $row['tipe_billing'] ?? 'postpaid',
             'hutang' => $row['hutang'] ?? 0,
             'tanggal_gabung' => $row['tanggal_gabung'] ?? null,
             'tanggal_tagih' => $row['tanggal_tagih'] ?? 1,
-            'perilaku_bayar' => $row['perilaku_bayar'] ?? 'regular',
-            'is_rapel' => $row['is_rapel'] ?? 0,
             'rapel_bulan' => $row['rapel_bulan'] ?? 3,
-            'catatan' => $row['catatan'] ?? null,
-            'latitude' => $this->formatCoordinate($row['latitude'] ?? null),
-            'longitude' => $this->formatCoordinate($row['longitude'] ?? null),
         ];
     }
 
@@ -151,8 +135,8 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             return null;
         }
 
-        // Generate customer_id if not provided
-        $customerId = $row['id_pelanggan'] ?? $this->generateCustomerId();
+        // Generate customer_id (always auto-generate)
+        $customerId = $this->generateCustomerId();
 
         // Check if customer already exists
         if (Customer::where('customer_id', $customerId)->exists()) {
@@ -182,17 +166,17 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             }
         }
 
+        // Determine rapel status based on rapel_bulan
+        $rapelMonths = (int) ($row['rapel_bulan'] ?? 3);
+        $isRapel = $rapelMonths > 0;
+
         return new Customer([
             'customer_id' => $customerId,
             'name' => $row['nama'],
             'address' => $row['alamat'] ?? null,
-            'rt_rw' => $row['rt_rw'] ?? null,
             'kelurahan' => $row['kelurahan'] ?? null,
-            'kecamatan' => $row['kecamatan'] ?? null,
+            'kecamatan' => 'Pule', // Default kecamatan
             'phone' => $this->formatPhone($row['telepon'] ?? null),
-            'phone_alt' => $this->formatPhone($row['telepon_alternatif'] ?? null),
-            'email' => $row['email'] ?? null,
-            'nik' => $row['nik'] ?? null,
             'package_id' => $packageId,
             'area_id' => $areaId,
             'router_id' => $routerId,
@@ -200,22 +184,16 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'collector_id' => $collectorId,
             'connection_type' => $connectionType,
             'pppoe_username' => $row['pppoe_username'] ?? null,
-            'pppoe_password' => $row['pppoe_password'] ?? null,
-            'ip_address' => $row['ip_address'] ?? null,
+            'pppoe_password' => 'client001', // Default password
             'static_ip' => $row['static_ip'] ?? null,
-            'mac_address' => $row['mac_address'] ?? null,
-            'onu_serial' => $row['onu_serial'] ?? null,
             'status' => $this->parseStatus($row['status'] ?? 'active'),
-            'billing_type' => $this->parseBillingType($row['tipe_billing'] ?? 'postpaid'),
+            'billing_type' => 'prepaid', // Default: bayar di muka
             'total_debt' => (float) ($row['hutang'] ?? 0),
             'join_date' => $joinDate ?? now(),
             'billing_date' => (int) ($row['tanggal_tagih'] ?? 1),
-            'payment_behavior' => $this->parsePaymentBehavior($row['perilaku_bayar'] ?? 'regular'),
-            'is_rapel' => (bool) ($row['is_rapel'] ?? 0),
-            'rapel_months' => (int) ($row['rapel_bulan'] ?? 3),
-            'notes' => $row['catatan'] ?? null,
-            'latitude' => $row['latitude'] ?? null,
-            'longitude' => $row['longitude'] ?? null,
+            'payment_behavior' => $isRapel ? 'rapel' : 'regular',
+            'is_rapel' => $isRapel,
+            'rapel_months' => $rapelMonths,
         ]);
     }
 

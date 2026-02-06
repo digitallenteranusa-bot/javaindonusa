@@ -108,7 +108,7 @@ const isActive = (href) => {
 }
 
 const navLinkClass = (href) => [
-    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+    'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm',
     isActive(href)
         ? 'bg-blue-600 text-white'
         : 'text-gray-300 hover:bg-gray-800 hover:text-white'

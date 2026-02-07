@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import CollectorLayout from '@/Layouts/CollectorLayout.vue'
 
@@ -27,6 +27,120 @@ const paymentType = ref('cash')
 const paymentAmount = ref('')
 const paymentNotes = ref('')
 const transferProof = ref(null)
+
+// GPS/Location state
+const currentLocation = ref(null)
+const isGettingLocation = ref(false)
+const locationError = ref(null)
+
+// Get current location
+const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+        locationError.value = 'GPS tidak didukung di browser ini'
+        return
+    }
+
+    isGettingLocation.value = true
+    locationError.value = null
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            currentLocation.value = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy
+            }
+            isGettingLocation.value = false
+        },
+        (error) => {
+            isGettingLocation.value = false
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    locationError.value = 'Izin lokasi ditolak. Aktifkan GPS di pengaturan.'
+                    break
+                case error.POSITION_UNAVAILABLE:
+                    locationError.value = 'Lokasi tidak tersedia'
+                    break
+                case error.TIMEOUT:
+                    locationError.value = 'Waktu habis mendapatkan lokasi'
+                    break
+                default:
+                    locationError.value = 'Gagal mendapatkan lokasi'
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
+        }
+    )
+}
+
+// Calculate distance between two points (Haversine formula)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371 // Radius bumi dalam km
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+}
+
+// Get distance to customer
+const getDistanceToCustomer = (customer) => {
+    if (!currentLocation.value || !customer.latitude || !customer.longitude) {
+        return null
+    }
+    const distance = calculateDistance(
+        currentLocation.value.latitude,
+        currentLocation.value.longitude,
+        parseFloat(customer.latitude),
+        parseFloat(customer.longitude)
+    )
+    if (distance < 1) {
+        return Math.round(distance * 1000) + ' m'
+    }
+    return distance.toFixed(1) + ' km'
+}
+
+// Navigate to customer using Google Maps
+const navigateToCustomer = (customer) => {
+    let url = ''
+    if (customer.latitude && customer.longitude) {
+        // Jika ada koordinat, gunakan koordinat
+        if (currentLocation.value) {
+            // Navigasi dari lokasi saat ini ke pelanggan
+            url = `https://www.google.com/maps/dir/${currentLocation.value.latitude},${currentLocation.value.longitude}/${customer.latitude},${customer.longitude}`
+        } else {
+            // Hanya tampilkan lokasi pelanggan
+            url = `https://www.google.com/maps/search/?api=1&query=${customer.latitude},${customer.longitude}`
+        }
+    } else if (customer.address) {
+        // Jika tidak ada koordinat, gunakan alamat
+        url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customer.address)}`
+    } else {
+        alert('Lokasi pelanggan tidak tersedia')
+        return
+    }
+    window.open(url, '_blank')
+}
+
+// Open my location in maps
+const openMyLocation = () => {
+    if (currentLocation.value) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${currentLocation.value.latitude},${currentLocation.value.longitude}`, '_blank')
+    } else {
+        getCurrentLocation()
+    }
+}
+
+// Get location on mount
+onMounted(() => {
+    getCurrentLocation()
+})
 
 // Format currency
 const formatCurrency = (value) => {
@@ -273,7 +387,19 @@ const handleFileUpload = (event) => {
                                     </span>
                                 </div>
                                 <p class="text-gray-500 text-xs mt-1">{{ customer.customer_id }}</p>
-                                <p class="text-gray-600 text-sm mt-1">{{ customer.address }}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    </svg>
+                                    <p class="text-gray-600 text-sm">{{ customer.address }}</p>
+                                </div>
+                                <!-- Jarak ke pelanggan -->
+                                <div v-if="getDistanceToCustomer(customer)" class="flex items-center gap-1 mt-1">
+                                    <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                    </svg>
+                                    <span class="text-xs text-blue-600 font-medium">{{ getDistanceToCustomer(customer) }}</span>
+                                </div>
                                 <p class="text-red-600 font-semibold mt-2">
                                     Hutang: {{ formatCurrency(customer.total_debt) }}
                                 </p>
@@ -286,13 +412,22 @@ const handleFileUpload = (event) => {
                         <!-- Action Buttons -->
                         <div class="flex gap-2 mt-4">
                             <button
+                                @click="navigateToCustomer(customer)"
+                                class="flex items-center justify-center gap-1 px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600"
+                                title="Navigasi ke lokasi"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                </svg>
+                            </button>
+                            <button
                                 @click="openWhatsApp(customer)"
                                 class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600"
                             >
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
                                 </svg>
-                                WhatsApp
+                                WA
                             </button>
                             <button
                                 @click="openPaymentModal(customer)"
@@ -310,6 +445,49 @@ const handleFileUpload = (event) => {
                 <!-- Empty State -->
                 <div v-if="!overdueCustomers?.length" class="text-center py-12">
                     <p class="text-gray-500">Tidak ada pelanggan menunggak</p>
+                </div>
+            </div>
+
+            <!-- GPS Status Bar -->
+            <div class="fixed bottom-16 left-0 right-0 px-4 z-40">
+                <div
+                    v-if="locationError"
+                    class="bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center justify-between text-sm"
+                >
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>{{ locationError }}</span>
+                    </div>
+                    <button @click="getCurrentLocation" class="px-2 py-1 bg-white/20 rounded text-xs">Coba Lagi</button>
+                </div>
+                <div
+                    v-else-if="currentLocation"
+                    class="bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center justify-between text-sm"
+                >
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        <span>GPS Aktif</span>
+                    </div>
+                    <button @click="openMyLocation" class="px-2 py-1 bg-white/20 rounded text-xs flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        </svg>
+                        Lokasi Saya
+                    </button>
+                </div>
+                <div
+                    v-else-if="isGettingLocation"
+                    class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm"
+                >
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Mencari lokasi...</span>
                 </div>
             </div>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import CollectorLayout from '@/Layouts/CollectorLayout.vue'
 
@@ -126,14 +126,68 @@ const callCustomer = () => {
     window.location.href = `tel:${props.customer.phone}`
 }
 
-// Navigate to map
-const openMaps = () => {
-    if (props.customer.latitude && props.customer.longitude) {
-        window.open(`https://maps.google.com/?q=${props.customer.latitude},${props.customer.longitude}`, '_blank')
-    } else if (props.customer.address) {
-        window.open(`https://maps.google.com/?q=${encodeURIComponent(props.customer.address)}`, '_blank')
-    }
+// GPS/Location state
+const currentLocation = ref(null)
+
+// Get current location
+const getCurrentLocation = () => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            currentLocation.value = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            }
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    )
 }
+
+// Calculate distance (Haversine formula)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// Get distance to customer
+const distanceToCustomer = computed(() => {
+    if (!currentLocation.value || !props.customer.latitude || !props.customer.longitude) return null
+    const distance = calculateDistance(
+        currentLocation.value.latitude, currentLocation.value.longitude,
+        parseFloat(props.customer.latitude), parseFloat(props.customer.longitude)
+    )
+    return distance < 1 ? Math.round(distance * 1000) + ' m' : distance.toFixed(1) + ' km'
+})
+
+// Navigate to map with directions
+const openMaps = () => {
+    let url = ''
+    if (props.customer.latitude && props.customer.longitude) {
+        if (currentLocation.value) {
+            // Navigasi dengan arah dari lokasi saat ini
+            url = `https://www.google.com/maps/dir/${currentLocation.value.latitude},${currentLocation.value.longitude}/${props.customer.latitude},${props.customer.longitude}`
+        } else {
+            url = `https://www.google.com/maps/search/?api=1&query=${props.customer.latitude},${props.customer.longitude}`
+        }
+    } else if (props.customer.address) {
+        url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(props.customer.address)}`
+    } else {
+        alert('Lokasi pelanggan tidak tersedia')
+        return
+    }
+    window.open(url, '_blank')
+}
+
+// Get location on mount
+onMounted(() => {
+    getCurrentLocation()
+})
 
 // Active tab
 const activeTab = ref('invoices')
@@ -198,6 +252,13 @@ const activeTab = ref('invoices')
                         <div class="col-span-2">
                             <p class="text-xs text-gray-500">Alamat</p>
                             <p class="text-sm text-gray-800">{{ customer.address || '-' }}</p>
+                            <!-- Jarak ke pelanggan -->
+                            <div v-if="distanceToCustomer" class="flex items-center gap-1 mt-1">
+                                <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                </svg>
+                                <span class="text-xs text-blue-600 font-medium">Jarak: {{ distanceToCustomer }}</span>
+                            </div>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500">Telepon</p>
@@ -231,13 +292,12 @@ const activeTab = ref('invoices')
                         </button>
                         <button
                             @click="openMaps"
-                            class="flex-1 flex items-center justify-center gap-1 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm"
+                            class="flex-1 flex items-center justify-center gap-1 py-2 bg-orange-500 text-white rounded-lg text-sm"
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                             </svg>
-                            Maps
+                            Navigasi
                         </button>
                         <button
                             v-if="customer.total_debt > 0"

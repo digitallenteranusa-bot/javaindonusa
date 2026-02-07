@@ -465,17 +465,20 @@ const tabs = [
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Pengingat</label>
-                            <textarea v-model="notificationForm.reminder_template" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Gunakan {nama}, {nominal}, {jatuh_tempo} sebagai variabel"></textarea>
+                            <textarea v-model="notificationForm.reminder_template" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan untuk menggunakan template default"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Variabel: {nama}, {nominal}, {jatuh_tempo}, {customer_id}, {paket}, {hari}</p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Overdue</label>
-                            <textarea v-model="notificationForm.overdue_template" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                            <textarea v-model="notificationForm.overdue_template" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan untuk menggunakan template default"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Variabel: {nama}, {nominal}, {customer_id}, {paket}, {telepon}, {whatsapp}</p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Isolasi</label>
-                            <textarea v-model="notificationForm.isolation_template" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                            <textarea v-model="notificationForm.isolation_template" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan untuk menggunakan template default"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Variabel: {nama}, {nominal}, {customer_id}, {paket}, {telepon}, {whatsapp}, {portal_url}</p>
                         </div>
 
                         <div class="flex justify-end">

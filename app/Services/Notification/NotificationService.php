@@ -324,6 +324,31 @@ class NotificationService
         $companyName = $this->ispInfo?->company_name ?? 'ISP';
         $totalDebt = number_format($customer->total_debt, 0, ',', '.');
 
+        // Hitung tanggal jatuh tempo
+        $dueDate = now()->addDays($daysBeforeDue)->translatedFormat('d F Y');
+
+        // Cek apakah ada template custom dari settings
+        $customTemplate = Setting::getValue('notification', 'reminder_template', '');
+
+        if (!empty($customTemplate)) {
+            // Gunakan template custom
+            $message = str_replace(
+                ['{nama}', '{nominal}', '{jatuh_tempo}', '{customer_id}', '{paket}', '{hari}'],
+                [
+                    $customer->name,
+                    'Rp ' . $totalDebt,
+                    $dueDate,
+                    $customer->customer_id,
+                    $customer->package?->name ?? '-',
+                    $daysBeforeDue,
+                ],
+                $customTemplate
+            );
+
+            return $message . "\n\n_{$companyName}_";
+        }
+
+        // Template default jika tidak ada custom template
         $urgency = $daysBeforeDue <= 1 ? '⚠️ *SEGERA*' : '📢 *PENGINGAT*';
 
         return "{$urgency}\n\n" .
@@ -343,6 +368,28 @@ class NotificationService
         $companyName = $this->ispInfo?->company_name ?? 'ISP';
         $totalDebt = number_format($customer->total_debt, 0, ',', '.');
 
+        // Cek apakah ada template custom dari settings
+        $customTemplate = Setting::getValue('notification', 'overdue_template', '');
+
+        if (!empty($customTemplate)) {
+            // Gunakan template custom
+            $message = str_replace(
+                ['{nama}', '{nominal}', '{customer_id}', '{paket}', '{telepon}', '{whatsapp}'],
+                [
+                    $customer->name,
+                    'Rp ' . $totalDebt,
+                    $customer->customer_id,
+                    $customer->package?->name ?? '-',
+                    $this->ispInfo?->phone_primary ?? '',
+                    $this->ispInfo?->whatsapp_number ?? '',
+                ],
+                $customTemplate
+            );
+
+            return $message . "\n\n_{$companyName}_";
+        }
+
+        // Template default
         return "⚠️ *TAGIHAN JATUH TEMPO*\n\n" .
             "Yth. Bapak/Ibu *{$customer->name}*,\n\n" .
             "Tagihan internet Anda sebesar *Rp {$totalDebt}* telah melewati jatuh tempo.\n\n" .
@@ -361,6 +408,29 @@ class NotificationService
         $totalDebt = number_format($customer->total_debt, 0, ',', '.');
         $portalUrl = config('app.url') . '/portal/isolation/' . $customer->id;
 
+        // Cek apakah ada template custom dari settings
+        $customTemplate = Setting::getValue('notification', 'isolation_template', '');
+
+        if (!empty($customTemplate)) {
+            // Gunakan template custom
+            $message = str_replace(
+                ['{nama}', '{nominal}', '{customer_id}', '{paket}', '{telepon}', '{whatsapp}', '{portal_url}'],
+                [
+                    $customer->name,
+                    'Rp ' . $totalDebt,
+                    $customer->customer_id,
+                    $customer->package?->name ?? '-',
+                    $this->ispInfo?->phone_primary ?? '',
+                    $this->ispInfo?->whatsapp_number ?? '',
+                    $portalUrl,
+                ],
+                $customTemplate
+            );
+
+            return $message . "\n\n_{$companyName}_";
+        }
+
+        // Template default
         return "🔴 *PEMBERITAHUAN ISOLIR*\n\n" .
             "Yth. Bapak/Ibu *{$customer->name}*,\n\n" .
             "Dengan berat hati kami informasikan bahwa layanan internet Anda telah *DIISOLIR* karena tunggakan pembayaran.\n\n" .

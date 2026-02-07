@@ -323,15 +323,17 @@ class InvoiceController extends Controller
             'reason' => 'required|string|max:500',
         ]);
 
-        $invoice->update([
-            'status' => 'cancelled',
-            'notes' => 'Dibatalkan: ' . $validated['reason'],
-        ]);
+        // Save reference before deletion
+        $customer = $invoice->customer;
+        $invoiceNumber = $invoice->invoice_number;
+
+        // Force delete invoice (not soft delete) to avoid unique constraint blocking regeneration
+        $invoice->forceDelete();
 
         // Update customer debt
-        $invoice->customer->recalculateTotalDebt();
+        $customer->recalculateTotalDebt();
 
-        return back()->with('success', 'Invoice berhasil dibatalkan');
+        return back()->with('success', "Invoice {$invoiceNumber} berhasil dibatalkan dan dihapus");
     }
 
     /**

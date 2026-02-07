@@ -21,6 +21,17 @@ const selectedBackup = ref(null)
 const restoringBackup = ref(false)
 const uploadingBackup = ref(false)
 
+// Database backup
+const creatingDbBackup = ref(false)
+const loadingDbBackups = ref(false)
+const dbBackups = ref([])
+const showDbRestoreModal = ref(false)
+const selectedDbBackup = ref(null)
+const restoringDbBackup = ref(false)
+const uploadingDbBackup = ref(false)
+const dbBackupFile = ref(null)
+const dbBackupFileInput = ref(null)
+
 // File upload
 const updateFile = ref(null)
 const fileInput = ref(null)
@@ -38,6 +49,7 @@ const updateTime = () => {
 onMounted(() => {
     timeInterval = setInterval(updateTime, 1000)
     loadBackups()
+    loadDbBackups()
 })
 
 onUnmounted(() => {
@@ -202,6 +214,97 @@ const uploadBackup = () => {
                 backupFileInput.value.value = ''
             }
             loadBackups()
+        }
+    })
+}
+
+// Database backup methods
+const createDbBackup = () => {
+    creatingDbBackup.value = true
+    router.post('/admin/system/db-backup', {}, {
+        onFinish: () => {
+            creatingDbBackup.value = false
+            loadDbBackups()
+        }
+    })
+}
+
+const loadDbBackups = async () => {
+    loadingDbBackups.value = true
+    try {
+        const response = await fetch('/admin/system/db-backups')
+        const data = await response.json()
+        dbBackups.value = data.backups || []
+    } catch (error) {
+        console.error('Failed to load database backups:', error)
+    } finally {
+        loadingDbBackups.value = false
+    }
+}
+
+const handleDbBackupFileSelect = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+        const name = file.name.toLowerCase()
+        if (!name.endsWith('.sql') && !name.endsWith('.sql.gz') && !name.endsWith('.gz')) {
+            alert('File harus berformat .sql atau .sql.gz')
+            return
+        }
+        dbBackupFile.value = file
+    }
+}
+
+const uploadDbBackup = () => {
+    if (!dbBackupFile.value) {
+        alert('Pilih file backup database terlebih dahulu')
+        return
+    }
+
+    uploadingDbBackup.value = true
+
+    const formData = new FormData()
+    formData.append('backup_file', dbBackupFile.value)
+
+    router.post('/admin/system/upload-db-backup', formData, {
+        forceFormData: true,
+        onFinish: () => {
+            uploadingDbBackup.value = false
+            dbBackupFile.value = null
+            if (dbBackupFileInput.value) {
+                dbBackupFileInput.value.value = ''
+            }
+            loadDbBackups()
+        }
+    })
+}
+
+const confirmDbRestore = (backup) => {
+    selectedDbBackup.value = backup
+    showDbRestoreModal.value = true
+}
+
+const restoreDbBackup = () => {
+    if (!selectedDbBackup.value) return
+
+    restoringDbBackup.value = true
+    router.post('/admin/system/restore-db-backup', {
+        backup_file: selectedDbBackup.value.name
+    }, {
+        onFinish: () => {
+            restoringDbBackup.value = false
+            showDbRestoreModal.value = false
+            selectedDbBackup.value = null
+        }
+    })
+}
+
+const deleteDbBackup = (backup) => {
+    if (!confirm(`Hapus backup database ${backup.name}?`)) return
+
+    router.delete('/admin/system/delete-db-backup', {
+        data: { backup_file: backup.name },
+        onSuccess: () => {
+            loadDbBackups()
         }
     })
 }
@@ -517,6 +620,124 @@ const formatNumber = (num) => {
                 </div>
             </div>
 
+            <!-- Database Backup Section -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                    Backup Database
+                </h3>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Create & Upload DB Backup -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-900 mb-3">Backup Database MySQL</h4>
+                        <p class="text-sm text-gray-500 mb-4">Export seluruh database (tabel, data, trigger, routine) ke file SQL</p>
+
+                        <button
+                            @click="createDbBackup"
+                            :disabled="creatingDbBackup"
+                            class="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            <svg v-if="creatingDbBackup" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                            </svg>
+                            {{ creatingDbBackup ? 'Membuat Backup Database...' : 'Backup Database Sekarang' }}
+                        </button>
+
+                        <!-- Upload DB Backup -->
+                        <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                            <h5 class="text-sm font-medium text-gray-700 mb-2">Upload Backup Database</h5>
+                            <div class="flex gap-2">
+                                <input
+                                    ref="dbBackupFileInput"
+                                    type="file"
+                                    accept=".sql,.gz"
+                                    @change="handleDbBackupFileSelect"
+                                    class="flex-1 text-sm text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                                />
+                                <button
+                                    @click="uploadDbBackup"
+                                    :disabled="!dbBackupFile || uploadingDbBackup"
+                                    class="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 disabled:opacity-50"
+                                >
+                                    {{ uploadingDbBackup ? '...' : 'Upload' }}
+                                </button>
+                            </div>
+                            <p v-if="dbBackupFile" class="text-xs text-green-600 mt-1">{{ dbBackupFile.name }}</p>
+                            <p class="text-xs text-gray-400 mt-1">Format: .sql atau .sql.gz</p>
+                        </div>
+
+                        <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
+                            <p class="text-xs text-yellow-700">
+                                <strong>Catatan:</strong> Backup database berisi seluruh data (pelanggan, invoice, pembayaran, dll). Restore akan menimpa database yang ada saat ini.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- DB Backup List -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-medium text-gray-900">Daftar Backup Database</h4>
+                            <button @click="loadDbBackups" class="text-xs text-orange-600 hover:underline">Refresh</button>
+                        </div>
+
+                        <div v-if="loadingDbBackups" class="text-center py-8 text-gray-500 text-sm">
+                            Memuat...
+                        </div>
+                        <div v-else-if="dbBackups.length === 0" class="text-center py-8 text-gray-500 text-sm">
+                            Belum ada backup database
+                        </div>
+                        <div v-else class="space-y-2 max-h-64 overflow-y-auto">
+                            <div
+                                v-for="backup in dbBackups"
+                                :key="backup.name"
+                                class="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm"
+                            >
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-medium text-gray-800 truncate">{{ backup.name }}</p>
+                                    <p class="text-xs text-gray-500">{{ backup.size }} - {{ backup.created_at }}</p>
+                                </div>
+                                <div class="flex gap-1 ml-2 shrink-0">
+                                    <a
+                                        :href="`/admin/system/db-backups/download/${backup.name}`"
+                                        class="p-1.5 text-green-600 hover:bg-green-100 rounded"
+                                        title="Download"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                    </a>
+                                    <button
+                                        @click="confirmDbRestore(backup)"
+                                        class="p-1.5 text-orange-600 hover:bg-orange-100 rounded"
+                                        title="Restore Database"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        @click="deleteDbBackup(backup)"
+                                        class="p-1.5 text-red-600 hover:bg-red-100 rounded"
+                                        title="Hapus"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- System Info -->
                 <div class="bg-white rounded-xl shadow-sm p-6">
@@ -664,6 +885,42 @@ const formatNumber = (num) => {
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                             {{ restoringBackup ? 'Restoring...' : 'Ya, Restore' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Database Restore Modal -->
+        <div v-if="showDbRestoreModal" class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4">
+                <div class="fixed inset-0 bg-black bg-opacity-50" @click="showDbRestoreModal = false"></div>
+                <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Konfirmasi Restore Database</h3>
+                    <p class="text-gray-600 mb-4">
+                        Apakah Anda yakin ingin restore database dari backup <strong>{{ selectedDbBackup?.name }}</strong>?
+                    </p>
+                    <div class="p-3 bg-red-50 rounded-lg mb-6">
+                        <p class="text-sm text-red-700">
+                            <strong>Peringatan:</strong> Semua data di database saat ini akan ditimpa dengan data dari backup ini. Pastikan Anda sudah membuat backup database terbaru sebelum melanjutkan.
+                        </p>
+                    </div>
+                    <div class="flex gap-3 justify-end">
+                        <button
+                            @click="showDbRestoreModal = false"
+                            class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            @click="restoreDbBackup"
+                            :disabled="restoringDbBackup"
+                            class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center gap-2"
+                        >
+                            <svg v-if="restoringDbBackup" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            {{ restoringDbBackup ? 'Restoring...' : 'Ya, Restore Database' }}
                         </button>
                     </div>
                 </div>

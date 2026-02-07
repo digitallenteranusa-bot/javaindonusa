@@ -14,12 +14,14 @@ class UpdateService
 {
     protected string $updateServer;
     protected string $backupPath;
+    protected string $dbBackupPath;
     protected string $tempPath;
 
     public function __construct()
     {
         $this->updateServer = config('app.update_server', 'https://update.javaindonusa.net');
         $this->backupPath = storage_path('app/backups');
+        $this->dbBackupPath = storage_path('app/backups/database');
         $this->tempPath = storage_path('app/temp');
     }
 
@@ -456,6 +458,214 @@ class UpdateService
         }
 
         return $deleted;
+    }
+
+    /**
+     * Create database backup using mysqldump
+     */
+    public function createDatabaseBackup(): array
+    {
+        try {
+            if (!File::isDirectory($this->dbBackupPath)) {
+                File::makeDirectory($this->dbBackupPath, 0755, true);
+            }
+
+            $dbHost = config('database.connections.mysql.host', '127.0.0.1');
+            $dbPort = config('database.connections.mysql.port', '3306');
+            $dbName = config('database.connections.mysql.database');
+            $dbUser = config('database.connections.mysql.username');
+            $dbPass = config('database.connections.mysql.password');
+
+            $backupName = 'db_backup_' . date('Y-m-d_His') . '.sql';
+            $backupFile = "{$this->dbBackupPath}/{$backupName}";
+
+            // Build mysqldump command
+            $command = sprintf(
+                'mysqldump --host=%s --port=%s --user=%s --password=%s --single-transaction --routines --triggers --add-drop-table %s > %s 2>&1',
+                escapeshellarg($dbHost),
+                escapeshellarg($dbPort),
+                escapeshellarg($dbUser),
+                escapeshellarg($dbPass),
+                escapeshellarg($dbName),
+                escapeshellarg($backupFile)
+            );
+
+            exec($command, $output, $returnCode);
+
+            if ($returnCode !== 0) {
+                // Clean up failed file
+                if (File::exists($backupFile)) {
+                    File::delete($backupFile);
+                }
+                throw new \Exception('mysqldump gagal: ' . implode("\n", $output));
+            }
+
+            // Verify file was created and has content
+            if (!File::exists($backupFile) || File::size($backupFile) === 0) {
+                if (File::exists($backupFile)) {
+                    File::delete($backupFile);
+                }
+                throw new \Exception('File backup kosong atau tidak terbuat');
+            }
+
+            // Compress to .gz
+            $gzFile = $backupFile . '.gz';
+            $fp = gzopen($gzFile, 'w9');
+            $sqlContent = File::get($backupFile);
+            gzwrite($fp, $sqlContent);
+            gzclose($fp);
+
+            // Remove uncompressed file
+            File::delete($backupFile);
+
+            $finalName = $backupName . '.gz';
+
+            Setting::setValue('system', 'last_db_backup', [
+                'file' => $finalName,
+                'path' => $gzFile,
+                'created_at' => now()->toDateTimeString(),
+                'size' => File::size($gzFile),
+            ], 'array');
+
+            return [
+                'success' => true,
+                'backup_file' => $finalName,
+                'backup_size' => $this->formatBytes(File::size($gzFile)),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Database backup failed', ['error' => $e->getMessage()]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Restore database from backup file
+     */
+    public function restoreDatabaseBackup(string $backupFile): array
+    {
+        try {
+            $backupPath = "{$this->dbBackupPath}/{$backupFile}";
+
+            if (!File::exists($backupPath)) {
+                throw new \Exception('File backup database tidak ditemukan');
+            }
+
+            $dbHost = config('database.connections.mysql.host', '127.0.0.1');
+            $dbPort = config('database.connections.mysql.port', '3306');
+            $dbName = config('database.connections.mysql.database');
+            $dbUser = config('database.connections.mysql.username');
+            $dbPass = config('database.connections.mysql.password');
+
+            // Decompress if .gz
+            if (str_ends_with($backupFile, '.gz')) {
+                $sqlFile = "{$this->tempPath}/" . str_replace('.gz', '', $backupFile);
+
+                if (!File::isDirectory($this->tempPath)) {
+                    File::makeDirectory($this->tempPath, 0755, true);
+                }
+
+                $fp = gzopen($backupPath, 'rb');
+                $out = fopen($sqlFile, 'wb');
+                while (!gzeof($fp)) {
+                    fwrite($out, gzread($fp, 4096));
+                }
+                gzclose($fp);
+                fclose($out);
+            } else {
+                $sqlFile = $backupPath;
+            }
+
+            // Put in maintenance mode
+            Artisan::call('down', ['--secret' => 'restore-in-progress']);
+
+            // Build mysql import command
+            $command = sprintf(
+                'mysql --host=%s --port=%s --user=%s --password=%s %s < %s 2>&1',
+                escapeshellarg($dbHost),
+                escapeshellarg($dbPort),
+                escapeshellarg($dbUser),
+                escapeshellarg($dbPass),
+                escapeshellarg($dbName),
+                escapeshellarg($sqlFile)
+            );
+
+            exec($command, $output, $returnCode);
+
+            // Clean up temp sql file
+            if (str_ends_with($backupFile, '.gz') && File::exists($sqlFile)) {
+                File::delete($sqlFile);
+            }
+
+            if ($returnCode !== 0) {
+                Artisan::call('up');
+                throw new \Exception('Restore gagal: ' . implode("\n", $output));
+            }
+
+            // Run migrations in case backup is older
+            Artisan::call('migrate', ['--force' => true]);
+            Artisan::call('cache:clear');
+
+            // Bring back up
+            Artisan::call('up');
+
+            return [
+                'success' => true,
+                'message' => 'Database berhasil di-restore dari ' . $backupFile,
+            ];
+        } catch (\Exception $e) {
+            Artisan::call('up');
+            Log::error('Database restore failed', ['error' => $e->getMessage()]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get list of database backups
+     */
+    public function getDatabaseBackups(): array
+    {
+        $backups = [];
+
+        if (File::isDirectory($this->dbBackupPath)) {
+            $files = File::files($this->dbBackupPath);
+
+            foreach ($files as $file) {
+                $ext = $file->getExtension();
+                if (in_array($ext, ['sql', 'gz'])) {
+                    $backups[] = [
+                        'name' => $file->getFilename(),
+                        'size' => $this->formatBytes($file->getSize()),
+                        'created_at' => date('Y-m-d H:i:s', $file->getMTime()),
+                    ];
+                }
+            }
+
+            usort($backups, fn($a, $b) => strtotime($b['created_at']) - strtotime($a['created_at']));
+        }
+
+        return $backups;
+    }
+
+    /**
+     * Delete a database backup file
+     */
+    public function deleteDatabaseBackup(string $backupFile): bool
+    {
+        $path = "{$this->dbBackupPath}/{$backupFile}";
+
+        if (File::exists($path)) {
+            return File::delete($path);
+        }
+
+        return false;
     }
 
     /**

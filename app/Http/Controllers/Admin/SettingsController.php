@@ -567,6 +567,119 @@ class SettingsController extends Controller
     }
 
     /**
+     * Create database backup
+     */
+    public function createDatabaseBackup(UpdateService $updateService)
+    {
+        $result = $updateService->createDatabaseBackup();
+
+        if ($result['success']) {
+            return back()->with('success', "Backup database berhasil: {$result['backup_file']} ({$result['backup_size']})");
+        }
+
+        return back()->with('error', $result['error'] ?? 'Gagal membuat backup database');
+    }
+
+    /**
+     * Get list of database backups
+     */
+    public function getDatabaseBackups(UpdateService $updateService)
+    {
+        return response()->json([
+            'backups' => $updateService->getDatabaseBackups(),
+        ]);
+    }
+
+    /**
+     * Download database backup file
+     */
+    public function downloadDatabaseBackup(string $filename)
+    {
+        // Security: prevent directory traversal
+        if (str_contains($filename, '..') || str_contains($filename, '/')) {
+            abort(404, 'Backup tidak ditemukan');
+        }
+
+        $backupPath = storage_path('app/backups/database/' . $filename);
+
+        if (!file_exists($backupPath)) {
+            return back()->with('error', 'File backup database tidak ditemukan');
+        }
+
+        return response()->download($backupPath, $filename);
+    }
+
+    /**
+     * Upload database backup file
+     */
+    public function uploadDatabaseBackup(Request $request)
+    {
+        $request->validate([
+            'backup_file' => 'required|file|max:512000', // Max 500MB
+        ]);
+
+        try {
+            $file = $request->file('backup_file');
+            $filename = $file->getClientOriginalName();
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+            // Allow .sql, .sql.gz, or .gz
+            if (!in_array($ext, ['sql', 'gz'])) {
+                return back()->with('error', 'File harus berformat .sql atau .sql.gz');
+            }
+
+            $dbBackupPath = storage_path('app/backups/database');
+            if (!is_dir($dbBackupPath)) {
+                mkdir($dbBackupPath, 0755, true);
+            }
+
+            if (file_exists($dbBackupPath . '/' . $filename)) {
+                $filename = pathinfo($filename, PATHINFO_FILENAME) . '_' . time() . '.' . $ext;
+            }
+
+            $file->move($dbBackupPath, $filename);
+
+            return back()->with('success', "Backup database '{$filename}' berhasil diupload");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal upload backup database: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Restore database from backup
+     */
+    public function restoreDatabaseBackup(Request $request, UpdateService $updateService)
+    {
+        $request->validate([
+            'backup_file' => 'required|string',
+        ]);
+
+        $result = $updateService->restoreDatabaseBackup($request->backup_file);
+
+        if ($result['success']) {
+            return back()->with('success', $result['message']);
+        }
+
+        return back()->with('error', $result['error'] ?? 'Gagal restore database');
+    }
+
+    /**
+     * Delete a database backup
+     */
+    public function deleteDatabaseBackup(Request $request, UpdateService $updateService)
+    {
+        $request->validate([
+            'backup_file' => 'required|string',
+        ]);
+
+        if ($updateService->deleteDatabaseBackup($request->backup_file)) {
+            return back()->with('success', 'Backup database berhasil dihapus');
+        }
+
+        return back()->with('error', 'Gagal menghapus backup database');
+    }
+
+    /**
      * Clear application cache
      */
     public function clearCache()

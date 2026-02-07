@@ -348,6 +348,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('system.backups');
         Route::get('/system/backups/download/{filename}', [SettingsController::class, 'downloadBackup'])
             ->name('system.download-backup');
+        // Database backups (view)
+        Route::get('/system/db-backups', [SettingsController::class, 'getDatabaseBackups'])
+            ->name('system.db-backups');
+        Route::get('/system/db-backups/download/{filename}', [SettingsController::class, 'downloadDatabaseBackup'])
+            ->name('system.download-db-backup');
     });
     Route::middleware(['permission:system.manage'])->group(function () {
         Route::post('/system/clear-cache', [SettingsController::class, 'clearCache'])
@@ -364,6 +369,15 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('system.restore-backup');
         Route::delete('/system/delete-backup', [SettingsController::class, 'deleteBackup'])
             ->name('system.delete-backup');
+        // Database backups (manage)
+        Route::post('/system/db-backup', [SettingsController::class, 'createDatabaseBackup'])
+            ->name('system.db-backup');
+        Route::post('/system/upload-db-backup', [SettingsController::class, 'uploadDatabaseBackup'])
+            ->name('system.upload-db-backup');
+        Route::post('/system/restore-db-backup', [SettingsController::class, 'restoreDatabaseBackup'])
+            ->name('system.restore-db-backup');
+        Route::delete('/system/delete-db-backup', [SettingsController::class, 'deleteDatabaseBackup'])
+            ->name('system.delete-db-backup');
     });
 
     // ================================================================

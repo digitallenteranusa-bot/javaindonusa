@@ -32,11 +32,12 @@ const transferProof = ref(null)
 const currentLocation = ref(null)
 const isGettingLocation = ref(false)
 const locationError = ref(null)
+const showLocationBar = ref(true)
 
 // Get current location
 const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-        locationError.value = 'GPS tidak didukung di browser ini'
+        locationError.value = 'GPS tidak didukung'
         return
     }
 
@@ -51,21 +52,22 @@ const getCurrentLocation = () => {
                 accuracy: position.coords.accuracy
             }
             isGettingLocation.value = false
+            locationError.value = null
         },
         (error) => {
             isGettingLocation.value = false
             switch (error.code) {
                 case error.PERMISSION_DENIED:
-                    locationError.value = 'Izin lokasi ditolak. Aktifkan GPS di pengaturan.'
+                    locationError.value = 'GPS nonaktif'
                     break
                 case error.POSITION_UNAVAILABLE:
                     locationError.value = 'Lokasi tidak tersedia'
                     break
                 case error.TIMEOUT:
-                    locationError.value = 'Waktu habis mendapatkan lokasi'
+                    locationError.value = 'Timeout'
                     break
                 default:
-                    locationError.value = 'Gagal mendapatkan lokasi'
+                    locationError.value = 'GPS error'
             }
         },
         {
@@ -74,6 +76,11 @@ const getCurrentLocation = () => {
             maximumAge: 60000
         }
     )
+}
+
+// Dismiss location bar
+const dismissLocationBar = () => {
+    showLocationBar.value = false
 }
 
 // Calculate distance between two points (Haversine formula)
@@ -448,40 +455,52 @@ const handleFileUpload = (event) => {
                 </div>
             </div>
 
-            <!-- GPS Status Bar -->
-            <div class="fixed bottom-16 left-0 right-0 px-4 z-40">
+            <!-- GPS Status Bar (compact, dismissible) -->
+            <div v-if="showLocationBar" class="fixed bottom-16 left-0 right-0 px-4 z-40">
+                <!-- GPS Error - compact bar -->
                 <div
                     v-if="locationError"
-                    class="bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center justify-between text-sm"
+                    class="bg-gray-700 text-white px-3 py-2 rounded-lg shadow-lg flex items-center justify-between text-xs"
                 >
                     <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                         </svg>
                         <span>{{ locationError }}</span>
                     </div>
-                    <button @click="getCurrentLocation" class="px-2 py-1 bg-white/20 rounded text-xs">Coba Lagi</button>
+                    <div class="flex items-center gap-2">
+                        <button @click="getCurrentLocation" class="px-2 py-1 bg-blue-500 rounded text-xs">Aktifkan</button>
+                        <button @click="dismissLocationBar" class="p-1 hover:bg-white/10 rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
+                <!-- GPS Active - compact bar -->
                 <div
                     v-else-if="currentLocation"
-                    class="bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center justify-between text-sm"
+                    class="bg-green-600 text-white px-3 py-2 rounded-lg shadow-lg flex items-center justify-between text-xs"
                 >
                     <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                         </svg>
                         <span>GPS Aktif</span>
                     </div>
-                    <button @click="openMyLocation" class="px-2 py-1 bg-white/20 rounded text-xs flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                        Lokasi Saya
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button @click="openMyLocation" class="px-2 py-1 bg-white/20 rounded text-xs">Lokasi Saya</button>
+                        <button @click="dismissLocationBar" class="p-1 hover:bg-white/10 rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
+                <!-- Getting Location -->
                 <div
                     v-else-if="isGettingLocation"
-                    class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm"
+                    class="bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-xs"
                 >
                     <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

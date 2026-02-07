@@ -62,13 +62,57 @@ const formatOperationalHours = (hours) => {
     return result.join(', ')
 }
 
+// Default templates
+const defaultReminderTemplate = `📢 PENGINGAT TAGIHAN
+
+Yth. Bapak/Ibu {nama},
+
+Kami menginformasikan bahwa tagihan internet Anda sebesar {nominal} akan jatuh tempo pada {jatuh_tempo}.
+
+Segera lakukan pembayaran untuk menghindari pemutusan layanan otomatis oleh sistem.
+
+Pesan ini dikirim otomatis. Abaikan jika sudah membayar.
+
+Terima kasih.`
+
+const defaultOverdueTemplate = `⚠️ TAGIHAN JATUH TEMPO
+
+Yth. Bapak/Ibu {nama},
+
+Tagihan internet Anda sebesar {nominal} telah melewati jatuh tempo.
+
+Mohon segera lakukan pembayaran untuk menghindari isolir/pemutusan layanan.
+
+ID Pelanggan: {customer_id}
+
+Hubungi kami jika ada kendala:
+📞 {telepon}
+💬 WA: {whatsapp}`
+
+const defaultIsolationTemplate = `🔴 PEMBERITAHUAN ISOLIR
+
+Yth. Bapak/Ibu {nama},
+
+Dengan berat hati kami informasikan bahwa layanan internet Anda telah DIISOLIR karena tunggakan pembayaran.
+
+Total Tunggakan: {nominal}
+
+Untuk mengaktifkan kembali layanan, silakan:
+1. Lakukan pembayaran
+2. Kirim bukti transfer via WhatsApp
+3. Layanan akan aktif dalam 1x24 jam
+
+Hubungi kami:
+📞 {telepon}
+💬 WA: {whatsapp}`
+
 // Notification form (removed SMS)
 const notificationForm = useForm({
     whatsapp_enabled: props.settings.whatsapp_enabled === '1',
     reminder_days_before: props.settings.reminder_days_before || 3,
-    reminder_template: props.settings.reminder_template || '',
-    overdue_template: props.settings.overdue_template || '',
-    isolation_template: props.settings.isolation_template || '',
+    reminder_template: props.settings.reminder_template || defaultReminderTemplate,
+    overdue_template: props.settings.overdue_template || defaultOverdueTemplate,
+    isolation_template: props.settings.isolation_template || defaultIsolationTemplate,
 })
 
 // WhatsApp config form
@@ -465,20 +509,20 @@ const tabs = [
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Pengingat</label>
-                            <textarea v-model="notificationForm.reminder_template" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan untuk menggunakan template default"></textarea>
-                            <p class="text-xs text-gray-500 mt-1">Variabel: {nama}, {nominal}, {jatuh_tempo}, {customer_id}, {paket}, {hari}</p>
+                            <textarea v-model="notificationForm.reminder_template" rows="10" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Variabel: <code class="bg-gray-100 px-1 rounded">{nama}</code> <code class="bg-gray-100 px-1 rounded">{nominal}</code> <code class="bg-gray-100 px-1 rounded">{jatuh_tempo}</code> <code class="bg-gray-100 px-1 rounded">{customer_id}</code> <code class="bg-gray-100 px-1 rounded">{paket}</code> <code class="bg-gray-100 px-1 rounded">{hari}</code></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Overdue</label>
-                            <textarea v-model="notificationForm.overdue_template" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan untuk menggunakan template default"></textarea>
-                            <p class="text-xs text-gray-500 mt-1">Variabel: {nama}, {nominal}, {customer_id}, {paket}, {telepon}, {whatsapp}</p>
+                            <textarea v-model="notificationForm.overdue_template" rows="10" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Variabel: <code class="bg-gray-100 px-1 rounded">{nama}</code> <code class="bg-gray-100 px-1 rounded">{nominal}</code> <code class="bg-gray-100 px-1 rounded">{customer_id}</code> <code class="bg-gray-100 px-1 rounded">{paket}</code> <code class="bg-gray-100 px-1 rounded">{telepon}</code> <code class="bg-gray-100 px-1 rounded">{whatsapp}</code></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Isolasi</label>
-                            <textarea v-model="notificationForm.isolation_template" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan untuk menggunakan template default"></textarea>
-                            <p class="text-xs text-gray-500 mt-1">Variabel: {nama}, {nominal}, {customer_id}, {paket}, {telepon}, {whatsapp}, {portal_url}</p>
+                            <textarea v-model="notificationForm.isolation_template" rows="12" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Variabel: <code class="bg-gray-100 px-1 rounded">{nama}</code> <code class="bg-gray-100 px-1 rounded">{nominal}</code> <code class="bg-gray-100 px-1 rounded">{customer_id}</code> <code class="bg-gray-100 px-1 rounded">{paket}</code> <code class="bg-gray-100 px-1 rounded">{telepon}</code> <code class="bg-gray-100 px-1 rounded">{whatsapp}</code> <code class="bg-gray-100 px-1 rounded">{portal_url}</code></p>
                         </div>
 
                         <div class="flex justify-end">

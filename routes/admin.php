@@ -73,6 +73,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:customers.adjust-debt'])->group(function () {
         Route::post('/customers/{customer}/adjust-debt', [CustomerController::class, 'adjustDebt'])
             ->name('customers.adjust-debt');
+        Route::post('/customers/{customer}/add-historical-invoice', [CustomerController::class, 'addHistoricalInvoice'])
+            ->name('customers.add-historical-invoice');
     });
     Route::middleware(['permission:customers.write-off'])->group(function () {
         Route::post('/customers/{customer}/write-off-debt', [CustomerController::class, 'writeOffDebt'])

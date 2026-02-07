@@ -12,6 +12,12 @@ const showAdjustModal = ref(false)
 const adjustAmount = ref(0)
 const adjustReason = ref('')
 
+const showHistoricalModal = ref(false)
+const historicalMonth = ref(new Date().getMonth()) // previous month default
+const historicalYear = ref(new Date().getFullYear())
+const historicalAmount = ref(props.customer.package?.price || 0)
+const historicalDescription = ref('')
+
 // Format currency
 const formatCurrency = (value) => {
     return new Intl.NumberFormat('id-ID', {
@@ -56,6 +62,21 @@ const submitAdjust = () => {
             showAdjustModal.value = false
             adjustAmount.value = 0
             adjustReason.value = ''
+        },
+    })
+}
+
+// Submit historical invoice
+const submitHistoricalInvoice = () => {
+    router.post(`/admin/customers/${props.customer.id}/add-historical-invoice`, {
+        month: historicalMonth.value,
+        year: historicalYear.value,
+        amount: historicalAmount.value,
+        description: historicalDescription.value,
+    }, {
+        onSuccess: () => {
+            showHistoricalModal.value = false
+            historicalDescription.value = ''
         },
     })
 }
@@ -290,6 +311,12 @@ const recalculateDebt = () => {
 
                     <div class="space-y-2">
                         <button
+                            @click="showHistoricalModal = true"
+                            class="w-full py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm"
+                        >
+                            Tambah Invoice Lama
+                        </button>
+                        <button
                             @click="showAdjustModal = true"
                             class="w-full py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm"
                         >
@@ -396,6 +423,91 @@ const recalculateDebt = () => {
                             class="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                         >
                             Simpan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Historical Invoice Modal -->
+        <div
+            v-if="showHistoricalModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            @click.self="showHistoricalModal = false"
+        >
+            <div class="bg-white rounded-xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">Tambah Invoice Lama</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    Buat invoice untuk periode lama yang belum tercatat. Invoice akan otomatis berstatus overdue dan menambah hutang.
+                </p>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Bulan</label>
+                            <select
+                                v-model="historicalMonth"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option :value="1">Januari</option>
+                                <option :value="2">Februari</option>
+                                <option :value="3">Maret</option>
+                                <option :value="4">April</option>
+                                <option :value="5">Mei</option>
+                                <option :value="6">Juni</option>
+                                <option :value="7">Juli</option>
+                                <option :value="8">Agustus</option>
+                                <option :value="9">September</option>
+                                <option :value="10">Oktober</option>
+                                <option :value="11">November</option>
+                                <option :value="12">Desember</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
+                            <select
+                                v-model="historicalYear"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option v-for="y in 7" :key="y" :value="new Date().getFullYear() - y + 1">
+                                    {{ new Date().getFullYear() - y + 1 }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah (Rp)</label>
+                        <input
+                            v-model="historicalAmount"
+                            type="number"
+                            min="1000"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                        <p class="text-xs text-gray-400 mt-1">Default: harga paket saat ini</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan (opsional)</label>
+                        <textarea
+                            v-model="historicalDescription"
+                            rows="2"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="Misal: Hutang bulan lalu belum tercatat"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button
+                            @click="showHistoricalModal = false"
+                            class="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            @click="submitHistoricalInvoice"
+                            class="flex-1 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                        >
+                            Buat Invoice
                         </button>
                     </div>
                 </div>

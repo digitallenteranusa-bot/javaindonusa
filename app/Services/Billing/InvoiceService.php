@@ -121,8 +121,10 @@ class InvoiceService
             $this->debtService->addDebt(
                 $customer,
                 $invoice->total_amount,
-                "Invoice #{$invoice->invoice_number} - Periode {$month}/{$year}",
-                $invoice
+                'invoice_added',
+                'invoice',
+                $invoice->id,
+                "Invoice #{$invoice->invoice_number} - Periode {$month}/{$year}"
             );
 
             return $invoice;
@@ -149,6 +151,66 @@ class InvoiceService
         }
 
         return sprintf('%s%s%04d', $prefix, $dateCode, $newNumber);
+    }
+
+    /**
+     * Create historical invoice for past period (hutang lama)
+     */
+    public function createHistoricalInvoice(
+        Customer $customer,
+        int $month,
+        int $year,
+        float $amount,
+        ?string $description = null
+    ): Invoice {
+        // Check if invoice already exists for this period
+        $existingInvoice = Invoice::where('customer_id', $customer->id)
+            ->where('period_month', $month)
+            ->where('period_year', $year)
+            ->first();
+
+        if ($existingInvoice) {
+            throw new \Exception("Invoice untuk periode {$month}/{$year} sudah ada (#{$existingInvoice->invoice_number})");
+        }
+
+        return DB::transaction(function () use ($customer, $month, $year, $amount, $description) {
+            $dueDate = Carbon::create($year, $month, config('billing.due_days', 20));
+            $periodStart = Carbon::create($year, $month, 1);
+            $periodEnd = $periodStart->copy()->endOfMonth();
+
+            $packageName = $customer->package?->name ?? 'Paket tidak diketahui';
+
+            $invoice = Invoice::create([
+                'customer_id' => $customer->id,
+                'invoice_number' => $this->generateInvoiceNumber($year, $month),
+                'period_month' => $month,
+                'period_year' => $year,
+                'period_start' => $periodStart,
+                'period_end' => $periodEnd,
+                'package_name' => $packageName,
+                'package_price' => $amount,
+                'additional_charges' => 0,
+                'discount' => 0,
+                'total_amount' => $amount,
+                'paid_amount' => 0,
+                'remaining_amount' => $amount,
+                'due_date' => $dueDate,
+                'status' => 'overdue',
+                'notes' => $description ?? "Invoice hutang lama periode {$month}/{$year}",
+            ]);
+
+            // Add to debt
+            $this->debtService->addDebt(
+                $customer,
+                $amount,
+                'invoice_added',
+                'invoice',
+                $invoice->id,
+                "Hutang lama - Invoice #{$invoice->invoice_number} - Periode {$month}/{$year}"
+            );
+
+            return $invoice;
+        });
     }
 
     /**

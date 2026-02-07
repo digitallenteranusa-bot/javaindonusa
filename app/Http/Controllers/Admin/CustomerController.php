@@ -10,6 +10,7 @@ use App\Models\Router;
 use App\Models\User;
 use App\Models\Odp;
 use App\Services\Billing\DebtService;
+use App\Services\Billing\InvoiceService;
 use App\Imports\CustomerImport;
 use App\Exports\CustomerTemplateExport;
 use Illuminate\Http\Request;
@@ -20,10 +21,12 @@ use Maatwebsite\Excel\Facades\Excel;
 class CustomerController extends Controller
 {
     protected DebtService $debtService;
+    protected InvoiceService $invoiceService;
 
-    public function __construct(DebtService $debtService)
+    public function __construct(DebtService $debtService, InvoiceService $invoiceService)
     {
         $this->debtService = $debtService;
+        $this->invoiceService = $invoiceService;
     }
 
     /**
@@ -338,6 +341,33 @@ class CustomerController extends Controller
         $this->debtService->adjustDebt($customer, $validated['amount'], $validated['reason']);
 
         return back()->with('success', 'Hutang pelanggan berhasil disesuaikan');
+    }
+
+    /**
+     * Add historical invoice (hutang lama)
+     */
+    public function addHistoricalInvoice(Request $request, Customer $customer)
+    {
+        $validated = $request->validate([
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2020|max:' . now()->year,
+            'amount' => 'required|numeric|min:1000',
+            'description' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $invoice = $this->invoiceService->createHistoricalInvoice(
+                $customer,
+                $validated['month'],
+                $validated['year'],
+                $validated['amount'],
+                $validated['description'] ?? null
+            );
+
+            return back()->with('success', "Invoice hutang lama #{$invoice->invoice_number} berhasil dibuat untuk periode {$validated['month']}/{$validated['year']}");
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     /**

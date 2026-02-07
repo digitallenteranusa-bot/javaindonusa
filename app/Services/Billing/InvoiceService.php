@@ -76,10 +76,11 @@ class InvoiceService
      */
     public function generateInvoiceForCustomer(Customer $customer, int $month, int $year): ?Invoice
     {
-        // Check if invoice already exists
+        // Check if invoice already exists (exclude cancelled)
         $existingInvoice = Invoice::where('customer_id', $customer->id)
             ->where('period_month', $month)
             ->where('period_year', $year)
+            ->where('status', '!=', 'cancelled')
             ->first();
 
         if ($existingInvoice) {
@@ -163,10 +164,11 @@ class InvoiceService
         float $amount,
         ?string $description = null
     ): Invoice {
-        // Check if invoice already exists for this period
+        // Check if invoice already exists for this period (exclude cancelled)
         $existingInvoice = Invoice::where('customer_id', $customer->id)
             ->where('period_month', $month)
             ->where('period_year', $year)
+            ->where('status', '!=', 'cancelled')
             ->first();
 
         if ($existingInvoice) {

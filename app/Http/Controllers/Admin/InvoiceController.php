@@ -309,9 +309,9 @@ class InvoiceController extends Controller
      */
     public function cancel(Request $request, Invoice $invoice)
     {
-        // Only pending invoices can be cancelled
-        if ($invoice->status !== 'pending') {
-            return back()->with('error', 'Hanya invoice pending yang dapat dibatalkan');
+        // Only unpaid invoices can be cancelled
+        if (in_array($invoice->status, ['paid', 'cancelled'])) {
+            return back()->with('error', 'Invoice yang sudah lunas atau sudah dibatalkan tidak dapat dibatalkan');
         }
 
         // Check if invoice has payments
@@ -353,8 +353,8 @@ class InvoiceController extends Controller
         $customer = $invoice->customer;
         $invoiceNumber = $invoice->invoice_number;
 
-        // Delete the invoice
-        $invoice->delete();
+        // Delete the invoice permanently (force delete, not soft delete)
+        $invoice->forceDelete();
 
         // Update customer debt if customer exists
         if ($customer) {

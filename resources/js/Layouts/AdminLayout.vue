@@ -78,6 +78,7 @@ const billingNavigation = [
     { name: 'Pembayaran', href: '/admin/payments', icon: 'credit-card' },
     { name: 'Pengeluaran', href: '/admin/expenses', icon: 'receipt' },
     { name: 'Setoran', href: '/admin/settlements', icon: 'cash' },
+    { name: 'Laporan', href: '/admin/reports', icon: 'chart' },
 ]
 
 const masterNavigation = [
@@ -92,7 +93,6 @@ const masterNavigation = [
 
 const systemNavigation = [
     { name: 'VPN Server', href: '/admin/vpn-server', icon: 'vpn' },
-    { name: 'Laporan', href: '/admin/reports', icon: 'chart' },
     { name: 'Audit Log', href: '/admin/audit-logs', icon: 'clipboard' },
     { name: 'Roles', href: '/admin/roles', icon: 'shield' },
     { name: 'Pengaturan', href: '/admin/settings', icon: 'cog' },

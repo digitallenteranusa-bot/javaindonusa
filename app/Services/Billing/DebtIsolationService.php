@@ -261,7 +261,16 @@ class DebtIsolationService
                 "Pembayaran Rp " . number_format($amount, 0, ',', '.') . " dari {$customer->name}"
             );
 
-            $customer->refresh();
+            // 7. Kirim notifikasi konfirmasi pembayaran
+            try {
+                $customer->refresh();
+                $this->notification->sendPaymentConfirmation($customer, $payment);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Payment confirmation notification failed', [
+                    'payment_id' => $payment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return [
                 'success' => true,

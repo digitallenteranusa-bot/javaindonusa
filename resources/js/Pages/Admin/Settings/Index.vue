@@ -89,6 +89,22 @@ Hubungi kami jika ada kendala:
 📞 {telepon}
 💬 WA: {whatsapp}`
 
+const defaultPaymentConfirmationTemplate = `✅ KONFIRMASI PEMBAYARAN
+
+Yth. Bapak/Ibu {nama},
+
+Pembayaran Anda telah kami terima:
+
+Detail:
+No. Pembayaran: {no_pembayaran}
+Jumlah: {nominal}
+Metode: {metode}
+Tanggal: {tanggal}
+
+{status_lunas}
+
+Terima kasih.`
+
 const defaultIsolationTemplate = `🔴 PEMBERITAHUAN ISOLIR
 
 Yth. Bapak/Ibu {nama},
@@ -113,6 +129,7 @@ const notificationForm = useForm({
     reminder_template: props.settings.reminder_template || defaultReminderTemplate,
     overdue_template: props.settings.overdue_template || defaultOverdueTemplate,
     isolation_template: props.settings.isolation_template || defaultIsolationTemplate,
+    payment_confirmation_template: props.settings.payment_confirmation_template || defaultPaymentConfirmationTemplate,
 })
 
 // WhatsApp config form
@@ -523,6 +540,12 @@ const tabs = [
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Isolasi</label>
                             <textarea v-model="notificationForm.isolation_template" rows="12" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
                             <p class="text-xs text-gray-500 mt-1">Variabel: <code class="bg-gray-100 px-1 rounded">{nama}</code> <code class="bg-gray-100 px-1 rounded">{nominal}</code> <code class="bg-gray-100 px-1 rounded">{customer_id}</code> <code class="bg-gray-100 px-1 rounded">{paket}</code> <code class="bg-gray-100 px-1 rounded">{telepon}</code> <code class="bg-gray-100 px-1 rounded">{whatsapp}</code> <code class="bg-gray-100 px-1 rounded">{portal_url}</code></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Template Konfirmasi Pembayaran</label>
+                            <textarea v-model="notificationForm.payment_confirmation_template" rows="10" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Variabel: <code class="bg-gray-100 px-1 rounded">{nama}</code> <code class="bg-gray-100 px-1 rounded">{nominal}</code> <code class="bg-gray-100 px-1 rounded">{no_pembayaran}</code> <code class="bg-gray-100 px-1 rounded">{metode}</code> <code class="bg-gray-100 px-1 rounded">{tanggal}</code> <code class="bg-gray-100 px-1 rounded">{sisa_tagihan}</code> <code class="bg-gray-100 px-1 rounded">{customer_id}</code> <code class="bg-gray-100 px-1 rounded">{paket}</code> <code class="bg-gray-100 px-1 rounded">{status_lunas}</code></p>
                         </div>
 
                         <div class="flex justify-end">

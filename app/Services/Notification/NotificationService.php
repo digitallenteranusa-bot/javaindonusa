@@ -525,7 +525,32 @@ class NotificationService
         $companyName = $this->ispInfo?->company_name ?? 'ISP';
         $amount = number_format($payment->amount, 0, ',', '.');
         $remaining = number_format($customer->total_debt, 0, ',', '.');
+        $statusText = $customer->total_debt > 0 ? "Sisa tagihan: Rp {$remaining}" : 'LUNAS';
 
+        // Cek apakah ada template custom dari settings
+        $customTemplate = Setting::getValue('notification', 'payment_confirmation_template', '');
+
+        if (!empty($customTemplate)) {
+            $message = str_replace(
+                ['{nama}', '{nominal}', '{no_pembayaran}', '{metode}', '{tanggal}', '{sisa_tagihan}', '{customer_id}', '{paket}', '{status_lunas}'],
+                [
+                    $customer->name,
+                    'Rp ' . $amount,
+                    $payment->payment_number,
+                    $payment->method_label,
+                    $payment->created_at->format('d M Y H:i'),
+                    'Rp ' . $remaining,
+                    $customer->customer_id,
+                    $customer->package?->name ?? '-',
+                    $statusText,
+                ],
+                $customTemplate
+            );
+
+            return $message . "\n\n_{$companyName}_";
+        }
+
+        // Template default
         return "✅ *KONFIRMASI PEMBAYARAN*\n\n" .
             "Yth. Bapak/Ibu *{$customer->name}*,\n\n" .
             "Pembayaran Anda telah kami terima:\n\n" .

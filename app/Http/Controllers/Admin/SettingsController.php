@@ -265,6 +265,7 @@ class SettingsController extends Controller
             'reminder_template' => 'nullable|string',
             'overdue_template' => 'nullable|string',
             'isolation_template' => 'nullable|string',
+            'payment_confirmation_template' => 'nullable|string',
         ]);
 
         foreach ($validated as $key => $value) {

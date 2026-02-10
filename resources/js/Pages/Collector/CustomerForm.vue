@@ -13,6 +13,21 @@ const props = defineProps({
 
 const isEditing = computed(() => !!props.customer?.id)
 
+// Dropdown options
+const kelurahanOptions = ['Pule', 'Pakel', 'Kembangan', 'Joho', 'Tanggaran', 'Jombok', 'Karanganyar', 'Sukokidul']
+const routerMerkOptions = ['TENDA', 'TOTOLINK N200RE', 'TOTOLINK N300RE', 'ZTE', 'HUAWEI', 'GM', 'NETIS', 'DLINK', 'TP-LINK', 'NOKIA', 'GLOBAL']
+
+// Custom router input toggle
+const showCustomRouter = ref(false)
+const customRouterValue = ref('')
+
+// Check if existing onu_serial value is in the predefined list
+const existingMerk = props.customer?.onu_serial || ''
+if (existingMerk && !routerMerkOptions.includes(existingMerk)) {
+    showCustomRouter.value = true
+    customRouterValue.value = existingMerk
+}
+
 const form = useForm({
     name: props.customer?.name || '',
     phone: props.customer?.phone || '',
@@ -276,12 +291,17 @@ const dismissMessage = () => {
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Kelurahan/Desa</label>
-                            <input
+                            <select
                                 v-model="form.kelurahan"
-                                type="text"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Nama kelurahan/desa"
                             >
+                                <option value="">Pilih Kelurahan</option>
+                                <option v-for="kel in kelurahanOptions" :key="kel" :value="kel">{{ kel }}</option>
+                                <option
+                                    v-if="form.kelurahan && !kelurahanOptions.includes(form.kelurahan)"
+                                    :value="form.kelurahan"
+                                >{{ form.kelurahan }}</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -425,11 +445,31 @@ const dismissMessage = () => {
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Merk Router</label>
-                            <input
-                                v-model="form.onu_serial"
-                                type="text"
+                            <select
+                                :value="showCustomRouter ? '__custom__' : form.onu_serial"
+                                @change="(e) => {
+                                    if (e.target.value === '__custom__') {
+                                        showCustomRouter = true
+                                        form.onu_serial = customRouterValue
+                                    } else {
+                                        showCustomRouter = false
+                                        customRouterValue = ''
+                                        form.onu_serial = e.target.value
+                                    }
+                                }"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                placeholder="Contoh: TP-Link, Totolink, ZTE F609"
+                            >
+                                <option value="">Pilih Merk Router</option>
+                                <option v-for="merk in routerMerkOptions" :key="merk" :value="merk">{{ merk }}</option>
+                                <option value="__custom__">Lainnya...</option>
+                            </select>
+                            <input
+                                v-if="showCustomRouter"
+                                v-model="customRouterValue"
+                                @input="form.onu_serial = customRouterValue"
+                                type="text"
+                                placeholder="Masukkan merk router"
+                                class="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             >
                         </div>
                     </div>

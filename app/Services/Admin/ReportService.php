@@ -46,9 +46,9 @@ class ReportService
         $totalOutstanding = max(0, $totalBilled - $totalCollected);
 
         return [
-            'billable' => $totalBilled,
-            'collected' => $totalCollected,
-            'outstanding' => $totalOutstanding,
+            'billable' => (float) $totalBilled,
+            'collected' => (float) $totalCollected,
+            'outstanding' => (float) $totalOutstanding,
             'collection_rate' => $totalBilled > 0
                 ? round(($totalCollected / $totalBilled) * 100, 1)
                 : 0,
@@ -78,8 +78,8 @@ class ReportService
             $months[] = [
                 'month' => $m,
                 'month_name' => Carbon::create($year, $m, 1)->translatedFormat('M'),
-                'billed' => $totalBilled,
-                'paid' => $totalPaid,
+                'billed' => (float) $totalBilled,
+                'paid' => (float) $totalPaid,
                 'collection_rate' => $totalBilled > 0
                     ? round(($totalPaid / $totalBilled) * 100, 1)
                     : 0,
@@ -111,7 +111,7 @@ class ReportService
         foreach ($grouped as $method => $items) {
             $methods[] = [
                 'method' => $method,
-                'total' => $items->sum('amount'),
+                'total' => (float) $items->sum('amount'),
                 'count' => $items->count(),
             ];
         }
@@ -161,14 +161,14 @@ class ReportService
                 'id' => $collector->id,
                 'name' => $collector->name,
                 'customers_count' => $collector->assigned_customers_count,
-                'total_billable' => $totalBillable,
-                'total_collected' => $totalCollected,
+                'total_billable' => (float) $totalBillable,
+                'total_collected' => (float) $totalCollected,
                 'collection_rate' => $totalBillable > 0
                     ? round(($totalCollected / $totalBillable) * 100, 1)
                     : 0,
                 'transactions' => $payments->count(),
-                'cash_collected' => $payments->where('payment_method', 'cash')->sum('amount'),
-                'transfer_collected' => $payments->where('payment_method', 'transfer')->sum('amount'),
+                'cash_collected' => (float) $payments->where('payment_method', 'cash')->sum('amount'),
+                'transfer_collected' => (float) $payments->where('payment_method', 'transfer')->sum('amount'),
             ];
         }
 
@@ -210,9 +210,9 @@ class ReportService
                 'id' => $area->id,
                 'name' => $area->name,
                 'customers_count' => $area->customers_count,
-                'total_billed' => $totalBilled,
-                'total_paid' => $totalPaid,
-                'outstanding' => $totalBilled - $totalPaid,
+                'total_billed' => (float) $totalBilled,
+                'total_paid' => (float) $totalPaid,
+                'outstanding' => (float) ($totalBilled - $totalPaid),
                 'collection_rate' => $totalBilled > 0
                     ? round(($totalPaid / $totalBilled) * 100, 1)
                     : 0,

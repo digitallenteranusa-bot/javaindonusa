@@ -479,25 +479,33 @@ class UpdateService
             $backupName = 'db_backup_' . date('Y-m-d_His') . '.sql';
             $backupFile = "{$this->dbBackupPath}/{$backupName}";
 
-            // Build mysqldump command
+            // Build mysqldump command - stderr to separate file to avoid polluting SQL dump
+            $errorFile = $backupFile . '.err';
             $command = sprintf(
-                'mysqldump --host=%s --port=%s --user=%s --password=%s --single-transaction --routines --triggers --add-drop-table %s > %s 2>&1',
+                'mysqldump --host=%s --port=%s --user=%s --password=%s --single-transaction --routines --triggers --add-drop-table %s > %s 2>%s',
                 escapeshellarg($dbHost),
                 escapeshellarg($dbPort),
                 escapeshellarg($dbUser),
                 escapeshellarg($dbPass),
                 escapeshellarg($dbName),
-                escapeshellarg($backupFile)
+                escapeshellarg($backupFile),
+                escapeshellarg($errorFile)
             );
 
             exec($command, $output, $returnCode);
+
+            // Read and clean up error file
+            $errorOutput = File::exists($errorFile) ? trim(File::get($errorFile)) : '';
+            if (File::exists($errorFile)) {
+                File::delete($errorFile);
+            }
 
             if ($returnCode !== 0) {
                 // Clean up failed file
                 if (File::exists($backupFile)) {
                     File::delete($backupFile);
                 }
-                throw new \Exception('mysqldump gagal: ' . implode("\n", $output));
+                throw new \Exception('mysqldump gagal: ' . $errorOutput);
             }
 
             // Verify file was created and has content
@@ -582,27 +590,48 @@ class UpdateService
             // Put in maintenance mode
             Artisan::call('down', ['--secret' => 'restore-in-progress']);
 
-            // Build mysql import command
+            // Clean SQL file: remove any warning lines that may have been included
+            $sqlContent = File::get($sqlFile);
+            $cleanedContent = preg_replace('/^(mysqldump|mysql):.*$/m', '', $sqlContent);
+            $cleanedContent = ltrim($cleanedContent);
+            if ($cleanedContent !== $sqlContent) {
+                File::put($sqlFile, $cleanedContent);
+            }
+
+            // Build mysql import command - stderr to separate file
+            $errorFile = $sqlFile . '.err';
             $command = sprintf(
-                'mysql --host=%s --port=%s --user=%s --password=%s %s < %s 2>&1',
+                'mysql --host=%s --port=%s --user=%s --password=%s %s < %s 2>%s',
                 escapeshellarg($dbHost),
                 escapeshellarg($dbPort),
                 escapeshellarg($dbUser),
                 escapeshellarg($dbPass),
                 escapeshellarg($dbName),
-                escapeshellarg($sqlFile)
+                escapeshellarg($sqlFile),
+                escapeshellarg($errorFile)
             );
 
             exec($command, $output, $returnCode);
+
+            // Read and clean up error file
+            $errorOutput = File::exists($errorFile) ? trim(File::get($errorFile)) : '';
+            if (File::exists($errorFile)) {
+                File::delete($errorFile);
+            }
 
             // Clean up temp sql file
             if (str_ends_with($backupFile, '.gz') && File::exists($sqlFile)) {
                 File::delete($sqlFile);
             }
 
-            if ($returnCode !== 0) {
+            // Filter out warnings from error output, only fail on real errors
+            $realErrors = collect(explode("\n", $errorOutput))
+                ->filter(fn($line) => !empty(trim($line)) && !str_contains($line, '[Warning]'))
+                ->implode("\n");
+
+            if ($returnCode !== 0 && !empty(trim($realErrors))) {
                 Artisan::call('up');
-                throw new \Exception('Restore gagal: ' . implode("\n", $output));
+                throw new \Exception('Restore gagal: ' . $realErrors);
             }
 
             // Run migrations in case backup is older

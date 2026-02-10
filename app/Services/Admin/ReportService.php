@@ -82,7 +82,7 @@ class ReportService
      */
     public function getPaymentByMethod(?string $startDate = null, ?string $endDate = null): array
     {
-        $query = Payment::where('status', 'success');
+        $query = Payment::where('status', Payment::STATUS_VERIFIED);
 
         if ($startDate) {
             $query->whereDate('created_at', '>=', $startDate);
@@ -132,7 +132,7 @@ class ReportService
         foreach ($collectors as $collector) {
             // Get payments collected by this collector
             $payments = Payment::where('collector_id', $collector->id)
-                ->where('status', 'success')
+                ->where('status', Payment::STATUS_VERIFIED)
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->get();
 
@@ -303,7 +303,7 @@ class ReportService
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
         $daysInMonth = $endDate->day;
 
-        $payments = Payment::where('status', 'success')
+        $payments = Payment::where('status', Payment::STATUS_VERIFIED)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->select(
                 DB::raw('DAY(created_at) as day'),

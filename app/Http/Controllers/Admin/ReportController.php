@@ -36,8 +36,8 @@ class ReportController extends Controller
             'revenue' => $this->reportService->getRevenueOverview($year, $month),
             'monthlyTrend' => $this->reportService->getMonthlyRevenueTrend($year),
             'paymentMethods' => $this->reportService->getPaymentByMethod(
-                now()->startOfMonth()->format('Y-m-d'),
-                now()->endOfMonth()->format('Y-m-d')
+                \Carbon\Carbon::create($year, $month, 1)->startOfMonth()->format('Y-m-d'),
+                \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d')
             ),
             'customerStatus' => $this->reportService->getCustomerStatusSummary(),
             'debtAging' => $this->reportService->getDebtAging(),

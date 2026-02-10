@@ -43,7 +43,7 @@ class PaymentService
                 'received_by' => $receivedBy?->id ?? auth()->id(),
                 'transfer_proof' => $transferProof,
                 'notes' => $notes,
-                'status' => 'success',
+                'status' => 'verified',
             ]);
 
             // Allocate payment to invoices (FIFO - oldest first)
@@ -221,7 +221,7 @@ class PaymentService
      */
     public function getStatistics(?string $startDate = null, ?string $endDate = null): array
     {
-        $query = Payment::where('status', 'success');
+        $query = Payment::where('status', 'verified');
 
         if ($startDate) {
             $query->whereDate('created_at', '>=', $startDate);
@@ -251,7 +251,7 @@ class PaymentService
         $date = $date ?? now();
 
         $payments = Payment::where('collector_id', $collector->id)
-            ->where('status', 'success')
+            ->where('status', 'verified')
             ->whereDate('created_at', $date)
             ->get();
 
@@ -269,7 +269,7 @@ class PaymentService
     public function getCustomerPayments(Customer $customer, int $limit = 10): \Illuminate\Database\Eloquent\Collection
     {
         return Payment::where('customer_id', $customer->id)
-            ->where('status', 'success')
+            ->where('status', 'verified')
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();

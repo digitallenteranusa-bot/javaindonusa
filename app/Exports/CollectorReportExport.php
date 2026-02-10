@@ -37,7 +37,7 @@ class CollectorReportExport implements FromCollection, WithHeadings, WithMapping
 
         foreach ($collectors as $collector) {
             $payments = Payment::where('collector_id', $collector->id)
-                ->where('status', 'success')
+                ->where('status', 'verified')
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->get();
 

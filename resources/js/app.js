@@ -2,11 +2,35 @@ import './bootstrap';
 import '../css/app.css';
 
 import { createApp, h } from 'vue';
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from 'ziggy-js';
 
 const appName = import.meta.env.VITE_APP_NAME || 'ISP Billing';
+
+// Handle Inertia global errors (session expired, server errors)
+router.on('invalid', (event) => {
+    // When server returns non-Inertia response (e.g. login page HTML after session expired)
+    event.preventDefault();
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/portal')) {
+        window.location.href = '/portal/login';
+    } else {
+        window.location.href = '/login';
+    }
+});
+
+router.on('exception', (event) => {
+    // Network error or server unreachable
+    event.preventDefault();
+    // Show alert instead of blank page
+    if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) {
+        // In native app, show alert with retry option
+        if (confirm('Koneksi ke server gagal. Coba lagi?')) {
+            window.location.reload();
+        }
+    }
+});
 
 // Initialize Capacitor plugins (native app only)
 const initCapacitor = async () => {

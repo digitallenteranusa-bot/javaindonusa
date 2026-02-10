@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -25,5 +27,32 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Handle common HTTP errors with Inertia error pages
+        $exceptions->respond(function (Response $response, \Throwable $exception, Request $request) {
+            $status = $response->getStatusCode();
+
+            // Session expired / CSRF mismatch - redirect to login
+            if ($status === 419) {
+                $path = $request->path();
+                if (str_starts_with($path, 'portal')) {
+                    return redirect('/portal/login')->with('error', 'Sesi telah berakhir, silakan login kembali.');
+                }
+                return redirect('/login')->with('error', 'Sesi telah berakhir, silakan login kembali.');
+            }
+
+            // Server error - show Inertia error page if available
+            if (in_array($status, [500, 503, 404, 403]) && $request->header('X-Inertia')) {
+                return inertia('Error', [
+                    'status' => $status,
+                    'message' => match ($status) {
+                        404 => 'Halaman tidak ditemukan.',
+                        403 => 'Akses ditolak.',
+                        503 => 'Server sedang maintenance.',
+                        default => 'Terjadi kesalahan pada server.',
+                    },
+                ])->toResponse($request)->setStatusCode($status);
+            }
+
+            return $response;
+        });
     })->create();

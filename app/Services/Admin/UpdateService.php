@@ -372,9 +372,48 @@ class UpdateService
                 throw new \Exception('Cannot open backup file');
             }
 
-            // Extract backup
-            $zip->extractTo(base_path());
+            // Fix permissions before extraction on Linux
+            if (PHP_OS_FAMILY === 'Linux') {
+                $basePath = base_path();
+                $webUser = posix_getpwuid(posix_geteuid())['name'] ?? 'www-data';
+                // Ensure the web user can write to application directories
+                exec("chmod -R u+w " . escapeshellarg($basePath) . "/app 2>/dev/null");
+                exec("chmod -R u+w " . escapeshellarg($basePath) . "/config 2>/dev/null");
+                exec("chmod -R u+w " . escapeshellarg($basePath) . "/database 2>/dev/null");
+                exec("chmod -R u+w " . escapeshellarg($basePath) . "/resources 2>/dev/null");
+                exec("chmod -R u+w " . escapeshellarg($basePath) . "/routes 2>/dev/null");
+            }
+
+            // Extract to temp directory first to avoid permission issues
+            $extractPath = "{$this->tempPath}/restore_" . time();
+            if (!File::isDirectory($extractPath)) {
+                File::makeDirectory($extractPath, 0755, true);
+            }
+
+            $zip->extractTo($extractPath);
             $zip->close();
+
+            // Copy files from temp to application directory
+            $errors = [];
+            $this->copyDirectorySafe($extractPath, base_path(), $errors);
+
+            // Clean up temp directory
+            File::deleteDirectory($extractPath);
+
+            if (!empty($errors)) {
+                Log::warning('Some files could not be restored', ['errors' => array_slice($errors, 0, 10)]);
+            }
+
+            // Fix permissions after restore on Linux
+            if (PHP_OS_FAMILY === 'Linux') {
+                $basePath = base_path();
+                exec("chmod -R 755 " . escapeshellarg($basePath) . "/app 2>/dev/null");
+                exec("chmod -R 755 " . escapeshellarg($basePath) . "/config 2>/dev/null");
+                exec("chmod -R 755 " . escapeshellarg($basePath) . "/database 2>/dev/null");
+                exec("chmod -R 755 " . escapeshellarg($basePath) . "/resources 2>/dev/null");
+                exec("chmod -R 755 " . escapeshellarg($basePath) . "/routes 2>/dev/null");
+                exec("chmod -R 775 " . escapeshellarg($basePath) . "/storage 2>/dev/null");
+            }
 
             // Run post-restore commands
             Artisan::call('migrate', ['--force' => true]);
@@ -391,9 +430,16 @@ class UpdateService
         } catch (\Exception $e) {
             Artisan::call('up');
 
+            $errorMsg = $e->getMessage();
+
+            // Add helpful hint for permission errors
+            if (str_contains($errorMsg, 'Permission denied') || str_contains($errorMsg, 'permission')) {
+                $errorMsg .= '. Jalankan: sudo chown -R www-data:www-data /var/www/javaindonusa && sudo chmod -R 755 /var/www/javaindonusa';
+            }
+
             return [
                 'success' => false,
-                'error' => $e->getMessage(),
+                'error' => $errorMsg,
             ];
         }
     }
@@ -735,6 +781,47 @@ class UpdateService
             }
 
             File::copy($item->getRealPath(), $target);
+        }
+    }
+
+    /**
+     * Copy directory recursively with error handling per file
+     */
+    protected function copyDirectorySafe(string $source, string $destination, array &$errors = []): void
+    {
+        if (!File::isDirectory($source)) {
+            return;
+        }
+
+        if (!File::isDirectory($destination)) {
+            File::makeDirectory($destination, 0755, true);
+        }
+
+        $items = File::allFiles($source);
+
+        foreach ($items as $item) {
+            $target = $destination . '/' . $item->getRelativePathname();
+            $targetDir = dirname($target);
+
+            try {
+                if (!File::isDirectory($targetDir)) {
+                    File::makeDirectory($targetDir, 0755, true);
+                }
+
+                // If target exists and is not writable, try to make it writable first
+                if (File::exists($target) && !is_writable($target)) {
+                    @chmod($target, 0644);
+                }
+
+                File::copy($item->getRealPath(), $target);
+            } catch (\Exception $e) {
+                $errors[] = $item->getRelativePathname() . ': ' . $e->getMessage();
+            }
+        }
+
+        if (!empty($errors)) {
+            throw new \Exception('Permission denied untuk ' . count($errors) . ' file. ' .
+                'Jalankan: sudo chown -R www-data:www-data ' . escapeshellarg($destination));
         }
     }
 

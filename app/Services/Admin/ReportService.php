@@ -19,26 +19,38 @@ class ReportService
     {
         $year = $year ?? now()->year;
 
-        $query = Invoice::whereNotIn('status', ['cancelled']);
+        // Invoice data for billing totals
+        $invoiceQuery = Invoice::whereNotIn('status', ['cancelled']);
 
         if ($month) {
-            $query->where('period_year', $year)->where('period_month', $month);
+            $invoiceQuery->where('period_year', $year)->where('period_month', $month);
         } else {
-            $query->where('period_year', $year);
+            $invoiceQuery->where('period_year', $year);
         }
 
-        $invoices = $query->get();
-
+        $invoices = $invoiceQuery->get();
         $totalBilled = $invoices->sum('total_amount');
-        $totalPaid = $invoices->sum('paid_amount');
-        $totalOutstanding = $invoices->sum('remaining_amount');
+
+        // Payment data for actual collections (same period)
+        $paymentQuery = Payment::where('status', 'verified');
+
+        if ($month) {
+            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+            $endDate = Carbon::create($year, $month, 1)->endOfMonth();
+            $paymentQuery->whereBetween('created_at', [$startDate, $endDate]);
+        } else {
+            $paymentQuery->whereYear('created_at', $year);
+        }
+
+        $totalCollected = $paymentQuery->sum('amount');
+        $totalOutstanding = max(0, $totalBilled - $totalCollected);
 
         return [
             'billable' => $totalBilled,
-            'collected' => $totalPaid,
+            'collected' => $totalCollected,
             'outstanding' => $totalOutstanding,
             'collection_rate' => $totalBilled > 0
-                ? round(($totalPaid / $totalBilled) * 100, 1)
+                ? round(($totalCollected / $totalBilled) * 100, 1)
                 : 0,
             'invoice_count' => $invoices->count(),
             'paid_count' => $invoices->where('status', 'paid')->count(),

@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\Billing\DebtIsolationService;
+use App\Services\Notification\NotificationService;
 use App\Services\PdfService;
 use App\Exports\PaymentExport;
 use Illuminate\Http\Request;
@@ -17,10 +18,12 @@ use Maatwebsite\Excel\Facades\Excel;
 class PaymentController extends Controller
 {
     protected DebtIsolationService $billingService;
+    protected NotificationService $notificationService;
 
-    public function __construct(DebtIsolationService $billingService)
+    public function __construct(DebtIsolationService $billingService, NotificationService $notificationService)
     {
         $this->billingService = $billingService;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -163,6 +166,14 @@ class PaymentController extends Controller
         );
 
         if ($result['success']) {
+            // Kirim notifikasi konfirmasi pembayaran
+            try {
+                $customer->refresh();
+                $this->notificationService->sendPaymentConfirmation($customer, $result['payment']);
+            } catch (\Exception $e) {
+                // Notifikasi gagal tidak menghalangi pembayaran
+            }
+
             return redirect()->route('admin.payments.show', $result['payment'])
                 ->with('success', 'Pembayaran berhasil dicatat');
         }

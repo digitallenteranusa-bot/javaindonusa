@@ -34,9 +34,9 @@ class ReportService
         $totalOutstanding = $invoices->sum('remaining_amount');
 
         return [
-            'total_billed' => $totalBilled,
-            'total_paid' => $totalPaid,
-            'total_outstanding' => $totalOutstanding,
+            'billable' => $totalBilled,
+            'collected' => $totalPaid,
+            'outstanding' => $totalOutstanding,
             'collection_rate' => $totalBilled > 0
                 ? round(($totalPaid / $totalBilled) * 100, 1)
                 : 0,
@@ -82,7 +82,7 @@ class ReportService
      */
     public function getPaymentByMethod(?string $startDate = null, ?string $endDate = null): array
     {
-        $query = Payment::where('status', Payment::STATUS_VERIFIED);
+        $query = Payment::where('status', 'success');
 
         if ($startDate) {
             $query->whereDate('created_at', '>=', $startDate);
@@ -93,20 +93,18 @@ class ReportService
 
         $payments = $query->get();
 
-        return [
-            'cash' => [
-                'amount' => $payments->where('payment_method', 'cash')->sum('amount'),
-                'count' => $payments->where('payment_method', 'cash')->count(),
-            ],
-            'transfer' => [
-                'amount' => $payments->where('payment_method', 'transfer')->sum('amount'),
-                'count' => $payments->where('payment_method', 'transfer')->count(),
-            ],
-            'total' => [
-                'amount' => $payments->sum('amount'),
-                'count' => $payments->count(),
-            ],
-        ];
+        $methods = [];
+        $grouped = $payments->groupBy('payment_method');
+
+        foreach ($grouped as $method => $items) {
+            $methods[] = [
+                'method' => $method,
+                'total' => $items->sum('amount'),
+                'count' => $items->count(),
+            ];
+        }
+
+        return $methods;
     }
 
     /**
@@ -132,7 +130,7 @@ class ReportService
         foreach ($collectors as $collector) {
             // Get payments collected by this collector
             $payments = Payment::where('collector_id', $collector->id)
-                ->where('status', Payment::STATUS_VERIFIED)
+                ->where('status', 'success')
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->get();
 
@@ -256,11 +254,11 @@ class ReportService
             ->get();
 
         $aging = [
-            'current' => ['count' => 0, 'amount' => 0],      // Not yet due
-            '1_30' => ['count' => 0, 'amount' => 0],         // 1-30 days overdue
-            '31_60' => ['count' => 0, 'amount' => 0],        // 31-60 days
-            '61_90' => ['count' => 0, 'amount' => 0],        // 61-90 days
-            'over_90' => ['count' => 0, 'amount' => 0],      // Over 90 days
+            ['label' => 'Belum Jatuh Tempo', 'months' => 0, 'count' => 0, 'total' => 0],
+            ['label' => '1-30 Hari', 'months' => 1, 'count' => 0, 'total' => 0],
+            ['label' => '31-60 Hari', 'months' => 2, 'count' => 0, 'total' => 0],
+            ['label' => '61-90 Hari', 'months' => 3, 'count' => 0, 'total' => 0],
+            ['label' => '> 90 Hari', 'months' => 4, 'count' => 0, 'total' => 0],
         ];
 
         foreach ($customers as $customer) {
@@ -271,20 +269,20 @@ class ReportService
             $daysOverdue = $today->diffInDays($oldestInvoice->due_date, false);
 
             if ($daysOverdue <= 0) {
-                $aging['current']['count']++;
-                $aging['current']['amount'] += $customer->total_debt;
+                $aging[0]['count']++;
+                $aging[0]['total'] += $customer->total_debt;
             } elseif ($daysOverdue <= 30) {
-                $aging['1_30']['count']++;
-                $aging['1_30']['amount'] += $customer->total_debt;
+                $aging[1]['count']++;
+                $aging[1]['total'] += $customer->total_debt;
             } elseif ($daysOverdue <= 60) {
-                $aging['31_60']['count']++;
-                $aging['31_60']['amount'] += $customer->total_debt;
+                $aging[2]['count']++;
+                $aging[2]['total'] += $customer->total_debt;
             } elseif ($daysOverdue <= 90) {
-                $aging['61_90']['count']++;
-                $aging['61_90']['amount'] += $customer->total_debt;
+                $aging[3]['count']++;
+                $aging[3]['total'] += $customer->total_debt;
             } else {
-                $aging['over_90']['count']++;
-                $aging['over_90']['amount'] += $customer->total_debt;
+                $aging[4]['count']++;
+                $aging[4]['total'] += $customer->total_debt;
             }
         }
 
@@ -303,7 +301,7 @@ class ReportService
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
         $daysInMonth = $endDate->day;
 
-        $payments = Payment::where('status', Payment::STATUS_VERIFIED)
+        $payments = Payment::where('status', 'success')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->select(
                 DB::raw('DAY(created_at) as day'),
@@ -332,6 +330,9 @@ class ReportService
     {
         return Customer::where('total_debt', '>', 0)
             ->with(['area:id,name', 'package:id,name'])
+            ->withCount(['invoices as unpaid_months' => function ($q) {
+                $q->whereIn('status', ['pending', 'partial', 'overdue']);
+            }])
             ->orderByDesc('total_debt')
             ->limit($limit)
             ->get()
@@ -339,9 +340,10 @@ class ReportService
                 'id' => $c->id,
                 'customer_id' => $c->customer_id,
                 'name' => $c->name,
-                'area' => $c->area?->name,
+                'area' => $c->area ? ['name' => $c->area->name] : null,
                 'package' => $c->package?->name,
                 'total_debt' => $c->total_debt,
+                'unpaid_months' => $c->unpaid_months,
                 'status' => $c->status,
             ])
             ->toArray();

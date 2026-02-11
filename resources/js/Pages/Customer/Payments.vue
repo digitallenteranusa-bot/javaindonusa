@@ -58,6 +58,17 @@ const getMethodBadge = (method) => {
             </div>
         </div>
 
+        <!-- Saldo Kredit -->
+        <div v-if="customer.credit_balance > 0" class="px-4 pt-4">
+            <div class="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-green-700">Saldo Kredit Anda</p>
+                    <p class="text-xs text-green-600 mt-1">Otomatis digunakan untuk tagihan berikutnya</p>
+                </div>
+                <p class="text-xl font-bold text-green-600">{{ formatCurrency(customer.credit_balance) }}</p>
+            </div>
+        </div>
+
         <!-- Payment List -->
         <div class="px-4 py-4">
             <div class="space-y-3">

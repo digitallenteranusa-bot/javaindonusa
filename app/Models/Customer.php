@@ -37,6 +37,7 @@ class Customer extends Model
         'onu_serial',
         'status',
         'total_debt',
+        'credit_balance',
         'join_date',
         'isolation_date',
         'isolation_reason',
@@ -64,6 +65,7 @@ class Customer extends Model
             'termination_date' => 'date',
             'billing_date' => 'integer',
             'total_debt' => 'decimal:2',
+            'credit_balance' => 'decimal:2',
             'rapel_amount' => 'decimal:2',
             'rapel_months' => 'integer',
             'is_rapel' => 'boolean',
@@ -207,6 +209,11 @@ class Customer extends Model
     public function scopeHasDebt($query)
     {
         return $query->where('total_debt', '>', 0);
+    }
+
+    public function scopeHasCredit($query)
+    {
+        return $query->where('credit_balance', '>', 0);
     }
 
     public function scopeInArea($query, int $areaId)

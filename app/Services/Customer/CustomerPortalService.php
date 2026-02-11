@@ -184,6 +184,7 @@ class CustomerPortalService
                 'price' => $customer->package->price,
             ] : null,
             'status' => $customer->status,
+            'credit_balance' => $customer->credit_balance,
             'join_date' => Carbon::parse($customer->join_date)->format('d F Y'),
         ];
     }

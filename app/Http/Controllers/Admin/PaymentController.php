@@ -135,9 +135,12 @@ class PaymentController extends Controller
     {
         return Inertia::render('Admin/Payment/Form', [
             'customers' => Customer::whereIn('status', ['active', 'isolated'])
-                ->where('total_debt', '>', 0)
+                ->where(function ($q) {
+                    $q->where('total_debt', '>', 0)
+                      ->orWhere('credit_balance', '>', 0);
+                })
                 ->with('package:id,name,price')
-                ->get(['id', 'customer_id', 'name', 'phone', 'total_debt']),
+                ->get(['id', 'customer_id', 'name', 'phone', 'total_debt', 'credit_balance']),
         ]);
     }
 
@@ -201,13 +204,21 @@ class PaymentController extends Controller
         // 3. Update payment status
         // For now, just mark as cancelled
 
+        $customer = $payment->customer;
+
+        // Reverse kredit yang mungkin ditambahkan dari pembayaran ini
+        if ($payment->allocated_to_debt > 0 && $customer->credit_balance > 0) {
+            $creditToReverse = min($payment->allocated_to_debt, $customer->credit_balance);
+            $customer->decrement('credit_balance', $creditToReverse);
+        }
+
         $payment->update([
             'status' => 'cancelled',
             'notes' => ($payment->notes ?? '') . "\nDibatalkan: " . $validated['reason'],
         ]);
 
         // Recalculate customer debt
-        $payment->customer->recalculateTotalDebt();
+        $customer->recalculateTotalDebt();
 
         return back()->with('success', 'Pembayaran berhasil dibatalkan');
     }

@@ -43,6 +43,8 @@ class DebtHistory extends Model
     const TYPE_DISCOUNT = 'discount';
     const TYPE_LATE_FEE = 'late_fee';
     const TYPE_WRITEOFF = 'writeoff';
+    const TYPE_CREDIT_ADDED = 'credit_added';
+    const TYPE_CREDIT_USED = 'credit_used';
 
     // ================================================================
     // RELATIONSHIPS
@@ -267,6 +269,8 @@ class DebtHistory extends Model
             self::TYPE_DISCOUNT => 'Diskon',
             self::TYPE_LATE_FEE => 'Denda',
             self::TYPE_WRITEOFF => 'Write-off',
+            self::TYPE_CREDIT_ADDED => 'Kredit Ditambahkan',
+            self::TYPE_CREDIT_USED => 'Kredit Digunakan',
             default => $this->type,
         };
     }
@@ -276,7 +280,7 @@ class DebtHistory extends Model
      */
     public function getFormattedAmountAttribute(): string
     {
-        $prefix = in_array($this->type, [self::TYPE_PAYMENT, self::TYPE_DISCOUNT, self::TYPE_ADJUSTMENT_SUBTRACT, self::TYPE_WRITEOFF])
+        $prefix = in_array($this->type, [self::TYPE_PAYMENT, self::TYPE_DISCOUNT, self::TYPE_ADJUSTMENT_SUBTRACT, self::TYPE_WRITEOFF, self::TYPE_CREDIT_USED])
             ? '-'
             : '+';
 
@@ -305,6 +309,7 @@ class DebtHistory extends Model
             self::TYPE_ADJUSTMENT_SUBTRACT,
             self::TYPE_DISCOUNT,
             self::TYPE_WRITEOFF,
+            self::TYPE_CREDIT_USED,
         ]);
     }
 }

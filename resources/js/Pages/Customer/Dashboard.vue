@@ -119,6 +119,13 @@ const copyToClipboard = (text) => {
                         </span>
                     </div>
 
+                    <div v-if="(customer?.credit_balance ?? 0) > 0" class="flex justify-between items-center">
+                        <span class="text-gray-600">Saldo Kredit</span>
+                        <span class="font-bold text-lg text-green-600">
+                            {{ formatCurrency(customer?.credit_balance ?? 0) }}
+                        </span>
+                    </div>
+
                     <div class="flex justify-between items-center">
                         <span class="text-gray-600">Bulan Belum Bayar</span>
                         <span class="font-semibold">{{ billing?.unpaid_months ?? 0 }} bulan</span>

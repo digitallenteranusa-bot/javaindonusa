@@ -146,8 +146,8 @@ const closeImagePreview = () => {
                             <span class="font-medium">{{ formatCurrency(payment.allocated_to_invoice) }}</span>
                         </div>
                         <div v-if="payment.allocated_to_debt > 0" class="flex justify-between">
-                            <span class="text-gray-600">Dialokasikan ke Hutang</span>
-                            <span class="font-medium">{{ formatCurrency(payment.allocated_to_debt) }}</span>
+                            <span class="text-gray-600">Dialokasikan ke Kredit</span>
+                            <span class="font-medium text-green-600">{{ formatCurrency(payment.allocated_to_debt) }}</span>
                         </div>
                     </div>
 

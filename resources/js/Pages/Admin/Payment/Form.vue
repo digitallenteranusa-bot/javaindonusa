@@ -146,6 +146,10 @@ const submit = () => {
                         <div class="text-right">
                             <p class="text-sm text-blue-700">Total Hutang</p>
                             <p class="text-xl font-bold text-red-600">{{ formatCurrency(selectedCustomer.total_debt) }}</p>
+                            <div v-if="selectedCustomer.credit_balance > 0" class="mt-1">
+                                <p class="text-sm text-blue-700">Saldo Kredit</p>
+                                <p class="text-lg font-bold text-green-600">{{ formatCurrency(selectedCustomer.credit_balance) }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -276,6 +280,15 @@ const submit = () => {
                         <span class="font-bold text-green-900">
                             {{ formatCurrency(Math.max(0, selectedCustomer.total_debt - form.amount)) }}
                         </span>
+                    </div>
+                    <div v-if="form.amount > selectedCustomer.total_debt" class="flex justify-between text-base mt-1">
+                        <span class="text-green-700 font-medium">Kredit Baru</span>
+                        <span class="font-bold text-green-600">
+                            + {{ formatCurrency(form.amount - selectedCustomer.total_debt) }}
+                        </span>
+                    </div>
+                    <div v-if="form.amount > selectedCustomer.total_debt" class="mt-2 p-2 bg-green-100 rounded text-xs text-green-800">
+                        Kelebihan bayar akan disimpan sebagai saldo kredit dan otomatis digunakan untuk tagihan berikutnya.
                     </div>
                 </div>
             </div>

@@ -151,10 +151,22 @@ class DebtIsolationService
                 "Tagihan {$package->name} periode {$periodMonth}/{$periodYear}"
             );
 
+            // Auto-apply kredit jika pelanggan punya saldo kredit
+            $creditUsed = 0;
+            $customer->refresh();
+            if ($customer->credit_balance > 0) {
+                $creditToApply = min($customer->credit_balance, $invoice->remaining_amount);
+                if ($creditToApply > 0) {
+                    $this->debtService->useCredit($customer, $invoice, $creditToApply);
+                    $creditUsed = $creditToApply;
+                }
+            }
+
             return [
                 'added' => true,
                 'invoice_id' => $invoice->id,
                 'amount' => $amount,
+                'credit_used' => $creditUsed,
             ];
         });
     }
@@ -263,11 +275,16 @@ class DebtIsolationService
 
             $customer->refresh();
 
+            // Hitung kredit yang ditambahkan (jika bayar lebih dari total hutang)
+            $creditAdded = max(0, $amount - $previousDebt);
+
             return [
                 'success' => true,
                 'payment' => $payment,
                 'previous_debt' => $previousDebt,
                 'new_debt' => $customer->total_debt,
+                'credit_added' => $creditAdded,
+                'credit_balance' => $customer->credit_balance,
                 'allocations' => $allocations,
                 'access_opened' => $accessOpened,
             ];

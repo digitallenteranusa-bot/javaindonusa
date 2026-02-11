@@ -290,6 +290,12 @@ const recalculateDebt = () => {
                         <p class="text-3xl font-bold text-red-600">
                             {{ formatCurrency(customer.total_debt) }}
                         </p>
+                        <div v-if="customer.credit_balance > 0" class="mt-2">
+                            <p class="text-gray-500 text-sm">Saldo Kredit</p>
+                            <p class="text-xl font-bold text-green-600">
+                                {{ formatCurrency(customer.credit_balance) }}
+                            </p>
+                        </div>
                     </div>
 
                     <div class="space-y-2 text-sm">

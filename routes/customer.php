@@ -20,6 +20,9 @@ Route::prefix('portal')->name('customer.')->group(function () {
         ->middleware('throttle:5,1')
         ->name('request-otp');
 
+    // Halaman input OTP (GET)
+    Route::get('/verify-otp', [PortalController::class, 'showVerifyOTP'])->name('show-verify-otp');
+
     // Verify OTP: max 10 attempts per minute per IP
     Route::post('/verify-otp', [PortalController::class, 'verifyOTP'])
         ->middleware('throttle:10,1')

@@ -46,10 +46,33 @@ class PortalController extends Controller
             return back()->with('error', $result['message']);
         }
 
+        // Simpan data di session untuk halaman verify OTP
+        session([
+            'otp_phone' => $request->phone,
+            'otp_phone_masked' => $result['phone_masked'],
+        ]);
+
+        return redirect()->route('customer.show-verify-otp')
+            ->with('success', $result['message']);
+    }
+
+    /**
+     * Tampilkan halaman input OTP
+     */
+    public function showVerifyOTP()
+    {
+        $phone = session('otp_phone');
+        $phoneMasked = session('otp_phone_masked');
+
+        // Jika tidak ada data OTP di session, kembali ke login
+        if (!$phone) {
+            return redirect()->route('customer.login')
+                ->with('error', 'Silakan masukkan nomor HP terlebih dahulu');
+        }
+
         return Inertia::render('Customer/VerifyOTP', [
-            'phone' => $request->phone,
-            'phone_masked' => $result['phone_masked'],
-            'message' => $result['message'],
+            'phone' => $phone,
+            'phone_masked' => $phoneMasked,
         ]);
     }
 

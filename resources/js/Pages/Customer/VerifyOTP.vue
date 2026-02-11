@@ -5,7 +5,6 @@ import { Head, useForm, usePage } from '@inertiajs/vue3'
 const props = defineProps({
     phone: String,
     phone_masked: String,
-    message: String,
 })
 
 const page = usePage()
@@ -140,9 +139,9 @@ onUnmounted(() => {
         <!-- OTP Form -->
         <div class="bg-white rounded-t-3xl px-6 py-8">
             <!-- Success Message -->
-            <div v-if="message" class="mb-5 p-3 bg-green-50 border border-green-200 rounded-xl">
+            <div v-if="$page.props.flash?.success" class="mb-5 p-3 bg-green-50 border border-green-200 rounded-xl">
                 <p class="text-green-700 text-sm text-center">
-                    {{ message }}
+                    {{ $page.props.flash.success }}
                 </p>
             </div>
 

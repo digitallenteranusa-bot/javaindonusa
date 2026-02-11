@@ -19,6 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
 
+        // Redirect authenticated users yang akses halaman guest (login)
+        $middleware->redirectUsersTo(fn (Request $request) => route('admin.dashboard'));
+
+        // Redirect guests yang akses halaman protected
+        $middleware->redirectGuestsTo(fn (Request $request) => route('login'));
+
         // Alias middleware
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
@@ -33,6 +39,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // Session expired / CSRF mismatch - redirect to login
             if ($status === 419) {
+                // Regenerate session & CSRF token untuk menghindari redirect loop
+                if ($request->hasSession()) {
+                    $request->session()->regenerate();
+                    $request->session()->regenerateToken();
+                }
+
                 $path = $request->path();
                 if (str_starts_with($path, 'portal')) {
                     return redirect('/portal/login')->with('error', 'Sesi telah berakhir, silakan login kembali.');

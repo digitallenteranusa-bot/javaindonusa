@@ -20,7 +20,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 });
 
-Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+// Logout tanpa middleware auth - agar tidak redirect loop saat session expired
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // Include other route files
 require __DIR__.'/admin.php';

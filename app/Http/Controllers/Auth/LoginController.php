@@ -115,6 +115,9 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
+        // Clear intended URL agar tidak redirect ke halaman sebelumnya
+        $request->session()->forget('url.intended');
+
         return redirect()->route('login');
     }
 

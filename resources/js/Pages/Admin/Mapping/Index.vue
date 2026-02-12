@@ -305,9 +305,10 @@ const renderCableLines = () => {
             [[odp.lat, odp.lng], [customer.lat, customer.lng]],
             {
                 color: statusColor,
-                weight: 2,
-                opacity: 0.6,
-                dashArray: '6, 4',
+                weight: 2.5,
+                opacity: 0.7,
+                dashArray: '8, 6',
+                className: 'cable-line-animated',
             }
         )
 
@@ -568,5 +569,13 @@ const zoomToAll = () => {
 }
 .leaflet-popup-content {
     margin: 12px;
+}
+.cable-line-animated {
+    animation: cable-flow 1s linear infinite;
+}
+@keyframes cable-flow {
+    to {
+        stroke-dashoffset: -14;
+    }
 }
 </style>

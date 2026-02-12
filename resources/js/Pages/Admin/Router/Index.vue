@@ -101,7 +101,9 @@ const isOnline = (rt) => {
                             ]"
                         ></div>
                         <div>
-                            <h3 class="font-semibold">{{ rt.name }}</h3>
+                            <Link :href="`/admin/routers/${rt.id}`" class="font-semibold hover:text-blue-600 hover:underline">
+                                {{ rt.name }}
+                            </Link>
                             <p class="text-xs text-gray-500">{{ rt.identity || 'Unknown' }}</p>
                         </div>
                     </div>
@@ -176,6 +178,12 @@ const isOnline = (rt) => {
 
                 <!-- Footer -->
                 <div class="px-4 py-3 bg-gray-50 border-t flex gap-2">
+                    <Link
+                        :href="`/admin/routers/${rt.id}`"
+                        class="flex-1 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 text-xs font-medium text-center"
+                    >
+                        Monitor
+                    </Link>
                     <button
                         @click="testConnection(rt)"
                         class="flex-1 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-xs font-medium"

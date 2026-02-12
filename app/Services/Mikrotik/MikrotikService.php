@@ -151,6 +151,16 @@ class MikrotikService
     }
 
     /**
+     * Get all interfaces
+     */
+    public function getInterfaces(): array
+    {
+        $this->ensureConnected();
+
+        return $this->client->command('/interface/print');
+    }
+
+    /**
      * Update router status in database
      */
     public function updateRouterStatus(Router $router): void

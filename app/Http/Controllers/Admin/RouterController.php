@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Router;
 use App\Services\Mikrotik\MikrotikService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -82,16 +83,96 @@ class RouterController extends Controller
     }
 
     /**
-     * Show router detail
+     * Show router detail / monitoring page
      */
     public function show(Router $router)
     {
         $router->loadCount(['customers']);
-        $router->load(['customers' => fn($q) => $q->limit(10)->orderBy('created_at', 'desc')]);
+
+        $routerInfo = null;
+        $connectionError = null;
+
+        try {
+            $routerInfo = $this->mikrotikService->withRouter($router, function ($service) {
+                return $service->getRouterInfo();
+            });
+        } catch (\Exception $e) {
+            $connectionError = $e->getMessage();
+        }
 
         return Inertia::render('Admin/Router/Show', [
             'router' => $router,
+            'routerInfo' => $routerInfo,
+            'connectionError' => $connectionError,
         ]);
+    }
+
+    /**
+     * API: Get router resources (CPU, memory, uptime)
+     */
+    public function apiResources(Router $router): JsonResponse
+    {
+        try {
+            $data = $this->mikrotikService->withRouter($router, function ($service) {
+                return $service->getRouterInfo();
+            });
+
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * API: Get router interfaces
+     */
+    public function apiInterfaces(Router $router): JsonResponse
+    {
+        try {
+            $data = $this->mikrotikService->withRouter($router, function ($service) {
+                return $service->getInterfaces();
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'timestamp' => now()->timestamp,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * API: Get simple queues
+     */
+    public function apiQueues(Router $router): JsonResponse
+    {
+        try {
+            $data = $this->mikrotikService->withRouter($router, function ($service) {
+                return $service->getQueues();
+            });
+
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * API: Get active PPPoE connections
+     */
+    public function apiActiveConnections(Router $router): JsonResponse
+    {
+        try {
+            $data = $this->mikrotikService->withRouter($router, function ($service) {
+                return $service->getActiveConnections();
+            });
+
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
     }
 
     /**

@@ -133,6 +133,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:routers.view'])->group(function () {
         Route::get('/routers', [RouterController::class, 'index'])->name('routers.index');
         Route::get('/routers/{router}', [RouterController::class, 'show'])->name('routers.show');
+        Route::get('/routers/{router}/api/resources', [RouterController::class, 'apiResources'])
+            ->name('routers.api.resources');
+        Route::get('/routers/{router}/api/interfaces', [RouterController::class, 'apiInterfaces'])
+            ->name('routers.api.interfaces');
+        Route::get('/routers/{router}/api/queues', [RouterController::class, 'apiQueues'])
+            ->name('routers.api.queues');
+        Route::get('/routers/{router}/api/active-connections', [RouterController::class, 'apiActiveConnections'])
+            ->name('routers.api.active-connections');
         Route::post('/routers/{router}/test-connection', [RouterController::class, 'testConnection'])
             ->name('routers.test-connection');
         Route::post('/routers/{router}/sync-info', [RouterController::class, 'syncInfo'])

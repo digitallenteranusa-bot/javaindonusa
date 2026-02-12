@@ -27,17 +27,6 @@ class ExpenseService
         ?string $receiptPhoto = null,
         ?Carbon $expenseDate = null
     ): Expense {
-        // Validasi batas harian
-        $dailyLimit = Setting::getValue('expense', 'daily_limit', 100000);
-        $todayTotal = $this->getTodayExpenseTotal($collector);
-
-        if (($todayTotal + $amount) > $dailyLimit) {
-            throw new \Exception(
-                "Melebihi batas pengeluaran harian. Sisa: Rp " .
-                number_format($dailyLimit - $todayTotal, 0, ',', '.')
-            );
-        }
-
         return Expense::create([
             'user_id' => $collector->id,
             'amount' => $amount,

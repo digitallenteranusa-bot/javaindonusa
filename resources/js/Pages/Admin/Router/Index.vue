@@ -48,12 +48,9 @@ const formatDate = (date) => {
     return new Date(date).toLocaleString('id-ID')
 }
 
-// Check if online (connected within 5 minutes)
+// Check if online
 const isOnline = (rt) => {
-    if (!rt.last_connected_at) return false
-    const lastConnect = new Date(rt.last_connected_at)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
-    return lastConnect > fiveMinutesAgo
+    return rt.is_active
 }
 </script>
 

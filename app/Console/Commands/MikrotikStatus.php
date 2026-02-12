@@ -110,6 +110,18 @@ class MikrotikStatus extends Command
                 ? round((($info['total_memory'] - $info['free_memory']) / $info['total_memory']) * 100)
                 : 0;
 
+            // Update status di database
+            $router->update([
+                'identity' => $info['identity'],
+                'version' => $info['version'],
+                'uptime' => $info['uptime'],
+                'cpu_load' => $info['cpu_load'],
+                'memory_usage' => $memoryUsage,
+                'model' => $info['model'],
+                'serial_number' => $info['serial'],
+                'last_connected_at' => now(),
+            ]);
+
             return [
                 $router->name,
                 $router->ip_address,

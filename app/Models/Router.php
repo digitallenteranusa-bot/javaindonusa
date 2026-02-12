@@ -110,14 +110,10 @@ class Router extends Model
     }
 
     /**
-     * Check if router is online (connected within last 5 minutes)
+     * Check if router is online
      */
     public function isOnline(): bool
     {
-        if (!$this->last_connected_at) {
-            return false;
-        }
-
-        return $this->last_connected_at->gt(now()->subMinutes(5));
+        return $this->is_active;
     }
 }

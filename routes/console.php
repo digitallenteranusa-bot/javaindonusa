@@ -65,6 +65,16 @@ Schedule::command('billing:send-overdue')
     ->appendOutputTo(storage_path('logs/scheduler.log'));
 
 // ==========================================================================
+// MIKROTIK TASKS
+// ==========================================================================
+
+// Sync Mikrotik router status every 5 minutes
+Schedule::command('mikrotik:status')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler.log'));
+
+// ==========================================================================
 // GENIEACS TASKS (TR-069)
 // ==========================================================================
 

@@ -14,9 +14,11 @@ const map = ref(null)
 const mapContainer = ref(null)
 const markers = ref({ customers: [], odps: [] })
 const markerLayers = ref({ customers: null, odps: null })
+let cableLinesLayer = null
 
 const showCustomers = ref(true)
 const showOdps = ref(true)
+const showCableLines = ref(true)
 const selectedArea = ref(props.filters.area_id || '')
 const selectedStatus = ref(props.filters.status || '')
 const loading = ref(false)
@@ -98,6 +100,10 @@ const initMap = () => {
 
     map.value.addLayer(markerLayers.value.customers)
     map.value.addLayer(markerLayers.value.odps)
+
+    // Cable lines layer
+    cableLinesLayer = L.layerGroup()
+    map.value.addLayer(cableLinesLayer)
 }
 
 const switchMapStyle = (style) => {
@@ -178,6 +184,7 @@ const loadData = async () => {
         loadCustomers(),
         loadOdps(),
     ])
+    renderCableLines()
     loading.value = false
 }
 
@@ -274,8 +281,51 @@ const renderOdpMarkers = () => {
     })
 }
 
+const renderCableLines = () => {
+    if (!cableLinesLayer) return
+    cableLinesLayer.clearLayers()
+
+    if (!showCableLines.value) return
+
+    // Buat lookup ODP berdasarkan id
+    const odpMap = {}
+    markers.value.odps.forEach(odp => {
+        odpMap[odp.id] = odp
+    })
+
+    // Gambar garis dari setiap pelanggan ke ODP-nya
+    markers.value.customers.forEach(customer => {
+        if (!customer.odp) return
+        const odp = odpMap[customer.odp.id]
+        if (!odp) return
+
+        const statusColor = customerStatuses[customer.status]?.color || '#6b7280'
+
+        const line = L.polyline(
+            [[odp.lat, odp.lng], [customer.lat, customer.lng]],
+            {
+                color: statusColor,
+                weight: 2,
+                opacity: 0.6,
+                dashArray: '6, 4',
+            }
+        )
+
+        line.bindPopup(`
+            <div class="text-sm">
+                <p class="font-semibold">Jalur Kabel</p>
+                <p>ODP: ${odp.code} → ${customer.name}</p>
+                <p class="text-gray-500">${customer.customer_id}</p>
+            </div>
+        `)
+
+        cableLinesLayer.addLayer(line)
+    })
+}
+
 watch(showCustomers, () => renderCustomerMarkers())
 watch(showOdps, () => renderOdpMarkers())
+watch(showCableLines, () => renderCableLines())
 watch([selectedArea, selectedStatus], () => loadData())
 
 const zoomToAll = () => {
@@ -428,6 +478,13 @@ const zoomToAll = () => {
                                     ODP ({{ markers.odps.length }})
                                 </span>
                             </label>
+                            <label class="flex items-center gap-2">
+                                <input v-model="showCableLines" type="checkbox" class="rounded text-blue-600">
+                                <span class="flex items-center gap-2">
+                                    <span class="w-4 h-0 border-t-2 border-dashed border-orange-500"></span>
+                                    Jalur Kabel
+                                </span>
+                            </label>
                         </div>
                     </div>
 
@@ -483,6 +540,11 @@ const zoomToAll = () => {
                             <div class="flex items-center gap-2">
                                 <span class="w-4 h-4 bg-red-500 rounded"></span>
                                 <span>Penuh (&gt;90%)</span>
+                            </div>
+                            <p class="font-medium text-gray-600 mt-3">Jalur Kabel:</p>
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-0 border-t-2 border-dashed border-gray-500"></span>
+                                <span>ODP → Pelanggan</span>
                             </div>
                         </div>
                     </div>

@@ -337,6 +337,114 @@ class UpdateService
     }
 
     /**
+     * Run git pull + build update on server
+     */
+    public function gitPullUpdate(): array
+    {
+        try {
+            $basePath = base_path();
+            $steps = [];
+            $hasError = false;
+
+            // Put application in maintenance mode
+            Artisan::call('down', ['--secret' => 'update-in-progress']);
+
+            // Step 1: git pull
+            $output = [];
+            $returnCode = 0;
+            exec("cd " . escapeshellarg($basePath) . " && git pull origin main 2>&1", $output, $returnCode);
+            $stepOutput = implode("\n", $output);
+            $steps[] = ['step' => 'git pull origin main', 'output' => $stepOutput, 'success' => $returnCode === 0];
+            if ($returnCode !== 0) {
+                $hasError = true;
+            }
+
+            // Step 2: composer install (only if git pull succeeded)
+            if (!$hasError) {
+                $output = [];
+                exec("cd " . escapeshellarg($basePath) . " && composer install --no-dev --optimize-autoloader 2>&1", $output, $returnCode);
+                $stepOutput = implode("\n", $output);
+                $steps[] = ['step' => 'composer install', 'output' => $stepOutput, 'success' => $returnCode === 0];
+                if ($returnCode !== 0) {
+                    $hasError = true;
+                }
+            }
+
+            // Step 3: npm run build
+            if (!$hasError) {
+                $output = [];
+                exec("cd " . escapeshellarg($basePath) . " && npm run build 2>&1", $output, $returnCode);
+                $stepOutput = implode("\n", $output);
+                $steps[] = ['step' => 'npm run build', 'output' => $stepOutput, 'success' => $returnCode === 0];
+                if ($returnCode !== 0) {
+                    $hasError = true;
+                }
+            }
+
+            // Step 4: migrate
+            if (!$hasError) {
+                $output = [];
+                exec("cd " . escapeshellarg($basePath) . " && php artisan migrate --force 2>&1", $output, $returnCode);
+                $stepOutput = implode("\n", $output);
+                $steps[] = ['step' => 'php artisan migrate', 'output' => $stepOutput, 'success' => $returnCode === 0];
+                if ($returnCode !== 0) {
+                    $hasError = true;
+                }
+            }
+
+            // Step 5: optimize clear
+            $output = [];
+            exec("cd " . escapeshellarg($basePath) . " && php artisan optimize:clear 2>&1", $output, $returnCode);
+            $stepOutput = implode("\n", $output);
+            $steps[] = ['step' => 'php artisan optimize:clear', 'output' => $stepOutput, 'success' => $returnCode === 0];
+
+            // Bring application back up
+            Artisan::call('up');
+
+            // Build combined log
+            $log = '';
+            foreach ($steps as $s) {
+                $status = $s['success'] ? 'OK' : 'GAGAL';
+                $log .= "=== [{$status}] {$s['step']} ===\n{$s['output']}\n\n";
+            }
+
+            if ($hasError) {
+                return [
+                    'success' => false,
+                    'output' => $log,
+                    'error' => 'Update gagal pada salah satu langkah. Lihat log untuk detail.',
+                ];
+            }
+
+            // Update version info
+            $newVersion = config('app.version', '1.0.0');
+            Setting::updateOrCreate(
+                ['group' => 'system', 'key' => 'last_update'],
+                ['value' => json_encode([
+                    'version' => $newVersion,
+                    'installed_at' => now()->toDateTimeString(),
+                    'method' => 'git_pull',
+                ])]
+            );
+
+            return [
+                'success' => true,
+                'output' => $log,
+                'message' => 'Update berhasil via git pull',
+            ];
+        } catch (\Exception $e) {
+            Artisan::call('up');
+            Log::error('Git pull update failed', ['error' => $e->getMessage()]);
+
+            return [
+                'success' => false,
+                'output' => '',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Run post-update commands
      */
     protected function runPostUpdateCommands(): void

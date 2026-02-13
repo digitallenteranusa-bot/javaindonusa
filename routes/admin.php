@@ -370,8 +370,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('system.backup');
         Route::post('/system/install-update', [SettingsController::class, 'installUpdate'])
             ->name('system.install-update');
-        Route::post('/system/download-install', [SettingsController::class, 'downloadAndInstall'])
-            ->name('system.download-install');
+        Route::post('/system/git-pull-update', [SettingsController::class, 'gitPullUpdate'])
+            ->name('system.git-pull-update');
         Route::post('/system/upload-backup', [SettingsController::class, 'uploadBackup'])
             ->name('system.upload-backup');
         Route::post('/system/restore-backup', [SettingsController::class, 'restoreBackup'])

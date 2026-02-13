@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Head, useForm, router } from '@inertiajs/vue3'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 const props = defineProps({
@@ -13,7 +13,6 @@ const props = defineProps({
 const checkingUpdate = ref(false)
 const clearingCache = ref(false)
 const creatingBackup = ref(false)
-const installingUpdate = ref(false)
 const loadingBackups = ref(false)
 const backups = ref([])
 const showBackupModal = ref(false)
@@ -32,9 +31,11 @@ const uploadingDbBackup = ref(false)
 const dbBackupFile = ref(null)
 const dbBackupFileInput = ref(null)
 
+// Git pull update
+const pullingUpdate = ref(false)
+const updateLog = ref('')
+
 // File upload
-const updateFile = ref(null)
-const fileInput = ref(null)
 const backupFile = ref(null)
 const backupFileInput = ref(null)
 
@@ -114,40 +115,25 @@ const loadBackups = async () => {
     }
 }
 
-const handleFileSelect = (event) => {
-    const file = event.target.files[0]
-    if (file) {
-        if (file.type !== 'application/zip' && !file.name.endsWith('.zip')) {
-            alert('File harus berformat ZIP')
-            return
-        }
-        updateFile.value = file
-    }
-}
+const page = usePage()
 
-const installUpdate = () => {
-    if (!updateFile.value) {
-        alert('Pilih file update terlebih dahulu')
+const gitPullUpdate = () => {
+    if (!confirm('Apakah Anda yakin ingin menjalankan update? Proses ini akan menjalankan git pull, composer install, npm build, dan migrate.')) {
         return
     }
 
-    if (!confirm('Apakah Anda yakin ingin menginstall update? Backup akan dibuat secara otomatis sebelum update.')) {
-        return
-    }
+    pullingUpdate.value = true
+    updateLog.value = ''
 
-    installingUpdate.value = true
-
-    const formData = new FormData()
-    formData.append('update_file', updateFile.value)
-
-    router.post('/admin/system/install-update', formData, {
-        forceFormData: true,
-        onFinish: () => {
-            installingUpdate.value = false
-            updateFile.value = null
-            if (fileInput.value) {
-                fileInput.value.value = ''
+    router.post('/admin/system/git-pull-update', {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            if (page.props.flash?.updateLog) {
+                updateLog.value = page.props.flash.updateLog
             }
+        },
+        onFinish: () => {
+            pullingUpdate.value = false
         }
     })
 }
@@ -475,46 +461,54 @@ const formatNumber = (num) => {
                 </h3>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Upload Update -->
+                    <!-- Git Pull Update -->
                     <div class="border border-gray-200 rounded-lg p-4">
-                        <h4 class="font-medium text-gray-900 mb-3">Install Update dari File</h4>
-                        <p class="text-sm text-gray-500 mb-4">Upload file update (.zip) untuk mengupdate aplikasi</p>
+                        <h4 class="font-medium text-gray-900 mb-3">Update Aplikasi</h4>
+                        <p class="text-sm text-gray-500 mb-4">Update langsung dari repository via git pull + build</p>
 
                         <div class="space-y-3">
-                            <div class="flex items-center gap-3">
-                                <input
-                                    ref="fileInput"
-                                    type="file"
-                                    accept=".zip"
-                                    @change="handleFileSelect"
-                                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                />
+                            <!-- Status: ada update / sudah terbaru -->
+                            <div v-if="updateInfo.update_available" class="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-medium text-green-800">Update tersedia: v{{ updateInfo.latest_version }}</p>
+                                    <p class="text-xs text-green-600">Versi saat ini: v{{ appVersion }}</p>
+                                </div>
                             </div>
-                            <div v-if="updateFile" class="flex items-center gap-2 text-sm text-green-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div v-else class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                {{ updateFile.name }} ({{ (updateFile.size / 1024 / 1024).toFixed(2) }} MB)
+                                <p class="text-sm text-gray-600">Aplikasi sudah versi terbaru (v{{ appVersion }})</p>
                             </div>
+
                             <button
-                                @click="installUpdate"
-                                :disabled="!updateFile || installingUpdate"
+                                @click="gitPullUpdate"
+                                :disabled="pullingUpdate"
                                 class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                <svg v-if="installingUpdate" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                <svg v-if="pullingUpdate" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                 </svg>
-                                {{ installingUpdate ? 'Menginstall...' : 'Install Update' }}
+                                {{ pullingUpdate ? 'Sedang mengupdate...' : 'Update Sekarang' }}
                             </button>
+                        </div>
+
+                        <!-- Update Log Output -->
+                        <div v-if="updateLog" class="mt-4">
+                            <h5 class="text-sm font-medium text-gray-700 mb-2">Log Update:</h5>
+                            <pre class="p-3 bg-gray-900 text-green-400 text-xs rounded-lg overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap">{{ updateLog }}</pre>
                         </div>
 
                         <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
                             <p class="text-xs text-yellow-700">
-                                <strong>Catatan:</strong> Backup otomatis akan dibuat sebelum update diinstall.
+                                <strong>Proses:</strong> git pull &rarr; composer install &rarr; npm build &rarr; migrate &rarr; clear cache. Aplikasi akan masuk maintenance mode selama proses.
                             </p>
                         </div>
                     </div>

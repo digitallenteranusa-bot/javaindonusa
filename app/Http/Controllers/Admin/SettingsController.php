@@ -441,34 +441,19 @@ class SettingsController extends Controller
     }
 
     /**
-     * Download and install update from server
+     * Run git pull + build update on server
      */
-    public function downloadAndInstall(Request $request, UpdateService $updateService)
+    public function gitPullUpdate(UpdateService $updateService)
     {
-        $request->validate([
-            'download_url' => 'required|url',
-        ]);
-
-        // Create backup first
-        $backupResult = $updateService->createBackup();
-        if (!$backupResult['success']) {
-            return back()->with('error', 'Gagal membuat backup sebelum update');
-        }
-
-        // Download update
-        $downloadResult = $updateService->downloadUpdate($request->download_url);
-        if (!$downloadResult['success']) {
-            return back()->with('error', $downloadResult['error'] ?? 'Gagal download update');
-        }
-
-        // Install update
-        $result = $updateService->installUpdate($downloadResult['file_path']);
+        $result = $updateService->gitPullUpdate();
 
         if ($result['success']) {
-            return back()->with('success', "Update berhasil diinstall. Versi baru: {$result['new_version']}");
+            return back()->with('success', $result['message'] ?? 'Update berhasil')
+                         ->with('updateLog', $result['output'] ?? '');
         }
 
-        return back()->with('error', $result['error'] ?? 'Gagal menginstall update');
+        return back()->with('error', $result['error'] ?? 'Gagal menjalankan update')
+                     ->with('updateLog', $result['output'] ?? '');
     }
 
     /**

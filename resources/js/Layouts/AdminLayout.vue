@@ -51,6 +51,7 @@ const mobileMenuOpen = ref(false)
 // Collapsible menu sections - load from localStorage
 const expandedSections = ref({
     billing: localStorage.getItem('sidebar_billing') !== 'false',
+    finance: localStorage.getItem('sidebar_finance') !== 'false',
     master: localStorage.getItem('sidebar_master') !== 'false',
     system: localStorage.getItem('sidebar_system') !== 'false',
 })
@@ -82,6 +83,11 @@ const billingNavigation = [
     { name: 'Laporan', href: '/admin/reports', icon: 'chart' },
 ]
 
+const financeNavigation = [
+    { name: 'Dashboard', href: '/admin/finance', icon: 'banknotes' },
+    { name: 'Pengeluaran Ops', href: '/admin/finance/expenses', icon: 'receipt' },
+]
+
 const masterNavigation = [
     { name: 'Paket', href: '/admin/packages', icon: 'cube' },
     { name: 'Area', href: '/admin/areas', icon: 'map' },
@@ -102,8 +108,8 @@ const systemNavigation = [
 
 const isActive = (href) => {
     const currentPath = window.location.pathname
-    if (href === '/admin') {
-        return currentPath === '/admin'
+    if (href === '/admin' || href === '/admin/finance') {
+        return currentPath === href
     }
     return currentPath.startsWith(href)
 }
@@ -183,6 +189,9 @@ const icons = {
     },
     megaphone: {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>`
+    },
+    banknotes: {
+        template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 7a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7zm10 1a4 4 0 100 8 4 4 0 000-8zm-6 1a1 1 0 100 2 1 1 0 000-2zm12 4a1 1 0 100 2 1 1 0 000-2z" /></svg>`
     },
     close: {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`
@@ -293,6 +302,38 @@ const getIcon = (name) => ({
                         >
                             <ul v-show="expandedSections.billing" class="space-y-1 overflow-hidden">
                                 <li v-for="item in billingNavigation" :key="item.name">
+                                    <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                        <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                        <span class="truncate">{{ item.name }}</span>
+                                    </Link>
+                                </li>
+                            </ul>
+                        </Transition>
+                    </div>
+
+                    <!-- Keuangan -->
+                    <div class="mb-4">
+                        <button
+                            @click="toggleSection('finance')"
+                            class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-green-400 uppercase tracking-wider hover:text-green-300 transition-colors"
+                        >
+                            <span>Keuangan</span>
+                            <component
+                                :is="getIcon('chevron-down')"
+                                class="w-4 h-4 transition-transform duration-200"
+                                :class="{ 'rotate-180': !expandedSections.finance }"
+                            />
+                        </button>
+                        <Transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-96"
+                            leave-active-class="transition-all duration-200 ease-in"
+                            leave-from-class="opacity-100 max-h-96"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
+                            <ul v-show="expandedSections.finance" class="space-y-1 overflow-hidden">
+                                <li v-for="item in financeNavigation" :key="item.name">
                                     <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                         <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                         <span class="truncate">{{ item.name }}</span>
@@ -468,6 +509,39 @@ const getIcon = (name) => ({
                     >
                         <ul v-show="expandedSections.billing || !sidebarOpen" class="space-y-1 overflow-hidden">
                             <li v-for="item in billingNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </Transition>
+                </div>
+
+                <!-- Keuangan -->
+                <div class="mb-4">
+                    <button
+                        v-if="sidebarOpen"
+                        @click="toggleSection('finance')"
+                        class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-green-400 uppercase tracking-wider hover:text-green-300 transition-colors"
+                    >
+                        <span>Keuangan</span>
+                        <component
+                            :is="getIcon('chevron-down')"
+                            class="w-4 h-4 transition-transform duration-200"
+                            :class="{ 'rotate-180': !expandedSections.finance }"
+                        />
+                    </button>
+                    <Transition
+                        enter-active-class="transition-all duration-200 ease-out"
+                        enter-from-class="opacity-0 max-h-0"
+                        enter-to-class="opacity-100 max-h-96"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="opacity-100 max-h-96"
+                        leave-to-class="opacity-0 max-h-0"
+                    >
+                        <ul v-show="expandedSections.finance || !sidebarOpen" class="space-y-1 overflow-hidden">
+                            <li v-for="item in financeNavigation" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>

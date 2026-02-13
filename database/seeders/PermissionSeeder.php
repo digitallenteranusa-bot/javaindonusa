@@ -110,6 +110,10 @@ class PermissionSeeder extends Seeder
             ['name' => 'roles.view', 'group' => 'roles', 'description' => 'Melihat role & permissions'],
             ['name' => 'roles.edit', 'group' => 'roles', 'description' => 'Mengubah permissions role'],
 
+            // Finance (Keuangan)
+            ['name' => 'finance.view', 'group' => 'finance', 'description' => 'Melihat dashboard keuangan'],
+            ['name' => 'finance.manage', 'group' => 'finance', 'description' => 'Kelola pengeluaran operasional'],
+
             // Expense Management
             ['name' => 'expenses.view', 'group' => 'expenses', 'description' => 'Melihat daftar expense'],
             ['name' => 'expenses.approve', 'group' => 'expenses', 'description' => 'Approve expense'],
@@ -181,6 +185,8 @@ class PermissionSeeder extends Seeder
 
         // Finance role permissions
         $financePermissions = [
+            'finance.view',
+            'finance.manage',
             'customers.view',
             'invoices.view',
             'invoices.generate',

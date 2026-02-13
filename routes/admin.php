@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\MappingController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RouterBrandController;
 use App\Http\Controllers\Admin\BroadcastController;
+use App\Http\Controllers\Admin\FinanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -299,6 +300,26 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:settlements.reject'])->group(function () {
         Route::post('/settlements/{settlement}/reject', [SettlementController::class, 'reject'])
             ->name('settlements.reject');
+    });
+
+    // ================================================================
+    // FINANCE (Keuangan Admin)
+    // ================================================================
+    Route::middleware(['permission:finance.view'])->group(function () {
+        Route::get('/finance', [FinanceController::class, 'dashboard'])->name('finance.dashboard');
+        Route::get('/finance/expenses', [FinanceController::class, 'expenses'])->name('finance.expenses');
+    });
+    Route::middleware(['permission:finance.manage'])->group(function () {
+        Route::get('/finance/expenses/create', [FinanceController::class, 'createExpense'])
+            ->name('finance.expenses.create');
+        Route::post('/finance/expenses', [FinanceController::class, 'storeExpense'])
+            ->name('finance.expenses.store');
+        Route::get('/finance/expenses/{expense}/edit', [FinanceController::class, 'editExpense'])
+            ->name('finance.expenses.edit');
+        Route::put('/finance/expenses/{expense}', [FinanceController::class, 'updateExpense'])
+            ->name('finance.expenses.update');
+        Route::delete('/finance/expenses/{expense}', [FinanceController::class, 'destroyExpense'])
+            ->name('finance.expenses.destroy');
     });
 
     // ================================================================

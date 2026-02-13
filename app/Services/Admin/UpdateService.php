@@ -12,39 +12,50 @@ use ZipArchive;
 
 class UpdateService
 {
-    protected string $updateServer;
+    protected string $githubRepo;
     protected string $backupPath;
     protected string $dbBackupPath;
     protected string $tempPath;
 
     public function __construct()
     {
-        $this->updateServer = config('app.update_server', 'https://update.javaindonusa.net');
+        $this->githubRepo = config('app.github_repo', 'digitallenteranusa-bot/javaindonusa');
         $this->backupPath = storage_path('app/backups');
         $this->dbBackupPath = storage_path('app/backups/database');
         $this->tempPath = storage_path('app/temp');
     }
 
     /**
-     * Check for available updates
+     * Check for available updates via GitHub Releases API
      */
     public function checkForUpdates(): array
     {
         try {
             $currentVersion = config('app.version', '1.0.0');
 
-            // Try to get update info from server
-            $response = Http::timeout(10)->get("{$this->updateServer}/api/version");
+            // Get latest release from GitHub
+            $response = Http::timeout(10)
+                ->withHeaders(['Accept' => 'application/vnd.github+json'])
+                ->get("https://api.github.com/repos/{$this->githubRepo}/releases/latest");
 
             if ($response->successful()) {
                 $data = $response->json();
-                $latestVersion = $data['version'] ?? $currentVersion;
-                $changelog = $data['changelog'] ?? [];
-                $downloadUrl = $data['download_url'] ?? null;
-                $minPhpVersion = $data['min_php_version'] ?? '8.1';
-                $releaseDate = $data['release_date'] ?? null;
+                $tagName = $data['tag_name'] ?? '';
+                $latestVersion = ltrim($tagName, 'vV');
+                $releaseDate = $data['published_at'] ?? null;
+                $body = $data['body'] ?? '';
+
+                // Parse changelog from release body
+                $changelog = array_filter(
+                    array_map('trim', explode("\n", $body)),
+                    fn ($line) => !empty($line)
+                );
+
+                // Get zipball download URL
+                $downloadUrl = $data['zipball_url'] ?? null;
+
+                $minPhpVersion = '8.1';
             } else {
-                // Fallback: check from local or return current version
                 $latestVersion = $currentVersion;
                 $changelog = [];
                 $downloadUrl = null;

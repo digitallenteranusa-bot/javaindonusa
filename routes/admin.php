@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\VpnServerController;
 use App\Http\Controllers\Admin\MappingController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RouterBrandController;
+use App\Http\Controllers\Admin\BroadcastController;
 
 /*
 |--------------------------------------------------------------------------
@@ -566,6 +567,15 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('mapping.customers.location');
         Route::post('/mapping/odps/{odp}/location', [MappingController::class, 'updateOdpLocation'])
             ->name('mapping.odps.location');
+    });
+
+    // ================================================================
+    // BROADCAST (Notifications)
+    // ================================================================
+    Route::middleware(['permission:settings.edit'])->group(function () {
+        Route::get('/broadcasts/create', [BroadcastController::class, 'create'])->name('broadcasts.create');
+        Route::post('/broadcasts/maintenance', [BroadcastController::class, 'sendMaintenance'])
+            ->name('broadcasts.maintenance');
     });
 
     // ================================================================

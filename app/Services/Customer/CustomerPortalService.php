@@ -391,6 +391,11 @@ class CustomerPortalService
 
         $whatsappNumber = preg_replace('/[^0-9]/', '', $ispInfo->whatsapp_number);
 
+        // Konversi format lokal (08xx) ke internasional (628xx)
+        if (str_starts_with($whatsappNumber, '0')) {
+            $whatsappNumber = '62' . substr($whatsappNumber, 1);
+        }
+
         $message = "Halo, saya {$customer->name} (ID: {$customer->customer_id})\n\n" .
             "Saya ingin mengirimkan bukti transfer pembayaran internet.\n\n" .
             "[Silakan lampirkan foto bukti transfer]";

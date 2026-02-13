@@ -276,6 +276,33 @@ class NotificationService
     }
 
     /**
+     * Send maintenance/gangguan notice to customers
+     */
+    public function sendMaintenanceNotice(
+        string $startTime,
+        string $endTime,
+        string $description,
+        ?array $customerIds = null
+    ): array {
+        $query = Customer::where('status', 'active');
+
+        if ($customerIds) {
+            $query->whereIn('id', $customerIds);
+        }
+
+        $customers = $query->get();
+        $sent = 0;
+
+        foreach ($customers as $customer) {
+            $message = $this->buildMaintenanceMessage($customer, $startTime, $endTime, $description);
+            $this->sendAsync('whatsapp', $customer->phone, $message);
+            $sent++;
+        }
+
+        return ['sent' => $sent];
+    }
+
+    /**
      * Send broadcast message to all active customers
      */
     public function sendBroadcast(string $message, ?array $customerIds = null): array
@@ -563,6 +590,45 @@ class NotificationService
                 ? "Sisa tagihan: Rp {$remaining}\n\n"
                 : "✨ Tagihan Anda sudah *LUNAS*\n\n") .
             "Terima kasih.\n" .
+            "_{$companyName}_";
+    }
+
+    protected function buildMaintenanceMessage(Customer $customer, string $startTime, string $endTime, string $description): string
+    {
+        $companyName = $this->ispInfo?->company_name ?? 'ISP';
+
+        // Cek apakah ada template custom dari settings
+        $customTemplate = Setting::getValue('notification', 'maintenance_template', '');
+
+        if (!empty($customTemplate)) {
+            $message = str_replace(
+                ['{nama}', '{tanggal_mulai}', '{tanggal_selesai}', '{keterangan}', '{telepon}', '{whatsapp}'],
+                [
+                    $customer->name,
+                    $startTime,
+                    $endTime,
+                    $description,
+                    $this->ispInfo?->phone_primary ?? '',
+                    $this->ispInfo?->whatsapp_number ?? '',
+                ],
+                $customTemplate
+            );
+
+            return $message . "\n\n_{$companyName}_";
+        }
+
+        // Template default
+        return "🔧 *PEMBERITAHUAN MAINTENANCE*\n\n" .
+            "Yth. Bapak/Ibu *{$customer->name}*,\n\n" .
+            "Kami informasikan bahwa akan dilakukan maintenance/perbaikan pada jaringan kami.\n\n" .
+            "📅 *Waktu Mulai:* {$startTime}\n" .
+            "📅 *Estimasi Selesai:* {$endTime}\n\n" .
+            "📝 *Keterangan:*\n{$description}\n\n" .
+            "Selama proses ini, layanan internet Anda mungkin mengalami gangguan sementara. " .
+            "Kami mohon maaf atas ketidaknyamanannya.\n\n" .
+            "Hubungi kami jika ada pertanyaan:\n" .
+            "📞 " . ($this->ispInfo?->phone_primary ?? '') . "\n" .
+            "💬 WA: " . ($this->ispInfo?->whatsapp_number ?? '') . "\n\n" .
             "_{$companyName}_";
     }
 

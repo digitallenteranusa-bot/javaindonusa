@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import CustomerLayout from '@/Layouts/CustomerLayout.vue'
 
@@ -10,6 +10,12 @@ const props = defineProps({
     payments: Array,
     isp_info: Object,
     transfer_proof_wa_url: String,
+    tripay_enabled: Boolean,
+})
+
+// Check if there are unpaid invoices
+const hasUnpaidInvoices = computed(() => {
+    return props.invoices?.some(inv => ['pending', 'partial', 'overdue'].includes(inv.status))
 })
 
 // Format currency
@@ -180,6 +186,19 @@ const copyToClipboard = (text) => {
                             </button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Online Payment Button (Tripay) -->
+                <div v-if="tripay_enabled && hasUnpaidInvoices" class="mt-4">
+                    <Link
+                        href="/portal/pay"
+                        class="w-full flex items-center justify-center gap-2 py-3 bg-green-600 text-white rounded-lg font-semibold text-base hover:bg-green-700 transition-colors"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        Bayar Online (QRIS / VA / E-Wallet)
+                    </Link>
                 </div>
 
                 <!-- WhatsApp Transfer Proof -->

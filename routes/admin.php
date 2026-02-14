@@ -365,6 +365,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('settings.mikrotik');
         Route::post('/settings/genieacs', [SettingsController::class, 'updateGenieacs'])
             ->name('settings.genieacs');
+        Route::post('/settings/tripay', [SettingsController::class, 'updateTripay'])
+            ->name('settings.tripay');
     });
 
     // ================================================================

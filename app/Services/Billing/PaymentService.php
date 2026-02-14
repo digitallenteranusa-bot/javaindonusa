@@ -29,19 +29,25 @@ class PaymentService
         ?User $collector = null,
         ?User $receivedBy = null,
         ?string $transferProof = null,
-        ?string $notes = null
+        ?string $notes = null,
+        ?string $paymentChannel = null,
+        ?string $referenceNumber = null
     ): Payment {
-        return DB::transaction(function () use ($customer, $amount, $paymentMethod, $collector, $receivedBy, $transferProof, $notes) {
+        return DB::transaction(function () use ($customer, $amount, $paymentMethod, $collector, $receivedBy, $transferProof, $notes, $paymentChannel, $referenceNumber) {
+            // Determine payment channel
+            $channel = $paymentChannel ?? ($collector ? 'collector' : 'office');
+
             // Create payment record
             $payment = Payment::create([
                 'customer_id' => $customer->id,
                 'payment_number' => $this->generatePaymentNumber(),
                 'amount' => $amount,
                 'payment_method' => $paymentMethod,
-                'payment_channel' => $collector ? 'collector' : 'office',
+                'payment_channel' => $channel,
                 'collector_id' => $collector?->id,
                 'received_by' => $receivedBy?->id ?? auth()->id(),
                 'transfer_proof' => $transferProof,
+                'reference_number' => $referenceNumber,
                 'notes' => $notes,
                 'status' => 'verified',
             ]);

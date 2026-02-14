@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Customer\PortalController;
+use App\Http\Controllers\Customer\TripayController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,5 +45,11 @@ Route::prefix('portal')->name('customer.')->group(function () {
         Route::get('/invoices', [PortalController::class, 'invoices'])->name('invoices');
         Route::get('/payments', [PortalController::class, 'payments'])->name('payments');
         Route::get('/payment-info', [PortalController::class, 'paymentInfo'])->name('payment-info');
+
+        // Tripay Online Payment
+        Route::get('/pay', [TripayController::class, 'payPage'])->name('tripay.pay');
+        Route::get('/tripay/channels', [TripayController::class, 'getChannels'])->name('tripay.channels');
+        Route::post('/tripay/pay', [TripayController::class, 'createTransaction'])->name('tripay.create');
+        Route::get('/tripay/status/{transaction}', [TripayController::class, 'checkStatus'])->name('tripay.status');
     });
 });

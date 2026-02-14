@@ -9,6 +9,7 @@ const props = defineProps({
     whatsappConfig: Object,
     whatsappDrivers: Object,
     logoUrl: String,
+    tripayConfig: Object,
 })
 
 const activeTab = ref('billing')
@@ -177,6 +178,15 @@ const genieacsForm = useForm({
     genieacs_sync_interval: props.settings.genieacs_sync_interval || 15,
 })
 
+// Tripay form
+const tripayForm = useForm({
+    tripay_enabled: props.tripayConfig?.enabled || false,
+    tripay_sandbox: props.tripayConfig?.sandbox ?? true,
+    tripay_api_key: props.tripayConfig?.api_key || '',
+    tripay_private_key: props.tripayConfig?.private_key || '',
+    tripay_merchant_code: props.tripayConfig?.merchant_code || '',
+})
+
 // Logo upload form
 const logoForm = useForm({
     logo: null,
@@ -230,6 +240,10 @@ const saveGenieacs = () => {
     genieacsForm.post('/admin/settings/genieacs')
 }
 
+const saveTripay = () => {
+    tripayForm.post('/admin/settings/tripay')
+}
+
 // Logo handlers
 const handleLogoChange = (event) => {
     logoForm.logo = event.target.files[0]
@@ -267,6 +281,7 @@ const tabs = [
     { id: 'whatsapp', label: 'WhatsApp', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
     { id: 'mikrotik', label: 'Mikrotik', icon: 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01' },
     { id: 'genieacs', label: 'GenieACS', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+    { id: 'tripay', label: 'Payment Gateway', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
 ]
 </script>
 
@@ -714,6 +729,63 @@ const tabs = [
                         <div class="flex justify-end">
                             <button type="submit" :disabled="genieacsForm.processing" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                                 {{ genieacsForm.processing ? 'Menyimpan...' : 'Simpan' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tripay Payment Gateway Settings -->
+                <div v-if="activeTab === 'tripay'" class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold mb-6">Payment Gateway (Tripay)</h2>
+
+                    <form @submit.prevent="saveTripay" class="space-y-6">
+                        <div class="flex gap-6">
+                            <label class="flex items-center gap-2">
+                                <input v-model="tripayForm.tripay_enabled" type="checkbox" class="w-4 h-4 text-blue-600 rounded">
+                                <span>Tripay Aktif</span>
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input v-model="tripayForm.tripay_sandbox" type="checkbox" class="w-4 h-4 text-yellow-600 rounded">
+                                <span>Mode Sandbox (Testing)</span>
+                            </label>
+                        </div>
+
+                        <div v-if="tripayForm.tripay_sandbox" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+                            <p class="font-medium">Mode Sandbox Aktif</p>
+                            <p>Transaksi menggunakan API sandbox Tripay. Tidak ada uang asli yang diproses. Matikan sandbox untuk mode produksi.</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Merchant Code</label>
+                                <input v-model="tripayForm.tripay_merchant_code" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="T12345">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                                <input v-model="tripayForm.tripay_api_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan jika tidak ingin mengubah">
+                                <p class="text-xs text-gray-500 mt-1">Kosongkan jika tidak ingin mengubah</p>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Private Key</label>
+                                <input v-model="tripayForm.tripay_private_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan jika tidak ingin mengubah">
+                                <p class="text-xs text-gray-500 mt-1">Kosongkan jika tidak ingin mengubah</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                            <p class="font-medium mb-2">Cara Setup Tripay:</p>
+                            <ol class="list-decimal list-inside space-y-1">
+                                <li>Daftar di <strong>tripay.co.id</strong> dan buat merchant</li>
+                                <li>Salin Merchant Code, API Key, dan Private Key dari dashboard Tripay</li>
+                                <li>Set Callback URL di Tripay: <code class="bg-blue-100 px-1 rounded">{{ $page.props.ziggy?.url || '' }}/api/tripay/callback</code></li>
+                                <li>Aktifkan metode pembayaran yang diinginkan (QRIS, VA, E-Wallet) di dashboard Tripay</li>
+                                <li>Test dengan mode Sandbox terlebih dahulu sebelum production</li>
+                            </ol>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" :disabled="tripayForm.processing" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                                {{ tripayForm.processing ? 'Menyimpan...' : 'Simpan' }}
                             </button>
                         </div>
                     </form>

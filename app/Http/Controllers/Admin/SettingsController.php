@@ -35,12 +35,22 @@ class SettingsController extends Controller
             'sender' => $settings['whatsapp_sender'] ?? '',
         ];
 
+        // Get Tripay config (mask sensitive keys)
+        $tripayConfig = [
+            'enabled' => (bool) ($settings['tripay_enabled'] ?? config('tripay.enabled', false)),
+            'sandbox' => (bool) ($settings['tripay_sandbox'] ?? config('tripay.sandbox', true)),
+            'api_key' => !empty($settings['tripay_api_key']) ? '********' : '',
+            'private_key' => !empty($settings['tripay_private_key']) ? '********' : '',
+            'merchant_code' => $settings['tripay_merchant_code'] ?? config('tripay.merchant_code', ''),
+        ];
+
         return Inertia::render('Admin/Settings/Index', [
             'settings' => $settings,
             'ispInfo' => $ispInfo,
             'whatsappConfig' => $whatsappConfig,
             'whatsappDrivers' => WhatsAppChannel::getAvailableDrivers(),
             'logoUrl' => $this->getLogoUrl(),
+            'tripayConfig' => $tripayConfig,
         ]);
     }
 
@@ -329,6 +339,31 @@ class SettingsController extends Controller
         }
 
         return back()->with('success', 'Pengaturan GenieACS berhasil disimpan');
+    }
+
+    /**
+     * Update Tripay payment gateway settings
+     */
+    public function updateTripay(Request $request)
+    {
+        $validated = $request->validate([
+            'tripay_enabled' => 'boolean',
+            'tripay_sandbox' => 'boolean',
+            'tripay_api_key' => 'nullable|string|max:255',
+            'tripay_private_key' => 'nullable|string|max:255',
+            'tripay_merchant_code' => 'nullable|string|max:50',
+        ]);
+
+        foreach ($validated as $key => $value) {
+            // Skip masked values (don't overwrite with ****)
+            if (in_array($key, ['tripay_api_key', 'tripay_private_key']) && ($value === '********' || empty($value))) {
+                continue;
+            }
+
+            Setting::setValue('tripay', $key, is_bool($value) ? ($value ? '1' : '0') : $value);
+        }
+
+        return back()->with('success', 'Pengaturan Tripay berhasil disimpan');
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Services\Customer\CustomerPortalService;
+use App\Services\Payment\TripayService;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -11,10 +12,12 @@ use Inertia\Inertia;
 class PortalController extends Controller
 {
     protected CustomerPortalService $portalService;
+    protected TripayService $tripayService;
 
-    public function __construct(CustomerPortalService $portalService)
+    public function __construct(CustomerPortalService $portalService, TripayService $tripayService)
     {
         $this->portalService = $portalService;
+        $this->tripayService = $tripayService;
     }
 
     // ================================================================
@@ -152,6 +155,9 @@ class PortalController extends Controller
 
         // URL untuk kirim bukti transfer
         $data['transfer_proof_wa_url'] = $this->portalService->getTransferProofWhatsAppUrl($customer);
+
+        // Tripay online payment flag
+        $data['tripay_enabled'] = $this->tripayService->isEnabled();
 
         return Inertia::render('Customer/Dashboard', $data);
     }

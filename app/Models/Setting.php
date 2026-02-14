@@ -36,6 +36,7 @@ class Setting extends Model
     const GROUP_ISOLATION = 'isolation';
     const GROUP_SYSTEM = 'system';
     const GROUP_VPN_SERVER = 'vpn_server';
+    const GROUP_TRIPAY = 'tripay';
 
     // ================================================================
     // CONSTANTS - KEYS
@@ -153,6 +154,7 @@ class Setting extends Model
             self::GROUP_ISOLATION,
             self::GROUP_SYSTEM,
             self::GROUP_VPN_SERVER,
+            self::GROUP_TRIPAY,
         ];
 
         foreach ($groups as $group) {

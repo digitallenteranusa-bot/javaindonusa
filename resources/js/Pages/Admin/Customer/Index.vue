@@ -17,7 +17,7 @@ const statusFilter = ref(props.filters.status || '')
 const areaFilter = ref(props.filters.area_id || '')
 const packageFilter = ref(props.filters.package_id || '')
 const collectorFilter = ref(props.filters.collector_id || '')
-const perPage = ref(props.filters.per_page || 15)
+const perPage = ref(props.filters.per_page === 'all' ? 'all' : Number(props.filters.per_page) || 15)
 
 // Import modal
 const showImportModal = ref(false)

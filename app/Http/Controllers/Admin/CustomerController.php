@@ -97,10 +97,10 @@ class CustomerController extends Controller
 
         $perPage = $request->get('per_page', 15);
         if ($perPage === 'all') {
-            $customers = $query->paginate($query->count() ?: 15)
+            $customers = $query->paginate(999999)
                 ->withQueryString();
         } else {
-            $customers = $query->paginate((int) $perPage)
+            $customers = $query->paginate(min((int) $perPage, 999999))
                 ->withQueryString();
         }
 

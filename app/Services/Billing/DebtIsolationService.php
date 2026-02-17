@@ -96,6 +96,15 @@ class DebtIsolationService
         int $periodMonth,
         int $periodYear
     ): array {
+        // Skip jika billing belum mulai (pelanggan baru)
+        if ($customer->billing_start_date) {
+            $billingStart = Carbon::parse($customer->billing_start_date)->startOfMonth();
+            $invoicePeriod = Carbon::create($periodYear, $periodMonth, 1);
+            if ($invoicePeriod->lt($billingStart)) {
+                return ['added' => false, 'reason' => 'billing_not_started'];
+            }
+        }
+
         // Cek apakah invoice bulan ini sudah ada
         $existingInvoice = Invoice::where('customer_id', $customer->id)
             ->where('period_year', $periodYear)

@@ -78,6 +78,19 @@ class Customer extends Model
     }
 
     // ================================================================
+    // DATE SERIALIZATION
+    // ================================================================
+
+    /**
+     * Format dates without UTC conversion to prevent timezone shift
+     * (Asia/Jakarta UTC+7 → UTC causes date to shift back 1 day)
+     */
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+
+    // ================================================================
     // ACCESSORS & MUTATORS FOR ENCRYPTION
     // ================================================================
 

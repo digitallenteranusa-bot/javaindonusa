@@ -36,12 +36,13 @@ class SettingsController extends Controller
         ];
 
         // Get Tripay config (mask sensitive keys)
+        $tripaySettings = Setting::getGroup('tripay');
         $tripayConfig = [
-            'enabled' => (bool) ($settings['tripay_enabled'] ?? config('tripay.enabled', false)),
-            'sandbox' => (bool) ($settings['tripay_sandbox'] ?? config('tripay.sandbox', true)),
-            'api_key' => !empty($settings['tripay_api_key']) ? '********' : '',
-            'private_key' => !empty($settings['tripay_private_key']) ? '********' : '',
-            'merchant_code' => $settings['tripay_merchant_code'] ?? config('tripay.merchant_code', ''),
+            'enabled' => (bool) ($tripaySettings['enabled'] ?? config('tripay.enabled', false)),
+            'sandbox' => (bool) ($tripaySettings['sandbox'] ?? config('tripay.sandbox', true)),
+            'api_key' => !empty($tripaySettings['api_key']) ? '********' : '',
+            'private_key' => !empty($tripaySettings['private_key']) ? '********' : '',
+            'merchant_code' => $tripaySettings['merchant_code'] ?? config('tripay.merchant_code', ''),
         ];
 
         return Inertia::render('Admin/Settings/Index', [
@@ -360,7 +361,9 @@ class SettingsController extends Controller
                 continue;
             }
 
-            Setting::setValue('tripay', $key, is_bool($value) ? ($value ? '1' : '0') : $value);
+            // Remove 'tripay_' prefix for DB key (e.g. 'tripay_enabled' -> 'enabled')
+            $dbKey = str_replace('tripay_', '', $key);
+            Setting::setValue('tripay', $dbKey, is_bool($value) ? ($value ? '1' : '0') : $value);
         }
 
         return redirect()->route('admin.settings.index')->with('success', 'Pengaturan Tripay berhasil disimpan');

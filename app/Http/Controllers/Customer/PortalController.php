@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Services\Customer\CustomerPortalService;
+use App\Services\Mikrotik\MikrotikService;
 use App\Services\Payment\TripayService;
 use App\Models\Customer;
+use App\Models\Router;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class PortalController extends Controller
@@ -232,6 +235,54 @@ class PortalController extends Controller
     // ================================================================
 
     /**
+     * Auto-detect pelanggan isolir dari IP address.
+     * Alur: IP request → query Mikrotik PPP active → dapat username → cari customer → redirect
+     */
+    public function detectIsolation(Request $request)
+    {
+        $clientIp = $request->ip();
+        $isolationSubnet = config('mikrotik.isolation.subnet', '10.144.1.0/24');
+
+        // Validasi: hanya proses jika IP dari subnet isolir
+        if (!$this->isIpInSubnet($clientIp, $isolationSubnet)) {
+            return $this->renderIsolationNotFound();
+        }
+
+        $mikrotikService = app(MikrotikService::class);
+        $routers = Router::where('is_active', true)->get();
+
+        foreach ($routers as $router) {
+            try {
+                $mikrotikService->connect($router);
+                $activeConnection = $mikrotikService->findActiveConnectionByIP($clientIp);
+                $mikrotikService->disconnect();
+
+                if ($activeConnection) {
+                    $pppoeUsername = $activeConnection['name'] ?? null;
+
+                    if ($pppoeUsername) {
+                        $customer = Customer::where('pppoe_username', $pppoeUsername)->first();
+
+                        if ($customer && $customer->status === 'isolated') {
+                            return redirect()->route('customer.isolation', $customer->customer_id);
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Isolation detect: failed to query router', [
+                    'router' => $router->name,
+                    'ip' => $clientIp,
+                    'error' => $e->getMessage(),
+                ]);
+                $mikrotikService->disconnect();
+            }
+        }
+
+        // Tidak ditemukan: tampilkan halaman generic
+        return $this->renderIsolationNotFound();
+    }
+
+    /**
      * Halaman info isolir (tanpa login)
      */
     public function isolationPage(string $customerId)
@@ -275,5 +326,43 @@ class PortalController extends Controller
         }
 
         return Customer::find($customerId);
+    }
+
+    /**
+     * Cek apakah IP berada dalam subnet (CIDR notation)
+     */
+    protected function isIpInSubnet(string $ip, string $subnet): bool
+    {
+        if (!str_contains($subnet, '/')) {
+            return $ip === $subnet;
+        }
+
+        [$subnetIp, $prefixLength] = explode('/', $subnet);
+
+        $ipLong = ip2long($ip);
+        $subnetLong = ip2long($subnetIp);
+
+        if ($ipLong === false || $subnetLong === false) {
+            return false;
+        }
+
+        $mask = -1 << (32 - (int) $prefixLength);
+
+        return ($ipLong & $mask) === ($subnetLong & $mask);
+    }
+
+    /**
+     * Render halaman isolir generic (customer tidak terdeteksi)
+     */
+    protected function renderIsolationNotFound()
+    {
+        $ispInfo = $this->portalService->getIspInfo();
+
+        return Inertia::render('Customer/IsolationPage', [
+            'customer' => null,
+            'isp_info' => $ispInfo,
+            'transfer_proof_wa_url' => null,
+            'detection_failed' => true,
+        ]);
     }
 }

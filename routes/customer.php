@@ -31,6 +31,11 @@ Route::prefix('portal')->name('customer.')->group(function () {
 
     Route::get('/auth/{token}', [PortalController::class, 'loginWithToken'])->name('auth.token');
 
+    // Auto-detect customer isolir dari IP (Captive Portal)
+    Route::get('/isolation/detect', [PortalController::class, 'detectIsolation'])
+        ->middleware('throttle:30,1')
+        ->name('isolation.detect');
+
     // Halaman Isolir (Public - Tanpa Login, rate limited)
     Route::get('/isolation/{customerId}', [PortalController::class, 'isolationPage'])
         ->middleware('throttle:30,1')

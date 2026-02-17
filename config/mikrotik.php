@@ -49,6 +49,9 @@ return [
 
         // Redirect URL untuk halaman isolir (opsional)
         'redirect_url' => env('MIKROTIK_ISOLATION_REDIRECT_URL', ''),
+
+        // Subnet IP pool isolir (untuk auto-detect customer dari IP)
+        'subnet' => env('MIKROTIK_ISOLATION_SUBNET', '10.144.1.0/24'),
     ],
 
     /*

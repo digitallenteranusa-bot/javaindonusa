@@ -367,6 +367,20 @@ class MikrotikService
     }
 
     /**
+     * Find active PPPoE connection by IP address
+     */
+    public function findActiveConnectionByIP(string $ip): ?array
+    {
+        $this->ensureConnected();
+
+        $result = $this->client->command('/ppp/active/print', [
+            '?address=' . $ip,
+        ]);
+
+        return $result[0] ?? null;
+    }
+
+    /**
      * Disconnect active PPPoE session
      */
     public function disconnectPPPoE(string $username): array

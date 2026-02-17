@@ -6,6 +6,10 @@ const props = defineProps({
     customer: Object,
     isp_info: Object,
     transfer_proof_wa_url: String,
+    detection_failed: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const formattedDebt = computed(() => {
@@ -51,8 +55,16 @@ const formattedDebt = computed(() => {
                 </p>
             </div>
 
+            <!-- Detection Failed (customer tidak terdeteksi) -->
+            <div v-if="detection_failed && !customer" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                <p class="text-sm text-yellow-800 text-center">
+                    Layanan internet Anda sedang terisolir karena tunggakan pembayaran.
+                    Silakan hubungi admin untuk informasi lebih lanjut.
+                </p>
+            </div>
+
             <!-- Customer Info -->
-            <div class="bg-gray-50 rounded-xl p-4 mb-4 space-y-2">
+            <div v-if="customer" class="bg-gray-50 rounded-xl p-4 mb-4 space-y-2">
                 <div class="flex justify-between text-sm">
                     <span class="text-gray-500">ID Pelanggan</span>
                     <span class="font-semibold text-gray-800">{{ customer.customer_id }}</span>
@@ -68,7 +80,7 @@ const formattedDebt = computed(() => {
             </div>
 
             <!-- Total Debt -->
-            <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-center">
+            <div v-if="customer" class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-center">
                 <p class="text-sm text-red-600 mb-1">Total Tunggakan</p>
                 <p class="text-2xl font-bold text-red-700">{{ formattedDebt }}</p>
             </div>

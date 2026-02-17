@@ -124,10 +124,16 @@ class InvoiceController extends Controller
         $periodYear = $request->get('year', now()->year);
 
         // Get customers without invoice for this period
+        $periodFirstDay = Carbon::create($periodYear, $periodMonth, 1)->format('Y-m-d');
         $customers = Customer::whereIn('status', ['active', 'isolated'])
             ->whereDoesntHave('invoices', function ($q) use ($periodMonth, $periodYear) {
                 $q->where('period_month', $periodMonth)
                     ->where('period_year', $periodYear);
+            })
+            // Filter pelanggan yang billing_start_date belum tercapai
+            ->where(function ($q) use ($periodFirstDay) {
+                $q->whereNull('billing_start_date')
+                  ->orWhereRaw('DATE_FORMAT(billing_start_date, "%Y-%m-01") <= ?', [$periodFirstDay]);
             })
             ->with('package')
             ->get();
@@ -184,6 +190,14 @@ class InvoiceController extends Controller
                     ->orWhere('address', 'like', "%{$search}%");
             });
         }
+
+        // Filter pelanggan yang billing_start_date belum tercapai
+        // billing_start_date = 2026-03-05 → startOfMonth = 2026-03-01 → tampil mulai periode Maret
+        $periodFirstDay = Carbon::create($periodYear, $periodMonth, 1)->format('Y-m-d');
+        $query->where(function ($q) use ($periodFirstDay) {
+            $q->whereNull('billing_start_date')
+              ->orWhereRaw('DATE_FORMAT(billing_start_date, "%Y-%m-01") <= ?', [$periodFirstDay]);
+        });
 
         // Only filter customers without invoice if not showing all
         if (!$showAll) {

@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RouterBrandController;
 use App\Http\Controllers\Admin\BroadcastController;
 use App\Http\Controllers\Admin\FinanceController;
+use App\Http\Controllers\Admin\IsolationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,6 +82,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:customers.write-off'])->group(function () {
         Route::post('/customers/{customer}/write-off-debt', [CustomerController::class, 'writeOffDebt'])
             ->name('customers.write-off-debt');
+    });
+
+    // ================================================================
+    // ISOLATION
+    // ================================================================
+    Route::middleware(['permission:customers.view'])->group(function () {
+        Route::get('/isolation', [IsolationController::class, 'index'])->name('isolation.index');
+    });
+    Route::middleware(['permission:customers.edit'])->group(function () {
+        Route::post('/isolation/{customer}/reopen', [IsolationController::class, 'reopen'])->name('isolation.reopen');
     });
 
     // ================================================================

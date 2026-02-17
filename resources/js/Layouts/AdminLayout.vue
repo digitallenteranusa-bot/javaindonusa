@@ -70,6 +70,7 @@ const closeMobileMenu = () => {
 const mainNavigation = [
     { name: 'Dashboard', href: '/admin', icon: 'home' },
     { name: 'Pelanggan', href: '/admin/customers', icon: 'users' },
+    { name: 'Isolir', href: '/admin/isolation', icon: 'shield' },
     { name: 'Perangkat', href: '/admin/devices', icon: 'device' },
     { name: 'Mapping', href: '/admin/mapping', icon: 'globe' },
     { name: 'Broadcast', href: '/admin/broadcasts/create', icon: 'megaphone' },

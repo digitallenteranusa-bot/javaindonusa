@@ -184,8 +184,9 @@ class CustomerController extends Controller
             $validated['odp_id'] = null;
         }
 
-        // Generate customer ID - cari nomor tertinggi dari semua customer_id yang ada
-        $maxSequence = Customer::where('customer_id', 'like', 'JIN-%')
+        // Generate customer ID - cari nomor tertinggi termasuk yang soft-deleted
+        $maxSequence = Customer::withTrashed()
+            ->where('customer_id', 'like', 'JIN-%')
             ->selectRaw("MAX(CAST(SUBSTRING(customer_id, 5) AS UNSIGNED)) as max_seq")
             ->value('max_seq');
         $sequence = ($maxSequence ?? 0) + 1;

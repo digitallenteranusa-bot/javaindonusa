@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import debounce from 'lodash/debounce'
@@ -9,6 +9,7 @@ const props = defineProps({
     filters: Object,
     areas: Array,
     packages: Array,
+    activeCustomers: Array,
 })
 
 const search = ref(props.filters.search || '')
@@ -38,6 +39,57 @@ const confirmReopen = () => {
         onFinish: () => {
             reopenLoading.value = false
             closeReopenModal()
+        },
+    })
+}
+
+// Isolate manual
+const showIsolateModal = ref(false)
+const isolateSearch = ref('')
+const showIsolateDropdown = ref(false)
+const isolateCustomer = ref(null)
+const isolateReason = ref('')
+const isolateLoading = ref(false)
+
+const filteredActiveCustomers = computed(() => {
+    if (!isolateSearch.value) return props.activeCustomers?.slice(0, 10) || []
+    const s = isolateSearch.value.toLowerCase()
+    return props.activeCustomers?.filter(c =>
+        c.name.toLowerCase().includes(s) ||
+        c.customer_id.toLowerCase().includes(s) ||
+        c.phone?.includes(s)
+    ).slice(0, 10) || []
+})
+
+const selectIsolateCustomer = (customer) => {
+    isolateCustomer.value = customer
+    isolateSearch.value = `${customer.customer_id} - ${customer.name}`
+    showIsolateDropdown.value = false
+}
+
+const openIsolateModal = () => {
+    isolateSearch.value = ''
+    isolateCustomer.value = null
+    isolateReason.value = ''
+    showIsolateModal.value = true
+}
+
+const closeIsolateModal = () => {
+    showIsolateModal.value = false
+    isolateCustomer.value = null
+    isolateSearch.value = ''
+    isolateReason.value = ''
+}
+
+const confirmIsolate = () => {
+    if (!isolateCustomer.value || !isolateReason.value) return
+    isolateLoading.value = true
+    router.post(`/admin/isolation/${isolateCustomer.value.id}/isolate`, {
+        reason: isolateReason.value,
+    }, {
+        onFinish: () => {
+            isolateLoading.value = false
+            closeIsolateModal()
         },
     })
 }
@@ -88,6 +140,12 @@ watch([search, areaFilter, packageFilter, perPage], applyFilters)
                     <h1 class="text-2xl font-bold text-gray-900">Pelanggan Isolir</h1>
                     <p class="text-sm text-gray-500 mt-1">Total: {{ customers.total }} pelanggan terisolir</p>
                 </div>
+                <button
+                    @click="openIsolateModal"
+                    class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700"
+                >
+                    Isolir Manual
+                </button>
             </div>
         </template>
 
@@ -276,6 +334,82 @@ watch([search, areaFilter, packageFilter, perPage], applyFilters)
                         :disabled="reopenLoading"
                     >
                         {{ reopenLoading ? 'Memproses...' : 'Ya, Buka Isolir' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Isolate Manual Modal -->
+        <div v-if="showIsolateModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="fixed inset-0 bg-black bg-opacity-50" @click="closeIsolateModal"></div>
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md relative z-10">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Isolir Manual</h3>
+
+                <!-- Customer Search -->
+                <div class="mb-4 relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Pelanggan *</label>
+                    <input
+                        v-model="isolateSearch"
+                        type="text"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                        placeholder="Ketik nama, ID, atau telepon..."
+                        @focus="showIsolateDropdown = true"
+                        @blur="setTimeout(() => showIsolateDropdown = false, 200)"
+                    >
+                    <div
+                        v-if="showIsolateDropdown && filteredActiveCustomers.length"
+                        class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                    >
+                        <button
+                            v-for="c in filteredActiveCustomers"
+                            :key="c.id"
+                            type="button"
+                            class="w-full text-left px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                            @click="selectIsolateCustomer(c)"
+                        >
+                            <div class="text-sm font-medium text-gray-900">{{ c.customer_id }} - {{ c.name }}</div>
+                            <div class="text-xs text-gray-500">{{ c.package?.name || '-' }} | {{ c.phone || '-' }}</div>
+                        </button>
+                    </div>
+                    <div
+                        v-if="showIsolateDropdown && isolateSearch && !filteredActiveCustomers.length"
+                        class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm text-gray-500 text-center"
+                    >
+                        Tidak ditemukan pelanggan aktif
+                    </div>
+                </div>
+
+                <!-- Selected Customer Info -->
+                <div v-if="isolateCustomer" class="bg-gray-50 rounded-lg p-3 mb-4">
+                    <p class="font-semibold text-gray-900">{{ isolateCustomer.name }}</p>
+                    <p class="text-sm text-gray-500">{{ isolateCustomer.customer_id }} | {{ isolateCustomer.package?.name || '-' }}</p>
+                </div>
+
+                <!-- Reason -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Isolir *</label>
+                    <input
+                        v-model="isolateReason"
+                        type="text"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                        placeholder="Contoh: Tunggakan 3 bulan, permintaan pelanggan..."
+                        maxlength="255"
+                    >
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button
+                        @click="closeIsolateModal"
+                        class="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                        :disabled="isolateLoading"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        @click="confirmIsolate"
+                        class="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                        :disabled="isolateLoading || !isolateCustomer || !isolateReason"
+                    >
+                        {{ isolateLoading ? 'Memproses...' : 'Ya, Isolir' }}
                     </button>
                 </div>
             </div>

@@ -91,6 +91,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/isolation', [IsolationController::class, 'index'])->name('isolation.index');
     });
     Route::middleware(['permission:customers.edit'])->group(function () {
+        Route::post('/isolation/{customer}/isolate', [IsolationController::class, 'isolate'])->name('isolation.isolate');
         Route::post('/isolation/{customer}/reopen', [IsolationController::class, 'reopen'])->name('isolation.reopen');
     });
 

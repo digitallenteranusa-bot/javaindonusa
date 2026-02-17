@@ -7,7 +7,10 @@ use App\Jobs\ReopenCustomerJob;
 use App\Models\Area;
 use App\Models\Customer;
 use App\Models\Package;
+use App\Services\Mikrotik\MikrotikService;
+use App\Services\Notification\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class IsolationController extends Controller
@@ -55,12 +58,56 @@ class IsolationController extends Controller
             $customers = $query->paginate(min((int) $perPage, 999999))->withQueryString();
         }
 
+        $activeCustomers = Customer::where('status', 'active')
+            ->with('package:id,name')
+            ->select('id', 'customer_id', 'name', 'phone', 'package_id')
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('Admin/Isolation/Index', [
             'customers' => $customers,
             'filters' => $request->only(['area_id', 'package_id', 'search', 'per_page']),
             'areas' => Area::active()->get(['id', 'name']),
             'packages' => Package::active()->get(['id', 'name']),
+            'activeCustomers' => $activeCustomers,
         ]);
+    }
+
+    public function isolate(Request $request, Customer $customer)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:255',
+        ]);
+
+        if ($customer->isIsolated()) {
+            return back()->with('error', 'Pelanggan sudah dalam status isolir.');
+        }
+
+        // Update customer status directly (manual isolation bypasses auto rules)
+        $customer->update([
+            'status' => 'isolated',
+            'isolation_date' => now(),
+            'isolation_reason' => $request->reason,
+        ]);
+
+        // Execute Mikrotik isolation via queue
+        $customerId = $customer->id;
+        dispatch(function () use ($customerId) {
+            $customer = Customer::with(['router', 'package'])->find($customerId);
+            if ($customer) {
+                app(MikrotikService::class)->isolateCustomer($customer);
+                app(NotificationService::class)->sendIsolationNotice($customer);
+            }
+        })->onQueue('isolation');
+
+        Log::info('Manual isolation executed by admin', [
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'reason' => $request->reason,
+            'admin' => auth()->user()->name ?? 'unknown',
+        ]);
+
+        return back()->with('success', "Proses isolir untuk {$customer->name} sedang dijalankan.");
     }
 
     public function reopen(Customer $customer)

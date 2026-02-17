@@ -349,13 +349,10 @@ class UpdateService
             // Put application in maintenance mode
             Artisan::call('down', ['--secret' => 'update-in-progress']);
 
-            // Ensure git trusts this directory
-            exec("git config --global --add safe.directory " . escapeshellarg($basePath) . " 2>&1");
-
-            // Step 1: git pull
+            // Step 1: git pull (use -c safe.directory to bypass ownership check)
             $output = [];
             $returnCode = 0;
-            exec("cd " . escapeshellarg($basePath) . " && git pull origin main 2>&1", $output, $returnCode);
+            exec("cd " . escapeshellarg($basePath) . " && git -c safe.directory=" . escapeshellarg($basePath) . " pull origin main 2>&1", $output, $returnCode);
             $stepOutput = implode("\n", $output);
             $steps[] = ['step' => 'git pull origin main', 'output' => $stepOutput, 'success' => $returnCode === 0];
             if ($returnCode !== 0) {

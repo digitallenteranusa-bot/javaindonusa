@@ -37,6 +37,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
                 '15-01-2024',           // tanggal_gabung (DD-MM-YYYY)
                 '1',                    // tanggal_tagih (1-28)
                 '3',                    // rapel_bulan (jumlah bulan toleransi rapel)
+                '01-03-2026',           // mulai_ditagih (DD-MM-YYYY, kosongkan jika langsung ditagih)
             ],
         ];
     }
@@ -64,6 +65,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
             'tanggal_gabung',
             'tanggal_tagih',
             'rapel_bulan',
+            'mulai_ditagih',
         ];
     }
 
@@ -72,8 +74,8 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
      */
     public function styles(Worksheet $sheet)
     {
-        // Style header row (A-Q = 17 columns)
-        $sheet->getStyle('A1:Q1')->applyFromArray([
+        // Style header row (A-R = 18 columns)
+        $sheet->getStyle('A1:R1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -90,7 +92,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
         ]);
 
         // Style data row (sample)
-        $sheet->getStyle('A2:Q2')->applyFromArray([
+        $sheet->getStyle('A2:R2')->applyFromArray([
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
                 'startColor' => ['rgb' => 'FEF3C7'],
@@ -117,6 +119,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
         $sheet->getComment('O1')->getText()->createTextRun('Format: DD-MM-YYYY (contoh: 02-01-2025)');
         $sheet->getComment('P1')->getText()->createTextRun('Tanggal 1-28');
         $sheet->getComment('Q1')->getText()->createTextRun('Jumlah bulan toleransi rapel (default 3)');
+        $sheet->getComment('R1')->getText()->createTextRun('Format: DD-MM-YYYY. Kosongkan jika langsung ditagih');
 
         return [];
     }
@@ -144,6 +147,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
             'O' => 15,  // tanggal_gabung
             'P' => 12,  // tanggal_tagih
             'Q' => 12,  // rapel_bulan
+            'R' => 15,  // mulai_ditagih
         ];
     }
 

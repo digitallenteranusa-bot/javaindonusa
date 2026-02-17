@@ -42,6 +42,7 @@ const form = useForm({
     onu_serial: props.customer?.onu_serial || '',
     connection_type: props.customer?.connection_type || 'pppoe',
     billing_date: props.customer?.billing_date || 1,
+    billing_start_date: props.customer?.billing_start_date ? props.customer.billing_start_date.substring(0, 10) : '',
     total_debt: props.customer?.total_debt || 0,
     rapel_months: props.customer?.rapel_months || '',
     notes: props.customer?.notes || '',
@@ -377,6 +378,16 @@ const dismissMessage = () => {
                             >
                                 <option v-for="d in 28" :key="d" :value="d">Tanggal {{ d }}</option>
                             </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Mulai Ditagih</label>
+                            <input
+                                v-model="form.billing_start_date"
+                                type="date"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                            <p class="text-gray-500 text-xs mt-1">Kosongkan untuk pelanggan lama. Invoice mulai dari bulan ini.</p>
                         </div>
 
                         <div>

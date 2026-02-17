@@ -48,6 +48,7 @@ class CustomerController extends Controller
             'onu_serial' => 'nullable|string|max:100',
             'connection_type' => 'required|in:pppoe,static',
             'billing_date' => 'required|integer|min:1|max:28',
+            'billing_start_date' => 'nullable|date',
             'total_debt' => 'nullable|numeric|min:0',
             'rapel_months' => 'nullable|integer|min:0|max:12',
             'notes' => 'nullable|string|max:1000',
@@ -66,6 +67,7 @@ class CustomerController extends Controller
         $validated['billing_type'] = 'prepaid'; // Otomatis bayar di muka
         $validated['pppoe_password'] = Crypt::encryptString('client001'); // Otomatis client001
         $validated['total_debt'] = $validated['total_debt'] ?? 0;
+        $validated['billing_start_date'] = $validated['billing_start_date'] ?: null;
         $validated['join_date'] = now();
         $validated['collector_id'] = Auth::id(); // Assign to current collector
 
@@ -136,12 +138,16 @@ class CustomerController extends Controller
             'onu_serial' => 'nullable|string|max:100',
             'connection_type' => 'required|in:pppoe,static',
             'billing_date' => 'required|integer|min:1|max:28',
+            'billing_start_date' => 'nullable|date',
             'total_debt' => 'nullable|numeric|min:0',
             'rapel_months' => 'nullable|integer|min:0|max:12',
             'notes' => 'nullable|string|max:1000',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
         ]);
+
+        // Set billing_start_date null if empty
+        $validated['billing_start_date'] = $validated['billing_start_date'] ?: null;
 
         // Set rapel jika ada rapel_months
         if (!empty($validated['rapel_months']) && $validated['rapel_months'] > 0) {

@@ -87,6 +87,7 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'tanggal_gabung' => $row['tanggal_gabung'] ?? null,
             'tanggal_tagih' => $row['tanggal_tagih'] ?? 1,
             'rapel_bulan' => $row['rapel_bulan'] ?? 3,
+            'mulai_ditagih' => $row['mulai_ditagih'] ?? null,
         ];
     }
 
@@ -230,6 +231,7 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'total_debt' => (float) ($row['hutang'] ?? 0),
             'join_date' => $joinDate ?? now(),
             'billing_date' => (int) ($row['tanggal_tagih'] ?? 1),
+            'billing_start_date' => !empty($row['mulai_ditagih']) ? $this->parseDate($row['mulai_ditagih']) : null,
             'payment_behavior' => $isRapel ? 'rapel' : 'regular',
             'is_rapel' => $isRapel,
             'rapel_months' => $rapelMonths,

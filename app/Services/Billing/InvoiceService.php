@@ -92,6 +92,15 @@ class InvoiceService
             return null;
         }
 
+        // Skip if billing hasn't started yet
+        if ($customer->billing_start_date) {
+            $billingStart = Carbon::parse($customer->billing_start_date)->startOfMonth();
+            $invoicePeriod = Carbon::create($year, $month, 1);
+            if ($invoicePeriod->lt($billingStart)) {
+                return null;
+            }
+        }
+
         return DB::transaction(function () use ($customer, $month, $year) {
             $package = $customer->package;
             $dueDate = Carbon::create($year, $month, config('billing.due_days', 20));

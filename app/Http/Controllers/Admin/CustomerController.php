@@ -135,6 +135,7 @@ class CustomerController extends Controller
             'longitude' => $request->longitude ?: null,
             'collector_id' => $request->collector_id ?: null,
             'odp_id' => $request->odp_id ?: null,
+            'billing_start_date' => $request->billing_start_date ?: null,
         ]);
 
         $validated = $request->validate([
@@ -160,6 +161,7 @@ class CustomerController extends Controller
             'onu_serial' => 'nullable|string|max:50',
             'billing_type' => 'required|in:prepaid,postpaid',
             'billing_date' => 'nullable|integer|min:1|max:28',
+            'billing_start_date' => 'nullable|date',
             'is_rapel' => 'boolean',
             'rapel_months' => 'nullable|integer|min:1|max:12',
             'notes' => 'nullable|string|max:1000',
@@ -244,6 +246,7 @@ class CustomerController extends Controller
             'longitude' => $request->longitude ?: null,
             'collector_id' => $request->collector_id ?: null,
             'odp_id' => $request->odp_id ?: null,
+            'billing_start_date' => $request->billing_start_date ?: null,
         ]);
 
         $validated = $request->validate([
@@ -270,6 +273,7 @@ class CustomerController extends Controller
             'status' => 'required|in:active,isolated,suspended,terminated',
             'billing_type' => 'required|in:prepaid,postpaid',
             'billing_date' => 'nullable|integer|min:1|max:28',
+            'billing_start_date' => 'nullable|date',
             'is_rapel' => 'boolean',
             'rapel_months' => 'nullable|integer|min:1|max:12',
             'notes' => 'nullable|string|max:1000',

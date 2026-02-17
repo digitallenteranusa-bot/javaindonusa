@@ -95,12 +95,18 @@ class CustomerController extends Controller
         $sortDirection = $request->get('direction', 'desc');
         $query->orderBy($sortField, $sortDirection);
 
-        $customers = $query->paginate($request->get('per_page', 15))
-            ->withQueryString();
+        $perPage = $request->get('per_page', 15);
+        if ($perPage === 'all') {
+            $customers = $query->paginate($query->count() ?: 15)
+                ->withQueryString();
+        } else {
+            $customers = $query->paginate((int) $perPage)
+                ->withQueryString();
+        }
 
         return Inertia::render('Admin/Customer/Index', [
             'customers' => $customers,
-            'filters' => $request->only(['status', 'area_id', 'package_id', 'collector_id', 'search', 'has_debt']),
+            'filters' => $request->only(['status', 'area_id', 'package_id', 'collector_id', 'search', 'has_debt', 'per_page']),
             'areas' => Area::active()->get(['id', 'name']),
             'packages' => Package::active()->get(['id', 'name']),
             'collectors' => User::where('role', 'penagih')->where('is_active', true)->get(['id', 'name']),

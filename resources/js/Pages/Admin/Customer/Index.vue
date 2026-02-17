@@ -16,6 +16,8 @@ const search = ref(props.filters.search || '')
 const statusFilter = ref(props.filters.status || '')
 const areaFilter = ref(props.filters.area_id || '')
 const packageFilter = ref(props.filters.package_id || '')
+const collectorFilter = ref(props.filters.collector_id || '')
+const perPage = ref(props.filters.per_page || 15)
 
 // Import modal
 const showImportModal = ref(false)
@@ -67,6 +69,8 @@ const applyFilters = debounce(() => {
         status: statusFilter.value || undefined,
         area_id: areaFilter.value || undefined,
         package_id: packageFilter.value || undefined,
+        collector_id: collectorFilter.value || undefined,
+        per_page: perPage.value != 15 ? perPage.value : undefined,
     }, {
         preserveState: true,
         preserveScroll: true,
@@ -74,7 +78,7 @@ const applyFilters = debounce(() => {
 }, 300)
 
 // Watch for filter changes
-watch([search, statusFilter, areaFilter, packageFilter], applyFilters)
+watch([search, statusFilter, areaFilter, packageFilter, collectorFilter, perPage], applyFilters)
 
 // Status badge classes
 const statusClass = (status) => {
@@ -138,7 +142,7 @@ const deleteCustomer = (customer) => {
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="md:col-span-2">
                     <input
                         v-model="search"
@@ -174,6 +178,26 @@ const deleteCustomer = (customer) => {
                     <option v-for="pkg in packages" :key="pkg.id" :value="pkg.id">
                         {{ pkg.name }}
                     </option>
+                </select>
+                <select
+                    v-model="collectorFilter"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">Semua Penagih</option>
+                    <option v-for="col in collectors" :key="col.id" :value="col.id">
+                        {{ col.name }}
+                    </option>
+                </select>
+                <select
+                    v-model="perPage"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                    <option :value="10">10 per halaman</option>
+                    <option :value="15">15 per halaman</option>
+                    <option :value="25">25 per halaman</option>
+                    <option :value="50">50 per halaman</option>
+                    <option :value="100">100 per halaman</option>
+                    <option value="all">Semua</option>
                 </select>
             </div>
         </div>

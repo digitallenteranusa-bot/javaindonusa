@@ -127,13 +127,11 @@ const gitPullUpdate = () => {
 
     router.post('/admin/system/git-pull-update', {}, {
         preserveScroll: true,
-        onSuccess: () => {
+        onFinish: () => {
+            pullingUpdate.value = false
             if (page.props.flash?.updateLog) {
                 updateLog.value = page.props.flash.updateLog
             }
-        },
-        onFinish: () => {
-            pullingUpdate.value = false
         }
     })
 }

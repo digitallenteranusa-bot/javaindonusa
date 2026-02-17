@@ -363,7 +363,7 @@ class SettingsController extends Controller
             Setting::setValue('tripay', $key, is_bool($value) ? ($value ? '1' : '0') : $value);
         }
 
-        return back()->with('success', 'Pengaturan Tripay berhasil disimpan');
+        return redirect()->route('admin.settings.index')->with('success', 'Pengaturan Tripay berhasil disimpan');
     }
 
     /**

@@ -241,7 +241,9 @@ const saveGenieacs = () => {
 }
 
 const saveTripay = () => {
-    tripayForm.post('/admin/settings/tripay')
+    tripayForm.post('/admin/settings/tripay', {
+        preserveScroll: true,
+    })
 }
 
 // Logo handlers

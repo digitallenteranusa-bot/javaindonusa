@@ -184,9 +184,11 @@ class CustomerController extends Controller
             $validated['odp_id'] = null;
         }
 
-        // Generate customer ID
-        $lastCustomer = Customer::orderBy('id', 'desc')->first();
-        $sequence = $lastCustomer ? intval(substr($lastCustomer->customer_id, -5)) + 1 : 1;
+        // Generate customer ID - cari nomor tertinggi dari semua customer_id yang ada
+        $maxSequence = Customer::where('customer_id', 'like', 'JIN-%')
+            ->selectRaw("MAX(CAST(SUBSTRING(customer_id, 5) AS UNSIGNED)) as max_seq")
+            ->value('max_seq');
+        $sequence = ($maxSequence ?? 0) + 1;
         $validated['customer_id'] = 'JIN-' . str_pad($sequence, 5, '0', STR_PAD_LEFT);
 
         $validated['status'] = Customer::STATUS_ACTIVE;

@@ -123,7 +123,30 @@ class DebtIsolationService
         // Buat invoice baru dan tambahkan ke hutang
         return DB::transaction(function () use ($customer, $periodMonth, $periodYear) {
             $package = $customer->package;
-            $amount = $package->price;
+            $packagePrice = $package->price;
+
+            // Hitung diskon
+            $discount = 0;
+            $discountReason = null;
+            if ($customer->discount_type === 'nominal' && $customer->discount_value > 0) {
+                $discount = $customer->discount_value;
+                $discountReason = $customer->discount_reason;
+            } elseif ($customer->discount_type === 'percentage' && $customer->discount_value > 0) {
+                $discount = round($packagePrice * $customer->discount_value / 100, 2);
+                $discountReason = $customer->discount_reason
+                    ? "{$customer->discount_reason} ({$customer->discount_value}%)"
+                    : "Diskon {$customer->discount_value}%";
+            }
+
+            $subtotal = $packagePrice - $discount;
+
+            // Hitung PPN 11% jika pelanggan kena pajak
+            $ppn = 0;
+            if ($customer->is_taxed) {
+                $ppn = round($subtotal * 0.11, 2);
+            }
+
+            $amount = $subtotal + $ppn;
 
             // Hitung periode
             $periodStart = Carbon::create($periodYear, $periodMonth, 1)->startOfMonth();
@@ -140,9 +163,10 @@ class DebtIsolationService
                 'period_month' => $periodMonth,
                 'period_year' => $periodYear,
                 'package_name' => $package->name,
-                'package_price' => $amount,
-                'additional_charges' => 0,
-                'discount' => 0,
+                'package_price' => $packagePrice,
+                'additional_charges' => $ppn,
+                'discount' => $discount,
+                'discount_reason' => $discountReason,
                 'total_amount' => $amount,
                 'paid_amount' => 0,
                 'remaining_amount' => $amount,

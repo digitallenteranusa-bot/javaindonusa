@@ -38,6 +38,9 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
                 '1',                    // tanggal_tagih (1-28)
                 '3',                    // rapel_bulan (jumlah bulan toleransi rapel)
                 '01-03-2026',           // mulai_ditagih (DD-MM-YYYY, kosongkan jika langsung ditagih)
+                'none',                 // diskon_tipe (none/nominal/percentage)
+                '0',                    // diskon_nilai (Rp atau %, sesuai tipe)
+                'tidak',                // ppn (ya/tidak)
             ],
         ];
     }
@@ -66,6 +69,9 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
             'tanggal_tagih',
             'rapel_bulan',
             'mulai_ditagih',
+            'diskon_tipe',
+            'diskon_nilai',
+            'ppn',
         ];
     }
 
@@ -74,8 +80,8 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
      */
     public function styles(Worksheet $sheet)
     {
-        // Style header row (A-R = 18 columns)
-        $sheet->getStyle('A1:R1')->applyFromArray([
+        // Style header row (A-U = 21 columns)
+        $sheet->getStyle('A1:U1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -92,7 +98,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
         ]);
 
         // Style data row (sample)
-        $sheet->getStyle('A2:R2')->applyFromArray([
+        $sheet->getStyle('A2:U2')->applyFromArray([
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
                 'startColor' => ['rgb' => 'FEF3C7'],
@@ -120,6 +126,9 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
         $sheet->getComment('P1')->getText()->createTextRun('Tanggal 1-28');
         $sheet->getComment('Q1')->getText()->createTextRun('Jumlah bulan toleransi rapel (default 3)');
         $sheet->getComment('R1')->getText()->createTextRun('Format: DD-MM-YYYY. Kosongkan jika langsung ditagih');
+        $sheet->getComment('S1')->getText()->createTextRun('none = tanpa diskon, nominal = Rp, percentage = %');
+        $sheet->getComment('T1')->getText()->createTextRun('Nilai diskon (Rp atau %) sesuai tipe diskon');
+        $sheet->getComment('U1')->getText()->createTextRun('ya = dikenakan PPN 11%, tidak = tanpa PPN');
 
         return [];
     }
@@ -148,6 +157,9 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
             'P' => 12,  // tanggal_tagih
             'Q' => 12,  // rapel_bulan
             'R' => 15,  // mulai_ditagih
+            'S' => 15,  // diskon_tipe
+            'T' => 15,  // diskon_nilai
+            'U' => 10,  // ppn
         ];
     }
 

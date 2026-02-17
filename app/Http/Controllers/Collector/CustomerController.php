@@ -51,10 +51,17 @@ class CustomerController extends Controller
             'billing_start_date' => 'nullable|date',
             'total_debt' => 'nullable|numeric|min:0',
             'rapel_months' => 'nullable|integer|min:0|max:12',
+            'discount_type' => 'nullable|in:none,nominal,percentage',
+            'discount_value' => 'nullable|numeric|min:0',
+            'discount_reason' => 'nullable|string|max:255',
+            'is_taxed' => 'boolean',
             'notes' => 'nullable|string|max:1000',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
         ]);
+
+        // Set default discount_type if not provided
+        $validated['discount_type'] = $validated['discount_type'] ?? 'none';
 
         // Generate customer ID
         $lastCustomer = Customer::orderBy('id', 'desc')->first();
@@ -141,10 +148,17 @@ class CustomerController extends Controller
             'billing_start_date' => 'nullable|date',
             'total_debt' => 'nullable|numeric|min:0',
             'rapel_months' => 'nullable|integer|min:0|max:12',
+            'discount_type' => 'nullable|in:none,nominal,percentage',
+            'discount_value' => 'nullable|numeric|min:0',
+            'discount_reason' => 'nullable|string|max:255',
+            'is_taxed' => 'boolean',
             'notes' => 'nullable|string|max:1000',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
         ]);
+
+        // Set default discount_type if not provided
+        $validated['discount_type'] = $validated['discount_type'] ?? 'none';
 
         // Set billing_start_date null if empty
         $validated['billing_start_date'] = $validated['billing_start_date'] ?: null;

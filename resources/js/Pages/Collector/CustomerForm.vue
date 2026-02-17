@@ -45,6 +45,10 @@ const form = useForm({
     billing_start_date: props.customer?.billing_start_date ? props.customer.billing_start_date.substring(0, 10) : '',
     total_debt: props.customer?.total_debt || 0,
     rapel_months: props.customer?.rapel_months || '',
+    discount_type: props.customer?.discount_type || 'none',
+    discount_value: props.customer?.discount_value || 0,
+    discount_reason: props.customer?.discount_reason || '',
+    is_taxed: props.customer?.is_taxed || false,
     notes: props.customer?.notes || '',
     latitude: props.customer?.latitude || '',
     longitude: props.customer?.longitude || '',
@@ -577,6 +581,62 @@ const dismissMessage = () => {
                         <p class="text-xs text-gray-500 text-center">
                             Klik GPS untuk lokasi otomatis atau Pilih di Peta untuk memilih manual.
                         </p>
+                    </div>
+                </div>
+
+                <!-- Diskon & Pajak -->
+                <div class="bg-white rounded-xl p-4 shadow-sm">
+                    <h2 class="font-semibold text-gray-800 mb-4">Diskon & Pajak</h2>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Diskon</label>
+                            <select
+                                v-model="form.discount_type"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="none">Tidak Ada Diskon</option>
+                                <option value="nominal">Nominal (Rp)</option>
+                                <option value="percentage">Persentase (%)</option>
+                            </select>
+                        </div>
+
+                        <div v-if="form.discount_type !== 'none'">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ form.discount_type === 'nominal' ? 'Nilai Diskon (Rp)' : 'Nilai Diskon (%)' }}
+                            </label>
+                            <input
+                                v-model="form.discount_value"
+                                type="number"
+                                min="0"
+                                :max="form.discount_type === 'percentage' ? 100 : undefined"
+                                :step="form.discount_type === 'percentage' ? 0.5 : 1000"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                :placeholder="form.discount_type === 'nominal' ? '25000' : '10'"
+                            >
+                        </div>
+
+                        <div v-if="form.discount_type !== 'none'">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Diskon</label>
+                            <input
+                                v-model="form.discount_reason"
+                                type="text"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                placeholder="Contoh: Diskon karyawan"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="flex items-center gap-3">
+                                <input
+                                    v-model="form.is_taxed"
+                                    type="checkbox"
+                                    class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                >
+                                <span class="text-sm font-medium text-gray-700">Dikenakan PPN 11%</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1 ml-8">PPN ditambahkan setelah diskon</p>
+                        </div>
                     </div>
                 </div>
 

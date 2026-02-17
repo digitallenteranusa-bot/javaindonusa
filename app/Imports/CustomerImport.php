@@ -88,6 +88,9 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'tanggal_tagih' => $row['tanggal_tagih'] ?? 1,
             'rapel_bulan' => $row['rapel_bulan'] ?? 3,
             'mulai_ditagih' => $row['mulai_ditagih'] ?? null,
+            'diskon_tipe' => $this->parseDiscountType($row['diskon_tipe'] ?? null),
+            'diskon_nilai' => $row['diskon_nilai'] ?? 0,
+            'ppn' => $row['ppn'] ?? null,
         ];
     }
 
@@ -235,6 +238,9 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'payment_behavior' => $isRapel ? 'rapel' : 'regular',
             'is_rapel' => $isRapel,
             'rapel_months' => $rapelMonths,
+            'discount_type' => $row['diskon_tipe'] ?? 'none',
+            'discount_value' => (float) ($row['diskon_nilai'] ?? 0),
+            'is_taxed' => $this->parseBooleanValue($row['ppn'] ?? null),
         ]);
     }
 
@@ -549,6 +555,34 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'problematic', 'bermasalah' => 'problematic',
             default => 'regular',
         };
+    }
+
+    /**
+     * Parse discount type
+     */
+    protected function parseDiscountType(?string $type): string
+    {
+        if (empty($type)) return 'none';
+
+        $type = strtolower(trim($type));
+
+        return match ($type) {
+            'nominal', 'rp', 'rupiah' => 'nominal',
+            'percentage', 'persen', '%', 'persentase' => 'percentage',
+            default => 'none',
+        };
+    }
+
+    /**
+     * Parse boolean value from various formats
+     */
+    protected function parseBooleanValue($value): bool
+    {
+        if (empty($value)) return false;
+
+        $value = strtolower(trim((string) $value));
+
+        return in_array($value, ['1', 'true', 'ya', 'yes', 'y', 'aktif', 'active']);
     }
 
     /**

@@ -109,6 +109,31 @@ class InvoiceService
             $periodStart = Carbon::create($year, $month, 1);
             $periodEnd = $periodStart->copy()->endOfMonth();
 
+            $packagePrice = $package->price;
+
+            // Hitung diskon dari data pelanggan
+            $discount = 0;
+            $discountReason = null;
+            if ($customer->discount_type === 'nominal' && $customer->discount_value > 0) {
+                $discount = $customer->discount_value;
+                $discountReason = $customer->discount_reason;
+            } elseif ($customer->discount_type === 'percentage' && $customer->discount_value > 0) {
+                $discount = round($packagePrice * $customer->discount_value / 100, 2);
+                $discountReason = $customer->discount_reason
+                    ? "{$customer->discount_reason} ({$customer->discount_value}%)"
+                    : "Diskon {$customer->discount_value}%";
+            }
+
+            $subtotal = $packagePrice - $discount;
+
+            // Hitung PPN 11% jika pelanggan kena pajak
+            $ppn = 0;
+            if ($customer->is_taxed) {
+                $ppn = round($subtotal * 0.11, 2);
+            }
+
+            $totalAmount = $subtotal + $ppn;
+
             $invoice = Invoice::create([
                 'customer_id' => $customer->id,
                 'invoice_number' => $this->generateInvoiceNumber($year, $month),
@@ -117,12 +142,13 @@ class InvoiceService
                 'period_start' => $periodStart,
                 'period_end' => $periodEnd,
                 'package_name' => $package->name,
-                'package_price' => $package->price,
-                'additional_charges' => $customer->additional_charges ?? 0,
-                'discount' => $customer->discount ?? 0,
-                'total_amount' => $package->price + ($customer->additional_charges ?? 0) - ($customer->discount ?? 0),
+                'package_price' => $packagePrice,
+                'additional_charges' => $ppn,
+                'discount' => $discount,
+                'discount_reason' => $discountReason,
+                'total_amount' => $totalAmount,
                 'paid_amount' => 0,
-                'remaining_amount' => $package->price + ($customer->additional_charges ?? 0) - ($customer->discount ?? 0),
+                'remaining_amount' => $totalAmount,
                 'due_date' => $dueDate,
                 'status' => 'pending',
             ]);

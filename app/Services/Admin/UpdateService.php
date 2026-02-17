@@ -349,6 +349,9 @@ class UpdateService
             // Put application in maintenance mode
             Artisan::call('down', ['--secret' => 'update-in-progress']);
 
+            // Ensure git trusts this directory
+            exec("git config --global --add safe.directory " . escapeshellarg($basePath) . " 2>&1");
+
             // Step 1: git pull
             $output = [];
             $returnCode = 0;

@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\TripayTransaction;
+use App\Models\XenditTransaction;
 use App\Services\Payment\TripayService;
+use App\Services\Payment\XenditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -44,10 +46,17 @@ class TripayController extends Controller
             return redirect()->route('customer.login');
         }
 
-        if (!$this->tripayService->isEnabled()) {
+        // Determine which gateway is active (prioritize Xendit)
+        $xenditService = app(XenditService::class);
+        $xenditEnabled = $xenditService->isEnabled();
+        $tripayEnabled = $this->tripayService->isEnabled();
+
+        if (!$tripayEnabled && !$xenditEnabled) {
             return redirect()->route('customer.dashboard')
                 ->with('error', 'Pembayaran online belum tersedia');
         }
+
+        $paymentGateway = $xenditEnabled ? 'xendit' : 'tripay';
 
         // Get unpaid invoices
         $unpaidInvoices = Invoice::where('customer_id', $customer->id)
@@ -67,29 +76,65 @@ class TripayController extends Controller
                 'due_date' => $inv->due_date?->format('Y-m-d'),
             ]);
 
-        // Get active Tripay transaction for this customer (if any)
-        $activeTransaction = TripayTransaction::where('customer_id', $customer->id)
-            ->where('status', TripayTransaction::STATUS_UNPAID)
-            ->where('expired_at', '>', now())
-            ->latest()
-            ->first();
+        // Get active transaction based on gateway
+        $activeTransaction = null;
+        $activeGateway = null;
+
+        if ($xenditEnabled) {
+            $xenditTx = XenditTransaction::where('customer_id', $customer->id)
+                ->where('status', XenditTransaction::STATUS_PENDING)
+                ->where('expired_at', '>', now())
+                ->latest()
+                ->first();
+
+            if ($xenditTx) {
+                $activeTransaction = [
+                    'id' => $xenditTx->id,
+                    'reference' => $xenditTx->external_id,
+                    'method' => $xenditTx->method,
+                    'amount' => (float) $xenditTx->amount,
+                    'total_amount' => (float) $xenditTx->amount,
+                    'fee_customer' => 0,
+                    'status' => $xenditTx->status === 'PENDING' ? 'UNPAID' : $xenditTx->status,
+                    'checkout_url' => $xenditTx->invoice_url,
+                    'qr_url' => null,
+                    'pay_url' => null,
+                    'expired_at' => $xenditTx->expired_at?->toIso8601String(),
+                ];
+                $activeGateway = 'xendit';
+            }
+        }
+
+        if (!$activeTransaction && $tripayEnabled) {
+            $tripayTx = TripayTransaction::where('customer_id', $customer->id)
+                ->where('status', TripayTransaction::STATUS_UNPAID)
+                ->where('expired_at', '>', now())
+                ->latest()
+                ->first();
+
+            if ($tripayTx) {
+                $activeTransaction = [
+                    'id' => $tripayTx->id,
+                    'reference' => $tripayTx->reference,
+                    'method' => $tripayTx->method,
+                    'amount' => (float) $tripayTx->amount,
+                    'total_amount' => (float) $tripayTx->total_amount,
+                    'fee_customer' => (float) $tripayTx->fee_customer,
+                    'status' => $tripayTx->status,
+                    'checkout_url' => $tripayTx->checkout_url,
+                    'qr_url' => $tripayTx->qr_url,
+                    'pay_url' => $tripayTx->pay_url,
+                    'expired_at' => $tripayTx->expired_at?->toIso8601String(),
+                ];
+                $activeGateway = 'tripay';
+            }
+        }
 
         return Inertia::render('Customer/Pay', [
             'customer' => $customer,
             'unpaidInvoices' => $unpaidInvoices,
-            'activeTransaction' => $activeTransaction ? [
-                'id' => $activeTransaction->id,
-                'reference' => $activeTransaction->reference,
-                'method' => $activeTransaction->method,
-                'amount' => (float) $activeTransaction->amount,
-                'total_amount' => (float) $activeTransaction->total_amount,
-                'fee_customer' => (float) $activeTransaction->fee_customer,
-                'status' => $activeTransaction->status,
-                'checkout_url' => $activeTransaction->checkout_url,
-                'qr_url' => $activeTransaction->qr_url,
-                'pay_url' => $activeTransaction->pay_url,
-                'expired_at' => $activeTransaction->expired_at?->toIso8601String(),
-            ] : null,
+            'activeTransaction' => $activeTransaction,
+            'payment_gateway' => $activeGateway ?? $paymentGateway,
         ]);
     }
 

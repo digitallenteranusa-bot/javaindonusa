@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Customer\PortalController;
 use App\Http\Controllers\Customer\TripayController;
+use App\Http\Controllers\Customer\XenditController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,5 +57,10 @@ Route::prefix('portal')->name('customer.')->group(function () {
         Route::get('/tripay/channels', [TripayController::class, 'getChannels'])->name('tripay.channels');
         Route::post('/tripay/pay', [TripayController::class, 'createTransaction'])->name('tripay.create');
         Route::get('/tripay/status/{transaction}', [TripayController::class, 'checkStatus'])->name('tripay.status');
+
+        // Xendit Online Payment
+        Route::get('/xendit/channels', [XenditController::class, 'getChannels'])->name('xendit.channels');
+        Route::post('/xendit/pay', [XenditController::class, 'createTransaction'])->name('xendit.create');
+        Route::get('/xendit/status/{transaction}', [XenditController::class, 'checkStatus'])->name('xendit.status');
     });
 });

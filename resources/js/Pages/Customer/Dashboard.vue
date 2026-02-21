@@ -11,6 +11,7 @@ const props = defineProps({
     isp_info: Object,
     transfer_proof_wa_url: String,
     tripay_enabled: Boolean,
+    xendit_enabled: Boolean,
 })
 
 // Check if there are unpaid invoices
@@ -189,7 +190,7 @@ const copyToClipboard = (text) => {
                 </div>
 
                 <!-- Online Payment Button (Tripay) -->
-                <div v-if="tripay_enabled && hasUnpaidInvoices" class="mt-4">
+                <div v-if="(tripay_enabled || xendit_enabled) && hasUnpaidInvoices" class="mt-4">
                     <Link
                         href="/portal/pay"
                         class="w-full flex items-center justify-center gap-2 py-3 bg-green-600 text-white rounded-lg font-semibold text-base hover:bg-green-700 transition-colors"

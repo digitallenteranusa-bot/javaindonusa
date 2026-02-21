@@ -379,6 +379,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('settings.genieacs');
         Route::post('/settings/tripay', [SettingsController::class, 'updateTripay'])
             ->name('settings.tripay');
+        Route::post('/settings/xendit', [SettingsController::class, 'updateXendit'])
+            ->name('settings.xendit');
     });
 
     // ================================================================

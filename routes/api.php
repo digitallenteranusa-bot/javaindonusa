@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Customer\TripayController;
+use App\Http\Controllers\Customer\XenditController;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,3 +13,6 @@ use App\Http\Controllers\Customer\TripayController;
 
 Route::post('/tripay/callback', [TripayController::class, 'callback'])
     ->name('api.tripay.callback');
+
+Route::post('/xendit/callback', [XenditController::class, 'callback'])
+    ->name('api.xendit.callback');

@@ -7,6 +7,10 @@ const props = defineProps({
     customer: Object,
     unpaidInvoices: Array,
     activeTransaction: Object,
+    payment_gateway: {
+        type: String,
+        default: 'tripay',
+    },
 })
 
 // State
@@ -77,11 +81,18 @@ onUnmounted(() => {
     stopPolling()
 })
 
+// Gateway-aware endpoint helper
+const gateway = ref(props.payment_gateway)
+
+const gatewayUrl = (path) => {
+    return `/portal/${gateway.value}/${path}`
+}
+
 // Load payment channels
 const loadChannels = async () => {
     loadingChannels.value = true
     try {
-        const response = await fetch('/portal/tripay/channels')
+        const response = await fetch(gatewayUrl('channels'))
         const data = await response.json()
         if (data.success) {
             channels.value = data.data
@@ -120,7 +131,7 @@ const createTransaction = async () => {
     error.value = null
 
     try {
-        const response = await fetch('/portal/tripay/pay', {
+        const response = await fetch(gatewayUrl('pay'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -167,7 +178,7 @@ const startPolling = () => {
     polling.value = setInterval(async () => {
         if (!transaction.value?.id) return
         try {
-            const response = await fetch(`/portal/tripay/status/${transaction.value.id}`)
+            const response = await fetch(gatewayUrl(`status/${transaction.value.id}`))
             const data = await response.json()
             if (data.status === 'PAID') {
                 transaction.value.status = 'PAID'

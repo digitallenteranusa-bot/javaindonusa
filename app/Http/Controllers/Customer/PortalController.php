@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Customer\CustomerPortalService;
 use App\Services\Mikrotik\MikrotikService;
 use App\Services\Payment\TripayService;
+use App\Services\Payment\XenditService;
 use App\Models\Customer;
 use App\Models\Router;
 use Illuminate\Http\Request;
@@ -16,11 +17,13 @@ class PortalController extends Controller
 {
     protected CustomerPortalService $portalService;
     protected TripayService $tripayService;
+    protected XenditService $xenditService;
 
-    public function __construct(CustomerPortalService $portalService, TripayService $tripayService)
+    public function __construct(CustomerPortalService $portalService, TripayService $tripayService, XenditService $xenditService)
     {
         $this->portalService = $portalService;
         $this->tripayService = $tripayService;
+        $this->xenditService = $xenditService;
     }
 
     // ================================================================
@@ -159,8 +162,9 @@ class PortalController extends Controller
         // URL untuk kirim bukti transfer
         $data['transfer_proof_wa_url'] = $this->portalService->getTransferProofWhatsAppUrl($customer);
 
-        // Tripay online payment flag
+        // Payment gateway flags
         $data['tripay_enabled'] = $this->tripayService->isEnabled();
+        $data['xendit_enabled'] = $this->xenditService->isEnabled();
 
         return Inertia::render('Customer/Dashboard', $data);
     }

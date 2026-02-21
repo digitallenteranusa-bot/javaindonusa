@@ -54,6 +54,14 @@ class SettingsController extends Controller
             'merchant_code' => $tripaySettings['merchant_code'] ?? config('tripay.merchant_code', ''),
         ];
 
+        // Get Xendit config (mask sensitive keys)
+        $xenditSettings = Setting::getGroup('xendit');
+        $xenditConfig = [
+            'enabled' => (bool) ($xenditSettings['enabled'] ?? config('xendit.enabled', false)),
+            'secret_key' => !empty($xenditSettings['secret_key']) ? '********' : '',
+            'webhook_token' => !empty($xenditSettings['webhook_token']) ? '********' : '',
+        ];
+
         return Inertia::render('Admin/Settings/Index', [
             'settings' => $settings,
             'ispInfo' => $ispInfo,
@@ -61,6 +69,7 @@ class SettingsController extends Controller
             'whatsappDrivers' => WhatsAppChannel::getAvailableDrivers(),
             'logoUrl' => $this->getLogoUrl(),
             'tripayConfig' => $tripayConfig,
+            'xenditConfig' => $xenditConfig,
         ]);
     }
 
@@ -408,6 +417,30 @@ class SettingsController extends Controller
         }
 
         return redirect()->route('admin.settings.index')->with('success', 'Pengaturan Tripay berhasil disimpan');
+    }
+
+    /**
+     * Update Xendit payment gateway settings
+     */
+    public function updateXendit(Request $request)
+    {
+        $validated = $request->validate([
+            'xendit_enabled' => 'boolean',
+            'xendit_secret_key' => 'nullable|string|max:255',
+            'xendit_webhook_token' => 'nullable|string|max:255',
+        ]);
+
+        foreach ($validated as $key => $value) {
+            // Skip masked values
+            if (in_array($key, ['xendit_secret_key', 'xendit_webhook_token']) && ($value === '********' || empty($value))) {
+                continue;
+            }
+
+            $dbKey = str_replace('xendit_', '', $key);
+            Setting::setValue('xendit', $dbKey, is_bool($value) ? ($value ? '1' : '0') : $value);
+        }
+
+        return redirect()->route('admin.settings.index')->with('success', 'Pengaturan Xendit berhasil disimpan');
     }
 
     /**

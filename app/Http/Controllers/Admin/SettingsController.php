@@ -34,8 +34,6 @@ class SettingsController extends Controller
             'api_key' => !empty($settings['whatsapp_api_key']) ? '********' : '',
             'sender' => $settings['whatsapp_sender'] ?? '',
             // Mekari Qontak specific
-            'mekari_client_id' => $settings['whatsapp_mekari_client_id'] ?? '',
-            'mekari_client_secret' => !empty($settings['whatsapp_api_key']) && ($settings['whatsapp_driver'] ?? '') === 'mekari' ? '********' : '',
             'mekari_channel_id' => $settings['whatsapp_mekari_channel_id'] ?? '',
             'mekari_template_id' => $settings['whatsapp_mekari_template_id'] ?? '',
         ];
@@ -123,7 +121,6 @@ class SettingsController extends Controller
             'api_key' => 'nullable|string|max:500',
             'sender' => 'nullable|string|max:20',
             // Mekari Qontak specific
-            'mekari_client_id' => 'nullable|string|max:255',
             'mekari_channel_id' => 'nullable|string|max:255',
             'mekari_template_id' => 'nullable|string|max:255',
         ]);
@@ -148,13 +145,6 @@ class SettingsController extends Controller
 
         // Mekari Qontak specific settings
         if ($validated['driver'] === 'mekari') {
-            if (!empty($validated['mekari_client_id'])) {
-                Setting::updateOrCreate(
-                    ['group' => 'notification', 'key' => 'whatsapp_mekari_client_id'],
-                    ['value' => $validated['mekari_client_id']]
-                );
-            }
-
             if (!empty($validated['mekari_channel_id'])) {
                 Setting::updateOrCreate(
                     ['group' => 'notification', 'key' => 'whatsapp_mekari_channel_id'],
@@ -168,9 +158,6 @@ class SettingsController extends Controller
                     ['value' => $validated['mekari_template_id']]
                 );
             }
-
-            // Hapus cache token Mekari saat config berubah
-            \Illuminate\Support\Facades\Cache::forget('mekari_qontak_token_' . substr(md5($validated['mekari_client_id'] ?? ''), 0, 8));
         }
 
         return back()->with('success', 'Konfigurasi WhatsApp berhasil disimpan');

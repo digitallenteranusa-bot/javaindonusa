@@ -46,9 +46,9 @@ return [
         ],
 
         // Mekari Qontak specific (WhatsApp Business API)
+        // API Token: generate dari app.qontak.com → Settings → API token → Omnichannel → Generate
         'mekari' => [
-            'client_id' => env('MEKARI_CLIENT_ID', ''),
-            'client_secret' => env('MEKARI_CLIENT_SECRET', ''), // Digunakan sebagai whatsapp api_key
+            'api_token' => env('MEKARI_API_TOKEN', ''), // Digunakan sebagai whatsapp_api_key
             'channel_id' => env('MEKARI_CHANNEL_INTEGRATION_ID', ''),
             'template_id' => env('MEKARI_TEMPLATE_ID', ''),
         ],

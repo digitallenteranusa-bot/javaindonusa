@@ -158,7 +158,6 @@ const whatsappForm = useForm({
     api_key: props.whatsappConfig?.api_key || '',
     sender: props.whatsappConfig?.sender || '',
     // Mekari Qontak specific
-    mekari_client_id: props.whatsappConfig?.mekari_client_id || '',
     mekari_channel_id: props.whatsappConfig?.mekari_channel_id || '',
     mekari_template_id: props.whatsappConfig?.mekari_template_id || '',
 })
@@ -623,13 +622,13 @@ const tabs = [
                         <template v-if="whatsappForm.driver === 'mekari'">
                             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-3">
                                 <div>
-                                    <p class="font-semibold mb-1">① Client ID &amp; Client Secret</p>
-                                    <p>Buka <strong>developers.mekari.com</strong> → Login dengan akun Mekari → <strong>Applications</strong> → buat/pilih aplikasi → salin <strong>Client ID</strong> dan <strong>Client Secret</strong>.</p>
-                                    <p class="mt-1 text-xs text-blue-600">Catatan: Jika belum ada akses, hubungi tim Mekari Qontak untuk permintaan OAuth credentials.</p>
+                                    <p class="font-semibold mb-1">① API Token</p>
+                                    <p>Login <strong>app.qontak.com</strong> → <strong>Settings</strong> → <strong>API token</strong> → tab <strong>Omnichannel</strong> → klik <strong>Generate</strong> → klik <strong>Show token</strong> → salin token-nya.</p>
+                                    <p class="mt-1 text-xs text-blue-600">Token berlaku 1 tahun. Bisa generate maksimal 2 token.</p>
                                 </div>
                                 <div>
                                     <p class="font-semibold mb-1">② Channel Integration ID</p>
-                                    <p>Login <strong>app.qontak.com</strong> → <strong>Settings</strong> → <strong>Integration</strong> → <strong>Channel Integration</strong> → pilih channel WhatsApp Anda → salin <strong>ID</strong>-nya.</p>
+                                    <p>Di <strong>app.qontak.com</strong> → <strong>Settings</strong> → <strong>Integration</strong> → <strong>Channel Integration</strong> → pilih channel WhatsApp → salin <strong>ID</strong>-nya.</p>
                                 </div>
                                 <div>
                                     <p class="font-semibold mb-1">③ Template ID</p>
@@ -637,16 +636,13 @@ const tabs = [
                                 </div>
                             </div>
 
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">API Token <span class="text-red-500">*</span></label>
+                                <input v-model="whatsappForm.api_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan jika tidak ingin mengubah">
+                                <p class="text-xs text-gray-500 mt-1">Token dari Settings → API token → Omnichannel di Qontak. Kosongkan jika tidak ingin mengubah.</p>
+                            </div>
+
                             <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Client ID <span class="text-red-500">*</span></label>
-                                    <input v-model="whatsappForm.mekari_client_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Client ID dari Mekari">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Client Secret <span class="text-red-500">*</span></label>
-                                    <input v-model="whatsappForm.api_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan jika tidak ingin mengubah">
-                                    <p class="text-xs text-gray-500 mt-1">Kosongkan jika tidak ingin mengubah</p>
-                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Channel Integration ID <span class="text-red-500">*</span></label>
                                     <input v-model="whatsappForm.mekari_channel_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Channel Integration ID WhatsApp">
@@ -654,7 +650,7 @@ const tabs = [
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Template ID <span class="text-red-500">*</span></label>
                                     <input v-model="whatsappForm.mekari_template_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="ID template pesan yang disetujui">
-                                    <p class="text-xs text-gray-500 mt-1">Template harus memiliki 1 parameter body <code class="bg-gray-100 px-1 rounded">&#123;&#123;1&#125;&#125;</code> untuk isi pesan</p>
+                                    <p class="text-xs text-gray-500 mt-1">Template harus punya 1 parameter body <code class="bg-gray-100 px-1 rounded">&#123;&#123;1&#125;&#125;</code></p>
                                 </div>
                             </div>
                         </template>

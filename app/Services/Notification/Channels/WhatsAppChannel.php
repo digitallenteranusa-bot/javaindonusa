@@ -235,21 +235,30 @@ class WhatsAppChannel
 
             $toName = $options['name'] ?? 'Pelanggan';
 
+            // Jika params eksplisit diberikan, gunakan sebagai multi-parameter template
+            // Jika tidak, fallback ke seluruh pesan sebagai {{1}}
+            if (!empty($options['params']) && is_array($options['params'])) {
+                $bodyParams = [];
+                foreach (array_values($options['params']) as $i => $val) {
+                    $bodyParams[] = [
+                        'key'        => (string) ($i + 1),
+                        'value_text' => (string) $val,
+                        'value'      => 'param' . ($i + 1),
+                    ];
+                }
+            } else {
+                $bodyParams = [
+                    ['key' => '1', 'value_text' => $message, 'value' => 'pesan'],
+                ];
+            }
+
             $payload = [
-                'to_name' => $toName,
-                'to_number' => $phone,
-                'message_template_id' => $templateId,
+                'to_name'                => $toName,
+                'to_number'              => $phone,
+                'message_template_id'    => $templateId,
                 'channel_integration_id' => $this->mekariChannelId,
-                'language' => ['code' => 'id'],
-                'parameters' => [
-                    'body' => [
-                        [
-                            'key' => '1',
-                            'value_text' => $message,
-                            'value' => 'pesan',
-                        ],
-                    ],
-                ],
+                'language'               => ['code' => 'id'],
+                'parameters'             => ['body' => $bodyParams],
             ];
 
             $response = Http::withHeaders([

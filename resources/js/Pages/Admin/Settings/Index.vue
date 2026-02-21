@@ -158,8 +158,14 @@ const whatsappForm = useForm({
     api_key: props.whatsappConfig?.api_key || '',
     sender: props.whatsappConfig?.sender || '',
     // Mekari Qontak specific
-    mekari_channel_id: props.whatsappConfig?.mekari_channel_id || '',
-    mekari_template_id: props.whatsappConfig?.mekari_template_id || '',
+    mekari_channel_id:    props.whatsappConfig?.mekari_channel_id || '',
+    mekari_tpl_payment:   props.whatsappConfig?.mekari_tpl_payment || '',
+    mekari_tpl_invoice:   props.whatsappConfig?.mekari_tpl_invoice || '',
+    mekari_tpl_reminder:  props.whatsappConfig?.mekari_tpl_reminder || '',
+    mekari_tpl_overdue:   props.whatsappConfig?.mekari_tpl_overdue || '',
+    mekari_tpl_isolation: props.whatsappConfig?.mekari_tpl_isolation || '',
+    mekari_tpl_otp:       props.whatsappConfig?.mekari_tpl_otp || '',
+    mekari_tpl_access:    props.whatsappConfig?.mekari_tpl_access || '',
 })
 
 // Mikrotik form
@@ -642,15 +648,54 @@ const tabs = [
                                 <p class="text-xs text-gray-500 mt-1">Token dari Settings → API token → Omnichannel di Qontak. Kosongkan jika tidak ingin mengubah.</p>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Channel Integration ID <span class="text-red-500">*</span></label>
-                                    <input v-model="whatsappForm.mekari_channel_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Channel Integration ID WhatsApp">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Template ID <span class="text-red-500">*</span></label>
-                                    <input v-model="whatsappForm.mekari_template_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="ID template pesan yang disetujui">
-                                    <p class="text-xs text-gray-500 mt-1">Template harus punya 1 parameter body <code class="bg-gray-100 px-1 rounded">&#123;&#123;1&#125;&#125;</code></p>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Channel Integration ID <span class="text-red-500">*</span></label>
+                                <input v-model="whatsappForm.mekari_channel_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Channel Integration ID WhatsApp">
+                            </div>
+
+                            <!-- Template IDs per jenis notifikasi -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Template ID per Jenis Notifikasi</label>
+                                <p class="text-xs text-gray-500 mb-3">UUID template yang sudah berstatus <strong>APPROVED</strong> di Mekari Qontak. Salin dari Campaign → Template Messages.</p>
+                                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="text-left px-4 py-2 font-medium text-gray-600 w-40">Jenis</th>
+                                                <th class="text-left px-4 py-2 font-medium text-gray-600">Template ID (UUID)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            <tr>
+                                                <td class="px-4 py-2 text-gray-700">Konfirmasi Bayar</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.mekari_tpl_payment" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></td>
+                                            </tr>
+                                            <tr class="bg-gray-50">
+                                                <td class="px-4 py-2 text-gray-700">Tagihan Invoice</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.mekari_tpl_invoice" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-4 py-2 text-gray-700">Pengingat</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.mekari_tpl_reminder" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></td>
+                                            </tr>
+                                            <tr class="bg-gray-50">
+                                                <td class="px-4 py-2 text-gray-700">Overdue</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.mekari_tpl_overdue" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-4 py-2 text-gray-700">Isolasi</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.mekari_tpl_isolation" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></td>
+                                            </tr>
+                                            <tr class="bg-gray-50">
+                                                <td class="px-4 py-2 text-gray-700">Akses Dibuka</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.mekari_tpl_access" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-4 py-2 text-gray-700">OTP Login</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.mekari_tpl_otp" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </template>

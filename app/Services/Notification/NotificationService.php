@@ -109,21 +109,30 @@ class NotificationService
      */
     public function sendInvoiceNotification(Customer $customer, Invoice $invoice): array
     {
-        // Jangan kirim jika pelanggan tidak punya hutang
         if ($customer->total_debt <= 0) {
             return ['success' => false, 'message' => 'Customer has no debt, notification skipped'];
         }
 
-        // Jangan kirim notifikasi untuk invoice bulan berjalan (baru di-generate)
         $currentMonth = now()->month;
-        $currentYear = now()->year;
+        $currentYear  = now()->year;
         if ($invoice->period_month == $currentMonth && $invoice->period_year == $currentYear) {
             return ['success' => false, 'message' => 'Current month invoice, notification skipped'];
         }
 
         $message = $this->buildInvoiceMessage($customer, $invoice);
 
-        return $this->sendWhatsApp($customer->phone, $message);
+        return $this->sendWhatsApp($customer->phone, $message, [
+            'template_id' => $this->getMekariTemplateId('invoice'),
+            'params'      => [
+                $customer->name,                                        // {{1}}
+                $invoice->period_label,                                 // {{2}}
+                $invoice->invoice_number,                               // {{3}}
+                $invoice->package_name,                                 // {{4}}
+                number_format($invoice->total_amount, 0, ',', '.'),    // {{5}}
+                $invoice->due_date->format('d M Y'),                   // {{6}}
+                $customer->customer_id,                                 // {{7}}
+            ],
+        ]);
     }
 
     /**
@@ -131,14 +140,21 @@ class NotificationService
      */
     public function sendPaymentReminder(Customer $customer, int $daysBeforeDue = 3): array
     {
-        // Jangan kirim jika tidak punya hutang
         if ($customer->total_debt <= 0) {
             return ['success' => false, 'message' => 'Customer has no debt, notification skipped'];
         }
 
         $message = $this->buildReminderMessage($customer, $daysBeforeDue);
 
-        return $this->sendWhatsApp($customer->phone, $message);
+        return $this->sendWhatsApp($customer->phone, $message, [
+            'template_id' => $this->getMekariTemplateId('reminder'),
+            'params'      => [
+                $customer->name,                                        // {{1}}
+                number_format($customer->total_debt, 0, ',', '.'),     // {{2}}
+                $daysBeforeDue,                                         // {{3}}
+                $customer->customer_id,                                 // {{4}}
+            ],
+        ]);
     }
 
     /**
@@ -146,14 +162,20 @@ class NotificationService
      */
     public function sendOverdueNotice(Customer $customer): array
     {
-        // Jangan kirim jika tidak punya hutang
         if ($customer->total_debt <= 0) {
             return ['success' => false, 'message' => 'Customer has no debt, notification skipped'];
         }
 
         $message = $this->buildOverdueMessage($customer);
 
-        return $this->sendWhatsApp($customer->phone, $message);
+        return $this->sendWhatsApp($customer->phone, $message, [
+            'template_id' => $this->getMekariTemplateId('overdue'),
+            'params'      => [
+                $customer->name,                                        // {{1}}
+                number_format($customer->total_debt, 0, ',', '.'),     // {{2}}
+                $customer->customer_id,                                 // {{3}}
+            ],
+        ]);
     }
 
     /**
@@ -212,7 +234,15 @@ class NotificationService
     {
         $message = $this->buildIsolationMessage($customer);
 
-        return $this->sendWhatsApp($customer->phone, $message);
+        return $this->sendWhatsApp($customer->phone, $message, [
+            'template_id' => $this->getMekariTemplateId('isolation'),
+            'params'      => [
+                $customer->name,                                        // {{1}}
+                number_format($customer->total_debt, 0, ',', '.'),     // {{2}}
+                $this->ispInfo?->phone_primary ?? '',                   // {{3}}
+                $customer->customer_id,                                 // {{4}}
+            ],
+        ]);
     }
 
     /**
@@ -222,7 +252,13 @@ class NotificationService
     {
         $message = $this->buildAccessOpenedMessage($customer);
 
-        return $this->sendWhatsApp($customer->phone, $message);
+        return $this->sendWhatsApp($customer->phone, $message, [
+            'template_id' => $this->getMekariTemplateId('access_opened'),
+            'params'      => [
+                $customer->name,                                        // {{1}}
+                $this->ispInfo?->phone_primary ?? '',                   // {{2}}
+            ],
+        ]);
     }
 
     /**
@@ -231,8 +267,20 @@ class NotificationService
     public function sendPaymentConfirmation(Customer $customer, Payment $payment): array
     {
         $message = $this->buildPaymentConfirmationMessage($customer, $payment);
+        $amount    = number_format($payment->amount, 0, ',', '.');
+        $remaining = number_format($customer->total_debt, 0, ',', '.');
+        $status    = $customer->total_debt > 0 ? 'Sisa Rp ' . $remaining : 'LUNAS';
 
-        return $this->sendWhatsApp($customer->phone, $message);
+        return $this->sendWhatsApp($customer->phone, $message, [
+            'template_id' => $this->getMekariTemplateId('payment'),
+            'params'      => [
+                $customer->name,                              // {{1}}
+                $amount,                                      // {{2}}
+                $payment->payment_number,                     // {{3}}
+                $payment->created_at->format('d M Y H:i'),   // {{4}}
+                $status,                                      // {{5}}
+            ],
+        ]);
     }
 
     /**
@@ -242,8 +290,12 @@ class NotificationService
     {
         $message = $this->buildOtpMessage($otp);
 
-        // OTP via WhatsApp only for security
-        return $this->sendWhatsApp($customer->phone, $message);
+        return $this->sendWhatsApp($customer->phone, $message, [
+            'template_id' => $this->getMekariTemplateId('otp'),
+            'params'      => [
+                $otp, // {{1}}
+            ],
+        ]);
     }
 
     // ================================================================
@@ -646,6 +698,16 @@ class NotificationService
     // ================================================================
     // HELPERS
     // ================================================================
+
+    /**
+     * Ambil Mekari Template ID per jenis notifikasi
+     * Fallback ke template ID default jika tidak dikonfigurasi
+     */
+    protected function getMekariTemplateId(string $type): string
+    {
+        return Setting::getValue('notification', 'whatsapp_mekari_tpl_' . $type, '')
+            ?: Setting::getValue('notification', 'whatsapp_mekari_template_id', '');
+    }
 
     protected function formatPaymentInfo(): string
     {

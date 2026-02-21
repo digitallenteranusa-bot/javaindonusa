@@ -34,8 +34,14 @@ class SettingsController extends Controller
             'api_key' => !empty($settings['whatsapp_api_key']) ? '********' : '',
             'sender' => $settings['whatsapp_sender'] ?? '',
             // Mekari Qontak specific
-            'mekari_channel_id' => $settings['whatsapp_mekari_channel_id'] ?? '',
-            'mekari_template_id' => $settings['whatsapp_mekari_template_id'] ?? '',
+            'mekari_channel_id'      => $settings['whatsapp_mekari_channel_id'] ?? '',
+            'mekari_tpl_payment'     => $settings['whatsapp_mekari_tpl_payment'] ?? '',
+            'mekari_tpl_invoice'     => $settings['whatsapp_mekari_tpl_invoice'] ?? '',
+            'mekari_tpl_reminder'    => $settings['whatsapp_mekari_tpl_reminder'] ?? '',
+            'mekari_tpl_overdue'     => $settings['whatsapp_mekari_tpl_overdue'] ?? '',
+            'mekari_tpl_isolation'   => $settings['whatsapp_mekari_tpl_isolation'] ?? '',
+            'mekari_tpl_otp'         => $settings['whatsapp_mekari_tpl_otp'] ?? '',
+            'mekari_tpl_access'      => $settings['whatsapp_mekari_tpl_access_opened'] ?? '',
         ];
 
         // Get Tripay config (mask sensitive keys)
@@ -121,8 +127,14 @@ class SettingsController extends Controller
             'api_key' => 'nullable|string|max:500',
             'sender' => 'nullable|string|max:20',
             // Mekari Qontak specific
-            'mekari_channel_id' => 'nullable|string|max:255',
-            'mekari_template_id' => 'nullable|string|max:255',
+            'mekari_channel_id'    => 'nullable|string|max:255',
+            'mekari_tpl_payment'   => 'nullable|string|max:255',
+            'mekari_tpl_invoice'   => 'nullable|string|max:255',
+            'mekari_tpl_reminder'  => 'nullable|string|max:255',
+            'mekari_tpl_overdue'   => 'nullable|string|max:255',
+            'mekari_tpl_isolation' => 'nullable|string|max:255',
+            'mekari_tpl_otp'       => 'nullable|string|max:255',
+            'mekari_tpl_access'    => 'nullable|string|max:255',
         ]);
 
         Setting::updateOrCreate(
@@ -145,18 +157,24 @@ class SettingsController extends Controller
 
         // Mekari Qontak specific settings
         if ($validated['driver'] === 'mekari') {
-            if (!empty($validated['mekari_channel_id'])) {
-                Setting::updateOrCreate(
-                    ['group' => 'notification', 'key' => 'whatsapp_mekari_channel_id'],
-                    ['value' => $validated['mekari_channel_id']]
-                );
-            }
+            $mekariFields = [
+                'mekari_channel_id'    => 'whatsapp_mekari_channel_id',
+                'mekari_tpl_payment'   => 'whatsapp_mekari_tpl_payment',
+                'mekari_tpl_invoice'   => 'whatsapp_mekari_tpl_invoice',
+                'mekari_tpl_reminder'  => 'whatsapp_mekari_tpl_reminder',
+                'mekari_tpl_overdue'   => 'whatsapp_mekari_tpl_overdue',
+                'mekari_tpl_isolation' => 'whatsapp_mekari_tpl_isolation',
+                'mekari_tpl_otp'       => 'whatsapp_mekari_tpl_otp',
+                'mekari_tpl_access'    => 'whatsapp_mekari_tpl_access_opened',
+            ];
 
-            if (!empty($validated['mekari_template_id'])) {
-                Setting::updateOrCreate(
-                    ['group' => 'notification', 'key' => 'whatsapp_mekari_template_id'],
-                    ['value' => $validated['mekari_template_id']]
-                );
+            foreach ($mekariFields as $formKey => $dbKey) {
+                if (!empty($validated[$formKey])) {
+                    Setting::updateOrCreate(
+                        ['group' => 'notification', 'key' => $dbKey],
+                        ['value' => $validated[$formKey]]
+                    );
+                }
             }
         }
 

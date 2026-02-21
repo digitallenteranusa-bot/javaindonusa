@@ -213,28 +213,28 @@ const previewReceipt = (payment) => {
         </template>
 
         <!-- Summary Cards -->
-        <div class="bg-gradient-to-r from-green-600 to-green-800 rounded-xl shadow-sm p-6 mb-6 text-white">
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-                <div>
-                    <p class="text-green-200 text-sm">Total Pembayaran</p>
-                    <p class="text-3xl font-bold">{{ formatCurrency(stats?.total_amount) }}</p>
-                    <p class="text-green-200 text-sm mt-1">{{ stats?.total_count || 0 }} transaksi</p>
+        <div class="bg-gradient-to-r from-green-600 to-green-800 rounded-xl shadow-sm p-4 sm:p-6 mb-6 text-white">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-6">
+                <div class="col-span-2 md:col-span-1">
+                    <p class="text-green-200 text-xs sm:text-sm">Total Pembayaran</p>
+                    <p class="text-lg sm:text-xl lg:text-2xl font-bold truncate">{{ formatCurrency(stats?.total_amount) }}</p>
+                    <p class="text-green-200 text-xs sm:text-sm mt-1">{{ stats?.total_count || 0 }} transaksi</p>
                 </div>
                 <div>
-                    <p class="text-green-200 text-sm">Cash</p>
-                    <p class="text-3xl font-bold">{{ formatCurrency(stats?.cash) }}</p>
+                    <p class="text-green-200 text-xs sm:text-sm">Cash</p>
+                    <p class="text-lg sm:text-xl lg:text-2xl font-bold truncate">{{ formatCurrency(stats?.cash) }}</p>
                 </div>
                 <div>
-                    <p class="text-green-200 text-sm">Transfer</p>
-                    <p class="text-3xl font-bold">{{ formatCurrency(stats?.transfer) }}</p>
+                    <p class="text-green-200 text-xs sm:text-sm">Transfer</p>
+                    <p class="text-lg sm:text-xl lg:text-2xl font-bold truncate">{{ formatCurrency(stats?.transfer) }}</p>
                 </div>
                 <div>
-                    <p class="text-green-200 text-sm">Rata-rata</p>
-                    <p class="text-3xl font-bold">{{ formatCurrency(stats?.total_count ? stats?.total_amount / stats?.total_count : 0) }}</p>
+                    <p class="text-green-200 text-xs sm:text-sm">Rata-rata</p>
+                    <p class="text-lg sm:text-xl lg:text-2xl font-bold truncate">{{ formatCurrency(stats?.total_count ? stats?.total_amount / stats?.total_count : 0) }}</p>
                 </div>
                 <div v-if="stats?.cancelled_count > 0">
-                    <p class="text-red-200 text-sm">Dibatalkan</p>
-                    <p class="text-3xl font-bold text-red-200">{{ stats?.cancelled_count }}</p>
+                    <p class="text-red-200 text-xs sm:text-sm">Dibatalkan</p>
+                    <p class="text-lg sm:text-xl lg:text-2xl font-bold text-red-200">{{ stats?.cancelled_count }}</p>
                     <p class="text-red-200 text-xs mt-1">transaksi</p>
                 </div>
             </div>

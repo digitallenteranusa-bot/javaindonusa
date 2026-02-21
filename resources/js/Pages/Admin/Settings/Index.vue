@@ -157,6 +157,10 @@ const whatsappForm = useForm({
     driver: props.whatsappConfig?.driver || 'fonnte',
     api_key: props.whatsappConfig?.api_key || '',
     sender: props.whatsappConfig?.sender || '',
+    // Mekari Qontak specific
+    mekari_client_id: props.whatsappConfig?.mekari_client_id || '',
+    mekari_channel_id: props.whatsappConfig?.mekari_channel_id || '',
+    mekari_template_id: props.whatsappConfig?.mekari_template_id || '',
 })
 
 // Mikrotik form
@@ -615,16 +619,54 @@ const tabs = [
                             </select>
                         </div>
 
-                        <div v-if="whatsappForm.driver !== 'manual'">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">API Key / Token</label>
-                            <input v-model="whatsappForm.api_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Masukkan API key dari provider">
-                            <p class="text-xs text-gray-500 mt-1">Kosongkan jika tidak ingin mengubah</p>
-                        </div>
+                        <!-- Mekari Qontak specific fields -->
+                        <template v-if="whatsappForm.driver === 'mekari'">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                                <p class="font-medium mb-2">Cara Setup Mekari Qontak:</p>
+                                <ol class="list-decimal list-inside space-y-1">
+                                    <li>Login ke <strong>app.qontak.com</strong> → Developer → OAuth Application</li>
+                                    <li>Salin <strong>Client ID</strong> dan <strong>Client Secret</strong></li>
+                                    <li>Di menu Integrations → WhatsApp, salin <strong>Channel Integration ID</strong></li>
+                                    <li>Buat template pesan di Qontak → Template Messages, gunakan 1 parameter body <code class="bg-blue-100 px-1 rounded">&#123;&#123;1&#125;&#125;</code></li>
+                                    <li>Salin <strong>Template ID</strong> dari template yang disetujui</li>
+                                </ol>
+                            </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nomor Pengirim</label>
-                            <input v-model="whatsappForm.sender" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="628123456789">
-                        </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Client ID <span class="text-red-500">*</span></label>
+                                    <input v-model="whatsappForm.mekari_client_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Client ID dari Mekari">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Client Secret <span class="text-red-500">*</span></label>
+                                    <input v-model="whatsappForm.api_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan jika tidak ingin mengubah">
+                                    <p class="text-xs text-gray-500 mt-1">Kosongkan jika tidak ingin mengubah</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Channel Integration ID <span class="text-red-500">*</span></label>
+                                    <input v-model="whatsappForm.mekari_channel_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Channel Integration ID WhatsApp">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Template ID <span class="text-red-500">*</span></label>
+                                    <input v-model="whatsappForm.mekari_template_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="ID template pesan yang disetujui">
+                                    <p class="text-xs text-gray-500 mt-1">Template harus memiliki 1 parameter body <code class="bg-gray-100 px-1 rounded">&#123;&#123;1&#125;&#125;</code> untuk isi pesan</p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Fields untuk driver selain Mekari -->
+                        <template v-else>
+                            <div v-if="whatsappForm.driver !== 'manual'">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">API Key / Token</label>
+                                <input v-model="whatsappForm.api_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Masukkan API key dari provider">
+                                <p class="text-xs text-gray-500 mt-1">Kosongkan jika tidak ingin mengubah</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nomor Pengirim</label>
+                                <input v-model="whatsappForm.sender" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="628123456789">
+                            </div>
+                        </template>
 
                         <div class="flex justify-end">
                             <button type="submit" :disabled="whatsappForm.processing" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">

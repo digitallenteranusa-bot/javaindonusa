@@ -3,6 +3,7 @@
 namespace App\Services\Notification\Channels;
 
 use App\Models\Setting;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -13,6 +14,11 @@ class WhatsAppChannel
     protected string $baseUrl;
     protected ?string $sender;
 
+    // Mekari Qontak specific
+    protected string $mekariClientId;
+    protected string $mekariChannelId;
+    protected string $mekariTemplateId;
+
     public function __construct()
     {
         // Read from database first, fallback to config
@@ -20,11 +26,16 @@ class WhatsAppChannel
         $this->apiKey = $this->getSetting('whatsapp_api_key') ?? config('notification.whatsapp.api_key', '');
         $this->sender = $this->getSetting('whatsapp_sender') ?? config('notification.whatsapp.sender');
 
+        // Mekari Qontak specific settings
+        $this->mekariClientId = $this->getSetting('whatsapp_mekari_client_id') ?? config('notification.whatsapp.mekari.client_id', '');
+        $this->mekariChannelId = $this->getSetting('whatsapp_mekari_channel_id') ?? config('notification.whatsapp.mekari.channel_id', '');
+        $this->mekariTemplateId = $this->getSetting('whatsapp_mekari_template_id') ?? config('notification.whatsapp.mekari.template_id', '');
+
         $this->baseUrl = match ($this->driver) {
             'fonnte' => 'https://api.fonnte.com',
             'wablas' => 'https://pati.wablas.com',
             'dripsender' => 'https://api.dripsender.id',
-            'waapi' => 'https://api.whatsapp.com',
+            'mekari' => 'https://service.qontak.com',
             'manual' => '',
             default => '',
         };
@@ -56,6 +67,7 @@ class WhatsAppChannel
             'fonnte' => $this->sendViaFonnte($phone, $message, $options),
             'wablas' => $this->sendViaWablas($phone, $message, $options),
             'dripsender' => $this->sendViaDripsender($phone, $message, $options),
+            'mekari' => $this->sendViaMekari($phone, $message, $options),
             default => ['success' => false, 'message' => 'Unknown driver'],
         };
     }
@@ -208,6 +220,110 @@ class WhatsAppChannel
     }
 
     /**
+     * Send via Mekari Qontak API (WhatsApp Business API)
+     * Documentation: https://documenter.getpostman.com/view/12028883/Tzm6jdnf
+     */
+    protected function sendViaMekari(string $phone, string $message, array $options = []): array
+    {
+        try {
+            if (empty($this->mekariClientId)) {
+                return ['success' => false, 'message' => 'Mekari Client ID tidak dikonfigurasi'];
+            }
+
+            if (empty($this->mekariChannelId)) {
+                return ['success' => false, 'message' => 'Mekari Channel Integration ID tidak dikonfigurasi'];
+            }
+
+            $templateId = $options['template_id'] ?? $this->mekariTemplateId;
+            if (empty($templateId)) {
+                return ['success' => false, 'message' => 'Mekari Template ID tidak dikonfigurasi'];
+            }
+
+            $token = $this->getMekariToken();
+            if (!$token) {
+                return ['success' => false, 'message' => 'Gagal mendapatkan token Mekari Qontak'];
+            }
+
+            $toName = $options['name'] ?? 'Pelanggan';
+
+            $payload = [
+                'to_name' => $toName,
+                'to_number' => $phone,
+                'message_template_id' => $templateId,
+                'channel_integration_id' => $this->mekariChannelId,
+                'language' => ['code' => 'id'],
+                'parameters' => [
+                    'body' => [
+                        [
+                            'key' => '1',
+                            'value_text' => $message,
+                            'value' => 'pesan',
+                        ],
+                    ],
+                ],
+            ];
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUrl . '/api/open/v1/broadcasts/whatsapp/direct', $payload);
+
+            $data = $response->json();
+
+            if ($response->successful() && ($data['status'] ?? false)) {
+                return [
+                    'success' => true,
+                    'message' => 'Pesan terkirim via Mekari Qontak',
+                    'message_id' => $data['data']['id'] ?? null,
+                    'response' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $data['error_messages'][0] ?? $data['message'] ?? 'Gagal mengirim pesan',
+                'response' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Mekari Qontak API error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get Mekari Qontak OAuth2 access token (client credentials)
+     * Token dicache selama 1 jam
+     */
+    protected function getMekariToken(): ?string
+    {
+        $cacheKey = 'mekari_qontak_token_' . substr(md5($this->mekariClientId), 0, 8);
+
+        return Cache::remember($cacheKey, 3500, function () {
+            try {
+                $response = Http::asForm()->post('https://service.qontak.com/oauth/token', [
+                    'grant_type' => 'client_credentials',
+                    'client_id' => $this->mekariClientId,
+                    'client_secret' => $this->apiKey,
+                ]);
+
+                if ($response->successful()) {
+                    return $response->json('access_token');
+                }
+
+                Log::warning('Mekari Qontak token gagal', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return null;
+            } catch (\Exception $e) {
+                Log::error('Mekari Qontak token error', ['error' => $e->getMessage()]);
+                return null;
+            }
+        });
+    }
+
+    /**
      * Generate manual WhatsApp URL (wa.me link)
      * For cases where automatic sending is not available
      */
@@ -264,6 +380,15 @@ class WhatsAppChannel
         }
 
         try {
+            // Mekari: cek dengan fetch token
+            if ($this->driver === 'mekari') {
+                $token = $this->getMekariToken();
+                return [
+                    'success' => !empty($token),
+                    'status' => !empty($token) ? 'Token berhasil didapat' : 'Gagal mendapatkan token',
+                ];
+            }
+
             $endpoint = match ($this->driver) {
                 'fonnte' => $this->baseUrl . '/device',
                 'wablas' => $this->baseUrl . '/api/device/info',
@@ -309,6 +434,12 @@ class WhatsAppChannel
                 'name' => 'Dripsender',
                 'website' => 'https://dripsender.id',
                 'description' => 'WhatsApp Marketing Automation',
+            ],
+            'mekari' => [
+                'name' => 'Mekari Qontak',
+                'website' => 'https://qontak.com',
+                'description' => 'WhatsApp Business API resmi (Mekari Qontak)',
+                'requires_template' => true,
             ],
             'manual' => [
                 'name' => 'Manual (wa.me)',

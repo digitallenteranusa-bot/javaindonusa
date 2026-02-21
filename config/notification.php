@@ -20,11 +20,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | Konfigurasi untuk WhatsApp Gateway.
-    | Supported drivers: fonnte, wablas, dripsender, manual
+    | Supported drivers: fonnte, wablas, dripsender, mekari, manual
     |
     | Fonnte: https://fonnte.com (Recommended for Indonesia)
     | Wablas: https://wablas.com
     | Dripsender: https://dripsender.id
+    | Mekari Qontak: https://qontak.com (WhatsApp Business API resmi)
     | Manual: Generate wa.me links only (no automatic sending)
     |
     */
@@ -42,6 +43,14 @@ return [
         // Wablas specific
         'wablas' => [
             'domain' => env('WABLAS_DOMAIN', 'pati'),
+        ],
+
+        // Mekari Qontak specific (WhatsApp Business API)
+        'mekari' => [
+            'client_id' => env('MEKARI_CLIENT_ID', ''),
+            'client_secret' => env('MEKARI_CLIENT_SECRET', ''), // Digunakan sebagai whatsapp api_key
+            'channel_id' => env('MEKARI_CHANNEL_INTEGRATION_ID', ''),
+            'template_id' => env('MEKARI_TEMPLATE_ID', ''),
         ],
 
         // Rate limiting

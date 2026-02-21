@@ -37,6 +37,7 @@ Sistem Billing ISP lengkap dengan integrasi Mikrotik API, GenieACS (TR-069), Sis
 - Sistem cicilan hutang dengan alokasi FIFO
 - Riwayat hutang lengkap (debt_history)
 - Multiple payment method (Cash, Transfer, QRIS, E-Wallet)
+- Payment gateway online: **Tripay** dan **Xendit** (bisa aktif bersamaan)
 
 ### 3. Logika Isolir Pintar
 - Isolir otomatis jika hutang 2 bulan berturut-turut
@@ -62,6 +63,7 @@ Sistem Billing ISP lengkap dengan integrasi Mikrotik API, GenieACS (TR-069), Sis
 ### 6. Portal Pelanggan
 - Login via nomor HP (tanpa password, OTP via WhatsApp)
 - Lihat histori tagihan dan pembayaran
+- **Bayar online** via QRIS, Virtual Account, E-Wallet (Tripay/Xendit)
 - Info rekening bank untuk transfer
 - Tombol kirim bukti transfer via WhatsApp
 - Halaman isolir (public) dengan info cara bayar
@@ -99,9 +101,17 @@ Sistem Billing ISP lengkap dengan integrasi Mikrotik API, GenieACS (TR-069), Sis
 - Assign/revoke permission
 - Reset ke default permissions
 
-### 13. Customizable Branding - BARU
+### 13. Customizable Branding
 - Upload logo ISP
 - Logo tampil di invoice PDF, receipt, dan portal
+
+### 14. Payment Gateway Online
+- **Tripay** - QRIS, Virtual Account, E-Wallet, Minimarket (via API Tripay)
+- **Xendit** - QRIS, VA (BCA/BNI/BRI/Mandiri/Permata), E-Wallet (DANA/OVO/ShopeePay/LinkAja), Minimarket (Alfamart/Indomaret)
+- Admin bisa aktifkan salah satu atau keduanya di Pengaturan
+- Jika dua-duanya aktif, Xendit digunakan sebagai gateway utama
+- Webhook callback otomatis memproses pembayaran + kirim notifikasi WA
+- Sandbox mode untuk testing (Tripay: toggle di UI, Xendit: otomatis dari prefix key)
 
 ## Tech Stack
 
@@ -156,6 +166,8 @@ Semua konfigurasi ada dalam satu file `.env.example`. Copy menjadi `.env` dan se
 | **MIKROTIK** | Jika pakai | Koneksi router untuk isolir/buka akses |
 | **GENIEACS** | Jika pakai | Manajemen device TR-069 (ONU/ONT) |
 | **NOTIFIKASI** | Opsional | WhatsApp, SMS, Email |
+| **TRIPAY** | Opsional | Payment gateway Tripay (QRIS, VA, E-Wallet) |
+| **XENDIT** | Opsional | Payment gateway Xendit (QRIS, VA, E-Wallet) |
 
 ### Instalasi Lokal vs Cloud
 
@@ -187,6 +199,18 @@ MIKROTIK_PASS=password_mikrotik
 WHATSAPP_ENABLED=true
 WHATSAPP_DRIVER=fonnte
 WHATSAPP_API_KEY=your_api_key
+
+# Payment Gateway - Tripay (opsional)
+TRIPAY_ENABLED=true
+TRIPAY_SANDBOX=true
+TRIPAY_API_KEY=your_tripay_api_key
+TRIPAY_PRIVATE_KEY=your_tripay_private_key
+TRIPAY_MERCHANT_CODE=T12345
+
+# Payment Gateway - Xendit (opsional)
+XENDIT_ENABLED=true
+XENDIT_SECRET_KEY=xnd_development_xxx
+XENDIT_WEBHOOK_TOKEN=your_webhook_token
 ```
 
 ## Scheduler (Cron)
@@ -229,7 +253,7 @@ Jadwal otomatis:
 - `/admin/reports` - Laporan
 - `/admin/audit-logs` - Audit log
 - `/admin/roles` - Roles & Permissions
-- `/admin/settings` - Pengaturan (ISP Info, Logo, WhatsApp, Mikrotik, GenieACS)
+- `/admin/settings` - Pengaturan (ISP Info, Logo, WhatsApp, Mikrotik, GenieACS, Payment Gateway)
 - `/admin/system` - System Info & Backup
 
 ### Penagih
@@ -242,6 +266,7 @@ Jadwal otomatis:
 ### Portal Pelanggan
 - `/portal/login` - Login pelanggan
 - `/portal` - Dashboard pelanggan
+- `/portal/pay` - Bayar online (Tripay/Xendit)
 - `/portal/invoices` - Histori tagihan
 - `/portal/payments` - Histori pembayaran
 - `/portal/isolation/{id}` - Halaman isolir (public)

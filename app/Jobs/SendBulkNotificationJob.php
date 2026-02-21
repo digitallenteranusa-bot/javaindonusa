@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Customer;
-use App\Services\Notification\NotificationService;
+use App\Jobs\SendNotificationJob;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -43,36 +43,30 @@ class SendBulkNotificationJob implements ShouldQueue
 
     /**
      * Execute the job.
+     * Dispatches individual SendNotificationJob with staggered delays to avoid spam detection.
      */
-    public function handle(NotificationService $notificationService): void
+    public function handle(): void
     {
-        $results = ['success' => 0, 'failed' => 0, 'skipped' => 0];
-
         $customers = Customer::whereIn('id', $this->customerIds)->get();
+        $bulkDelay = config('notification.whatsapp.rate_limit.bulk_delay_seconds', 15);
+        $dispatched = 0;
 
-        foreach ($customers as $customer) {
+        foreach ($customers as $index => $customer) {
             try {
-                $result = match ($this->type) {
-                    'reminder' => $this->sendReminder($notificationService, $customer),
-                    'overdue' => $this->sendOverdue($notificationService, $customer),
-                    'isolation' => $this->sendIsolation($notificationService, $customer),
-                    'broadcast' => $this->sendBroadcast($notificationService, $customer),
-                    default => ['success' => false],
-                };
+                $message = $this->buildMessage($customer);
 
-                if ($result['success']) {
-                    $results['success']++;
-                } else {
-                    $results['failed']++;
+                if ($message === null) {
+                    continue;
                 }
 
-                // Rate limiting - delay between messages
-                $delay = config('notification.whatsapp.rate_limit.delay_ms', 100);
-                usleep($delay * 1000);
+                $delay = $index * $bulkDelay;
+                SendNotificationJob::dispatch('whatsapp', $customer->phone, $message)
+                    ->onQueue(config('notification.queue.queue_name', 'notifications'))
+                    ->delay(now()->addSeconds($delay));
 
+                $dispatched++;
             } catch (\Exception $e) {
-                $results['failed']++;
-                Log::error('Bulk notification error', [
+                Log::error('Bulk notification dispatch error', [
                     'customer_id' => $customer->id,
                     'type' => $this->type,
                     'error' => $e->getMessage(),
@@ -80,38 +74,64 @@ class SendBulkNotificationJob implements ShouldQueue
             }
         }
 
-        Log::info('Bulk notification completed', [
+        Log::info('Bulk notification jobs dispatched', [
             'type' => $this->type,
-            'results' => $results,
+            'total_customers' => $customers->count(),
+            'dispatched' => $dispatched,
+            'delay_per_message' => $bulkDelay . 's',
+            'estimated_duration' => ($dispatched * $bulkDelay) . 's',
         ]);
     }
 
-    protected function sendReminder(NotificationService $service, Customer $customer): array
+    /**
+     * Build the notification message for the customer based on type.
+     * Returns null if the message should be skipped.
+     */
+    protected function buildMessage(Customer $customer): ?string
+    {
+        return match ($this->type) {
+            'reminder' => $customer->total_debt > 0
+                ? $this->buildReminderMessage($customer)
+                : null,
+            'overdue' => $customer->total_debt > 0
+                ? $this->buildOverdueMessage($customer)
+                : null,
+            'isolation' => $this->buildIsolationMessage($customer),
+            'broadcast' => $this->buildBroadcastMessage($customer),
+            default => null,
+        };
+    }
+
+    protected function buildReminderMessage(Customer $customer): string
     {
         $daysBeforeDue = $this->options['days_before_due'] ?? 3;
-        return $service->sendPaymentReminder($customer, $daysBeforeDue);
+        return "📢 *PENGINGAT*\n\nYth. Bapak/Ibu *{$customer->name}*,\n\nTagihan internet Anda sebesar *Rp " .
+            number_format($customer->total_debt, 0, ',', '.') .
+            "* akan jatuh tempo dalam *{$daysBeforeDue} hari*.\n\nMohon segera lakukan pembayaran.\n\nID Pelanggan: *{$customer->customer_id}*";
     }
 
-    protected function sendOverdue(NotificationService $service, Customer $customer): array
+    protected function buildOverdueMessage(Customer $customer): string
     {
-        return $service->sendOverdueNotice($customer);
+        return "⚠️ *TAGIHAN JATUH TEMPO*\n\nYth. Bapak/Ibu *{$customer->name}*,\n\nTagihan internet Anda sebesar *Rp " .
+            number_format($customer->total_debt, 0, ',', '.') .
+            "* telah melewati jatuh tempo.\n\nMohon segera lakukan pembayaran.\n\nID Pelanggan: *{$customer->customer_id}*";
     }
 
-    protected function sendIsolation(NotificationService $service, Customer $customer): array
+    protected function buildIsolationMessage(Customer $customer): string
     {
-        return $service->sendIsolationNotice($customer);
+        return "🔴 *PEMBERITAHUAN ISOLIR*\n\nYth. Bapak/Ibu *{$customer->name}*,\n\nLayanan internet Anda telah *DIISOLIR* karena tunggakan pembayaran sebesar *Rp " .
+            number_format($customer->total_debt, 0, ',', '.') . "*.\n\nID Pelanggan: *{$customer->customer_id}*";
     }
 
-    protected function sendBroadcast(NotificationService $service, Customer $customer): array
+    protected function buildBroadcastMessage(Customer $customer): ?string
     {
         $message = $this->options['message'] ?? '';
 
         if (empty($message)) {
-            return ['success' => false, 'message' => 'No message provided'];
+            return null;
         }
 
-        // Replace placeholders
-        $message = str_replace(
+        return str_replace(
             ['{name}', '{customer_id}', '{package}', '{debt}'],
             [
                 $customer->name,
@@ -121,8 +141,6 @@ class SendBulkNotificationJob implements ShouldQueue
             ],
             $message
         );
-
-        return $service->sendWhatsApp($customer->phone, $message);
     }
 
     /**

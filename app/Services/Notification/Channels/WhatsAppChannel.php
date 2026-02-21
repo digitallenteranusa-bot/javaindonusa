@@ -324,8 +324,9 @@ class WhatsAppChannel
                 ];
             }
 
-            // Add delay between messages to avoid rate limiting
-            usleep(100000); // 100ms delay
+            // Add delay between messages to avoid rate limiting / spam detection
+            $delaySeconds = config('notification.whatsapp.rate_limit.bulk_delay_seconds', 15);
+            sleep($delaySeconds);
         }
 
         return $results;

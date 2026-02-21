@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Customer;
 use App\Models\Invoice;
-use App\Models\Setting;
+use App\Jobs\SendNotificationJob;
 use App\Services\Notification\NotificationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -51,7 +51,9 @@ class SendPaymentReminderJob implements ShouldQueue
             ->with('customer')
             ->get();
 
-        $results = ['sent' => 0, 'failed' => 0, 'skipped' => 0];
+        $results = ['dispatched' => 0, 'skipped' => 0];
+        $bulkDelay = config('notification.whatsapp.rate_limit.bulk_delay_seconds', 15);
+        $dispatchIndex = 0;
 
         foreach ($invoices as $invoice) {
             $customer = $invoice->customer;
@@ -63,30 +65,49 @@ class SendPaymentReminderJob implements ShouldQueue
             }
 
             try {
-                $result = $notificationService->sendPaymentReminder($customer, $this->daysBeforeDue);
-
-                if ($result['success']) {
-                    $results['sent']++;
-                } else {
-                    $results['failed']++;
+                // Skip customers with no debt
+                if ($customer->total_debt <= 0) {
+                    $results['skipped']++;
+                    continue;
                 }
 
-                // Rate limiting
-                usleep(200000); // 200ms delay
+                // Dispatch individual job with staggered delay
+                $delay = $dispatchIndex * $bulkDelay;
+                SendNotificationJob::dispatch(
+                    'whatsapp',
+                    $customer->phone,
+                    $this->buildReminderMessage($customer)
+                )->onQueue(config('notification.queue.queue_name', 'notifications'))
+                 ->delay(now()->addSeconds($delay));
 
+                $results['dispatched']++;
+                $dispatchIndex++;
             } catch (\Exception $e) {
-                $results['failed']++;
-                Log::error('Payment reminder error', [
+                $results['skipped']++;
+                Log::error('Payment reminder dispatch error', [
                     'customer_id' => $customer->id,
                     'error' => $e->getMessage(),
                 ]);
             }
         }
 
-        Log::info('Payment reminder job completed', [
+        Log::info('Payment reminder jobs dispatched', [
             'days_before_due' => $this->daysBeforeDue,
             'results' => $results,
+            'delay_per_message' => $bulkDelay . 's',
         ]);
+    }
+
+    /**
+     * Build reminder message for individual dispatch.
+     */
+    protected function buildReminderMessage(Customer $customer): string
+    {
+        $totalDebt = number_format($customer->total_debt, 0, ',', '.');
+        $dueDate = Carbon::now()->addDays($this->daysBeforeDue)->translatedFormat('d F Y');
+        $urgency = $this->daysBeforeDue <= 1 ? '⚠️ *SEGERA*' : '📢 *PENGINGAT*';
+
+        return "{$urgency}\n\nYth. Bapak/Ibu *{$customer->name}*,\n\nTagihan internet Anda sebesar *Rp {$totalDebt}* akan jatuh tempo dalam *{$this->daysBeforeDue} hari* ({$dueDate}).\n\nMohon segera lakukan pembayaran.\n\nID Pelanggan: *{$customer->customer_id}*";
     }
 
     /**

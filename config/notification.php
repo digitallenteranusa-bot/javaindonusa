@@ -57,6 +57,7 @@ return [
         'rate_limit' => [
             'per_minute' => env('WHATSAPP_RATE_LIMIT', 30),
             'delay_ms' => env('WHATSAPP_DELAY_MS', 100),
+            'bulk_delay_seconds' => env('WHATSAPP_BULK_DELAY_SECONDS', 15),
         ],
     ],
 

@@ -314,13 +314,15 @@ class NotificationService
             ->where('total_debt', '>', 0)
             ->get();
 
-        foreach ($customers as $customer) {
-            // Use queue for bulk sending
-            $this->sendAsync(
+        $bulkDelay = config('notification.whatsapp.rate_limit.bulk_delay_seconds', 15);
+
+        foreach ($customers as $index => $customer) {
+            $delay = $index * $bulkDelay;
+            SendNotificationJob::dispatch(
                 'whatsapp',
                 $customer->phone,
                 $this->buildReminderMessage($customer, $daysBeforeDue)
-            );
+            )->delay(now()->addSeconds($delay));
             $results['success']++;
         }
 
@@ -344,10 +346,13 @@ class NotificationService
 
         $customers = $query->get();
         $sent = 0;
+        $bulkDelay = config('notification.whatsapp.rate_limit.bulk_delay_seconds', 15);
 
-        foreach ($customers as $customer) {
+        foreach ($customers as $index => $customer) {
             $message = $this->buildMaintenanceMessage($customer, $startTime, $endTime, $description);
-            $this->sendAsync('whatsapp', $customer->phone, $message);
+            $delay = $index * $bulkDelay;
+            SendNotificationJob::dispatch('whatsapp', $customer->phone, $message)
+                ->delay(now()->addSeconds($delay));
             $sent++;
         }
 
@@ -367,9 +372,12 @@ class NotificationService
 
         $customers = $query->get();
         $sent = 0;
+        $bulkDelay = config('notification.whatsapp.rate_limit.bulk_delay_seconds', 15);
 
-        foreach ($customers as $customer) {
-            $this->sendAsync('whatsapp', $customer->phone, $message);
+        foreach ($customers as $index => $customer) {
+            $delay = $index * $bulkDelay;
+            SendNotificationJob::dispatch('whatsapp', $customer->phone, $message)
+                ->delay(now()->addSeconds($delay));
             $sent++;
         }
 

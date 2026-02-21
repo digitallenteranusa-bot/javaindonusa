@@ -621,15 +621,20 @@ const tabs = [
 
                         <!-- Mekari Qontak specific fields -->
                         <template v-if="whatsappForm.driver === 'mekari'">
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                                <p class="font-medium mb-2">Cara Setup Mekari Qontak:</p>
-                                <ol class="list-decimal list-inside space-y-1">
-                                    <li>Login ke <strong>app.qontak.com</strong> → Developer → OAuth Application</li>
-                                    <li>Salin <strong>Client ID</strong> dan <strong>Client Secret</strong></li>
-                                    <li>Di menu Integrations → WhatsApp, salin <strong>Channel Integration ID</strong></li>
-                                    <li>Buat template pesan di Qontak → Template Messages, gunakan 1 parameter body <code class="bg-blue-100 px-1 rounded">&#123;&#123;1&#125;&#125;</code></li>
-                                    <li>Salin <strong>Template ID</strong> dari template yang disetujui</li>
-                                </ol>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-3">
+                                <div>
+                                    <p class="font-semibold mb-1">① Client ID &amp; Client Secret</p>
+                                    <p>Buka <strong>developers.mekari.com</strong> → Login dengan akun Mekari → <strong>Applications</strong> → buat/pilih aplikasi → salin <strong>Client ID</strong> dan <strong>Client Secret</strong>.</p>
+                                    <p class="mt-1 text-xs text-blue-600">Catatan: Jika belum ada akses, hubungi tim Mekari Qontak untuk permintaan OAuth credentials.</p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold mb-1">② Channel Integration ID</p>
+                                    <p>Login <strong>app.qontak.com</strong> → <strong>Settings</strong> → <strong>Integration</strong> → <strong>Channel Integration</strong> → pilih channel WhatsApp Anda → salin <strong>ID</strong>-nya.</p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold mb-1">③ Template ID</p>
+                                    <p>Di <strong>app.qontak.com</strong> → <strong>Broadcast</strong> → <strong>Template Messages</strong> → buat template dengan 1 parameter body <code class="bg-blue-100 px-1 rounded">&#123;&#123;1&#125;&#125;</code> → setelah disetujui Meta → salin <strong>ID</strong> template.</p>
+                                </div>
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">

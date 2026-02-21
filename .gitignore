@@ -32,3 +32,4 @@ tmpclaude-*
 *.ipa
 *.keystore
 .claude/settings.local.json
+composer.lock

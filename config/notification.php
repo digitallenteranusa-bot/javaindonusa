@@ -20,12 +20,13 @@ return [
     |--------------------------------------------------------------------------
     |
     | Konfigurasi untuk WhatsApp Gateway.
-    | Supported drivers: fonnte, wablas, dripsender, mekari, manual
+    | Supported drivers: fonnte, wablas, dripsender, mekari, meta, manual
     |
     | Fonnte: https://fonnte.com (Recommended for Indonesia)
     | Wablas: https://wablas.com
     | Dripsender: https://dripsender.id
     | Mekari Qontak: https://qontak.com (WhatsApp Business API resmi)
+    | Meta Cloud API: https://developers.facebook.com/docs/whatsapp/cloud-api
     | Manual: Generate wa.me links only (no automatic sending)
     |
     */
@@ -51,6 +52,14 @@ return [
             'api_token' => env('MEKARI_API_TOKEN', ''), // Digunakan sebagai whatsapp_api_key
             'channel_id' => env('MEKARI_CHANNEL_INTEGRATION_ID', ''),
             'template_id' => env('MEKARI_TEMPLATE_ID', ''),
+        ],
+
+        // Meta WhatsApp Cloud API (langsung dari Meta)
+        // Access Token: generate dari developers.facebook.com → WhatsApp → API Setup
+        'meta' => [
+            'access_token' => env('META_WA_ACCESS_TOKEN', ''),    // Permanent access token
+            'phone_number_id' => env('META_WA_PHONE_NUMBER_ID', ''), // Phone Number ID dari Meta
+            'business_account_id' => env('META_WA_BUSINESS_ACCOUNT_ID', ''), // WhatsApp Business Account ID
         ],
 
         // Rate limiting

@@ -42,6 +42,16 @@ class SettingsController extends Controller
             'mekari_tpl_isolation'   => $settings['whatsapp_mekari_tpl_isolation'] ?? '',
             'mekari_tpl_otp'         => $settings['whatsapp_mekari_tpl_otp'] ?? '',
             'mekari_tpl_access'      => $settings['whatsapp_mekari_tpl_access_opened'] ?? '',
+            // Meta WhatsApp Cloud API specific
+            'meta_phone_number_id'      => $settings['whatsapp_meta_phone_number_id'] ?? '',
+            'meta_business_account_id'  => $settings['whatsapp_meta_business_account_id'] ?? '',
+            'meta_tpl_payment'          => $settings['whatsapp_meta_tpl_payment'] ?? '',
+            'meta_tpl_invoice'          => $settings['whatsapp_meta_tpl_invoice'] ?? '',
+            'meta_tpl_reminder'         => $settings['whatsapp_meta_tpl_reminder'] ?? '',
+            'meta_tpl_overdue'          => $settings['whatsapp_meta_tpl_overdue'] ?? '',
+            'meta_tpl_isolation'        => $settings['whatsapp_meta_tpl_isolation'] ?? '',
+            'meta_tpl_otp'              => $settings['whatsapp_meta_tpl_otp'] ?? '',
+            'meta_tpl_access'           => $settings['whatsapp_meta_tpl_access_opened'] ?? '',
         ];
 
         // Get Tripay config (mask sensitive keys)
@@ -144,6 +154,16 @@ class SettingsController extends Controller
             'mekari_tpl_isolation' => 'nullable|string|max:255',
             'mekari_tpl_otp'       => 'nullable|string|max:255',
             'mekari_tpl_access'    => 'nullable|string|max:255',
+            // Meta WhatsApp Cloud API specific
+            'meta_phone_number_id'     => 'nullable|string|max:255',
+            'meta_business_account_id' => 'nullable|string|max:255',
+            'meta_tpl_payment'         => 'nullable|string|max:255',
+            'meta_tpl_invoice'         => 'nullable|string|max:255',
+            'meta_tpl_reminder'        => 'nullable|string|max:255',
+            'meta_tpl_overdue'         => 'nullable|string|max:255',
+            'meta_tpl_isolation'       => 'nullable|string|max:255',
+            'meta_tpl_otp'             => 'nullable|string|max:255',
+            'meta_tpl_access'          => 'nullable|string|max:255',
         ]);
 
         Setting::updateOrCreate(
@@ -178,6 +198,30 @@ class SettingsController extends Controller
             ];
 
             foreach ($mekariFields as $formKey => $dbKey) {
+                if (!empty($validated[$formKey])) {
+                    Setting::updateOrCreate(
+                        ['group' => 'notification', 'key' => $dbKey],
+                        ['value' => $validated[$formKey]]
+                    );
+                }
+            }
+        }
+
+        // Meta WhatsApp Cloud API specific settings
+        if ($validated['driver'] === 'meta') {
+            $metaFields = [
+                'meta_phone_number_id'     => 'whatsapp_meta_phone_number_id',
+                'meta_business_account_id' => 'whatsapp_meta_business_account_id',
+                'meta_tpl_payment'         => 'whatsapp_meta_tpl_payment',
+                'meta_tpl_invoice'         => 'whatsapp_meta_tpl_invoice',
+                'meta_tpl_reminder'        => 'whatsapp_meta_tpl_reminder',
+                'meta_tpl_overdue'         => 'whatsapp_meta_tpl_overdue',
+                'meta_tpl_isolation'       => 'whatsapp_meta_tpl_isolation',
+                'meta_tpl_otp'             => 'whatsapp_meta_tpl_otp',
+                'meta_tpl_access'          => 'whatsapp_meta_tpl_access_opened',
+            ];
+
+            foreach ($metaFields as $formKey => $dbKey) {
                 if (!empty($validated[$formKey])) {
                     Setting::updateOrCreate(
                         ['group' => 'notification', 'key' => $dbKey],

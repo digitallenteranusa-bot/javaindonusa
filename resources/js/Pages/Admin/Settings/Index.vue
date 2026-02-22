@@ -167,6 +167,16 @@ const whatsappForm = useForm({
     mekari_tpl_isolation: props.whatsappConfig?.mekari_tpl_isolation || '',
     mekari_tpl_otp:       props.whatsappConfig?.mekari_tpl_otp || '',
     mekari_tpl_access:    props.whatsappConfig?.mekari_tpl_access || '',
+    // Meta WhatsApp Cloud API specific
+    meta_phone_number_id:     props.whatsappConfig?.meta_phone_number_id || '',
+    meta_business_account_id: props.whatsappConfig?.meta_business_account_id || '',
+    meta_tpl_payment:         props.whatsappConfig?.meta_tpl_payment || '',
+    meta_tpl_invoice:         props.whatsappConfig?.meta_tpl_invoice || '',
+    meta_tpl_reminder:        props.whatsappConfig?.meta_tpl_reminder || '',
+    meta_tpl_overdue:         props.whatsappConfig?.meta_tpl_overdue || '',
+    meta_tpl_isolation:       props.whatsappConfig?.meta_tpl_isolation || '',
+    meta_tpl_otp:             props.whatsappConfig?.meta_tpl_otp || '',
+    meta_tpl_access:          props.whatsappConfig?.meta_tpl_access || '',
 })
 
 // Mikrotik form
@@ -714,7 +724,93 @@ const tabs = [
                             </div>
                         </template>
 
-                        <!-- Fields untuk driver selain Mekari -->
+                        <!-- Meta WhatsApp Cloud API specific fields -->
+                        <template v-else-if="whatsappForm.driver === 'meta'">
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800 space-y-3">
+                                <div>
+                                    <p class="font-semibold mb-1">① Buat App di Meta</p>
+                                    <p>Buka <strong>developers.facebook.com</strong> → <strong>My Apps</strong> → <strong>Create App</strong> → pilih <strong>Business</strong> → tambahkan produk <strong>WhatsApp</strong>.</p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold mb-1">② Permanent Access Token</p>
+                                    <p>Di <strong>Business Settings</strong> → <strong>System Users</strong> → buat System User → <strong>Generate Token</strong> dengan permission <code class="bg-green-100 px-1 rounded">whatsapp_business_messaging</code> dan <code class="bg-green-100 px-1 rounded">whatsapp_business_management</code>.</p>
+                                    <p class="mt-1 text-xs text-green-600">Token ini permanent, tidak expire seperti token temporary.</p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold mb-1">③ Phone Number ID & Business Account ID</p>
+                                    <p>Di <strong>WhatsApp</strong> → <strong>API Setup</strong> → salin <strong>Phone Number ID</strong> dan <strong>WhatsApp Business Account ID</strong>.</p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold mb-1">④ Buat Template Message</p>
+                                    <p>Di <strong>WhatsApp Manager</strong> → <strong>Message Templates</strong> → buat template baru → tunggu approval Meta → salin <strong>nama template</strong> (bukan ID).</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Permanent Access Token <span class="text-red-500">*</span></label>
+                                <input v-model="whatsappForm.api_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan jika tidak ingin mengubah">
+                                <p class="text-xs text-gray-500 mt-1">System User token dari Business Settings. Kosongkan jika tidak ingin mengubah.</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number ID <span class="text-red-500">*</span></label>
+                                    <input v-model="whatsappForm.meta_phone_number_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="contoh: 123456789012345">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Business Account ID</label>
+                                    <input v-model="whatsappForm.meta_business_account_id" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="contoh: 123456789012345">
+                                </div>
+                            </div>
+
+                            <!-- Template Names per jenis notifikasi -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Template Name per Jenis Notifikasi</label>
+                                <p class="text-xs text-gray-500 mb-3">Nama template yang sudah berstatus <strong>APPROVED</strong> di WhatsApp Manager. Gunakan nama template (bukan ID), contoh: <code class="bg-gray-100 px-1 rounded">payment_confirmation</code></p>
+                                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="text-left px-4 py-2 font-medium text-gray-600 w-40">Jenis</th>
+                                                <th class="text-left px-4 py-2 font-medium text-gray-600">Template Name</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            <tr>
+                                                <td class="px-4 py-2 text-gray-700">Konfirmasi Bayar</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.meta_tpl_payment" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="payment_confirmation"></td>
+                                            </tr>
+                                            <tr class="bg-gray-50">
+                                                <td class="px-4 py-2 text-gray-700">Tagihan Invoice</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.meta_tpl_invoice" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="invoice_notification"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-4 py-2 text-gray-700">Pengingat</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.meta_tpl_reminder" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="payment_reminder"></td>
+                                            </tr>
+                                            <tr class="bg-gray-50">
+                                                <td class="px-4 py-2 text-gray-700">Overdue</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.meta_tpl_overdue" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="overdue_notice"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-4 py-2 text-gray-700">Isolasi</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.meta_tpl_isolation" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="isolation_notice"></td>
+                                            </tr>
+                                            <tr class="bg-gray-50">
+                                                <td class="px-4 py-2 text-gray-700">Akses Dibuka</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.meta_tpl_access" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="access_opened"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-4 py-2 text-gray-700">OTP Login</td>
+                                                <td class="px-4 py-2"><input v-model="whatsappForm.meta_tpl_otp" type="text" class="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-xs font-mono" placeholder="otp_code"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Fields untuk driver selain Mekari & Meta -->
                         <template v-else>
                             <div v-if="whatsappForm.driver !== 'manual'">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">API Key / Token</label>

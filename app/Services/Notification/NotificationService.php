@@ -122,6 +122,7 @@ class NotificationService
         $message = $this->buildInvoiceMessage($customer, $invoice);
 
         return $this->sendWhatsApp($customer->phone, $message, [
+            'notification_type' => 'invoice',
             'template_id' => $this->getMekariTemplateId('invoice'),
             'params'      => [
                 $customer->name,                                        // {{1}}
@@ -147,6 +148,7 @@ class NotificationService
         $message = $this->buildReminderMessage($customer, $daysBeforeDue);
 
         return $this->sendWhatsApp($customer->phone, $message, [
+            'notification_type' => 'reminder',
             'template_id' => $this->getMekariTemplateId('reminder'),
             'params'      => [
                 $customer->name,                                        // {{1}}
@@ -169,6 +171,7 @@ class NotificationService
         $message = $this->buildOverdueMessage($customer);
 
         return $this->sendWhatsApp($customer->phone, $message, [
+            'notification_type' => 'overdue',
             'template_id' => $this->getMekariTemplateId('overdue'),
             'params'      => [
                 $customer->name,                                        // {{1}}
@@ -235,6 +238,7 @@ class NotificationService
         $message = $this->buildIsolationMessage($customer);
 
         return $this->sendWhatsApp($customer->phone, $message, [
+            'notification_type' => 'isolation',
             'template_id' => $this->getMekariTemplateId('isolation'),
             'params'      => [
                 $customer->name,                                        // {{1}}
@@ -253,6 +257,7 @@ class NotificationService
         $message = $this->buildAccessOpenedMessage($customer);
 
         return $this->sendWhatsApp($customer->phone, $message, [
+            'notification_type' => 'access_opened',
             'template_id' => $this->getMekariTemplateId('access_opened'),
             'params'      => [
                 $customer->name,                                        // {{1}}
@@ -272,6 +277,7 @@ class NotificationService
         $status    = $customer->total_debt > 0 ? 'Sisa Rp ' . $remaining : 'LUNAS';
 
         return $this->sendWhatsApp($customer->phone, $message, [
+            'notification_type' => 'payment',
             'template_id' => $this->getMekariTemplateId('payment'),
             'params'      => [
                 $customer->name,                              // {{1}}
@@ -291,6 +297,7 @@ class NotificationService
         $message = $this->buildOtpMessage($otp);
 
         return $this->sendWhatsApp($customer->phone, $message, [
+            'notification_type' => 'otp',
             'template_id' => $this->getMekariTemplateId('otp'),
             'params'      => [
                 $otp, // {{1}}

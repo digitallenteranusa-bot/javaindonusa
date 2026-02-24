@@ -466,13 +466,13 @@ class ReportService
      */
     public function getRevenueByArea(int $year, ?int $month = null): array
     {
-        $query = Invoice::whereNotIn('status', ['cancelled'])
-            ->where('period_year', $year)
+        $query = Invoice::whereNotIn('invoices.status', ['cancelled'])
+            ->where('invoices.period_year', $year)
             ->join('customers', 'invoices.customer_id', '=', 'customers.id')
             ->join('areas', 'customers.area_id', '=', 'areas.id');
 
         if ($month) {
-            $query->where('period_month', $month);
+            $query->where('invoices.period_month', $month);
         }
 
         return $query->select('areas.name as area_name', DB::raw('SUM(invoices.total_amount) as total_billed'), DB::raw('SUM(invoices.paid_amount) as total_paid'), DB::raw('COUNT(invoices.id) as count'))
@@ -510,7 +510,8 @@ class ReportService
         $metrics = [];
 
         for ($m = 1; $m <= 12; $m++) {
-            $activeCustomers = Customer::where('status', 'active')
+            $activeCustomers = Customer::withTrashed()
+                ->where('status', 'active')
                 ->whereDate('created_at', '<=', Carbon::create($year, $m, 1)->endOfMonth())
                 ->where(function ($q) use ($year, $m) {
                     $q->whereNull('deleted_at')
@@ -549,7 +550,8 @@ class ReportService
                 ->whereMonth('created_at', $m)
                 ->count();
 
-            $churn = Customer::whereYear('deleted_at', $year)
+            $churn = Customer::onlyTrashed()
+                ->whereYear('deleted_at', $year)
                 ->whereMonth('deleted_at', $m)
                 ->count();
 

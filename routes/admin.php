@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\IsolationController;
 use App\Http\Controllers\Admin\RevenueAnalyticsController;
 use App\Http\Controllers\Admin\NetworkMonitoringController;
+use App\Http\Controllers\Admin\VpsMonitoringController;
 
 /*
 |--------------------------------------------------------------------------
@@ -445,6 +446,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('analytics.network');
         Route::get('/analytics/network/refresh', [NetworkMonitoringController::class, 'refresh'])
             ->name('analytics.network.refresh');
+        Route::get('/analytics/vps', [VpsMonitoringController::class, 'index'])
+            ->name('analytics.vps');
+        Route::get('/analytics/vps/refresh', [VpsMonitoringController::class, 'refresh'])
+            ->name('analytics.vps.refresh');
     });
     Route::middleware(['permission:reports.export'])->group(function () {
         Route::get('/reports/collectors/export', [ReportController::class, 'exportCollectorPerformance'])

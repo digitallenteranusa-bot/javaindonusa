@@ -93,6 +93,7 @@ const financeNavigation = [
 
 const networkNavigation = [
     { name: 'Kesehatan Jaringan', href: '/admin/analytics/network', icon: 'signal' },
+    { name: 'Kesehatan VPS', href: '/admin/analytics/vps', icon: 'server' },
 ]
 
 const masterNavigation = [

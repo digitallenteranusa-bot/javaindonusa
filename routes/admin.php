@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\BroadcastController;
 use App\Http\Controllers\Admin\FinanceController;
 use App\Http\Controllers\Admin\IsolationController;
 use App\Http\Controllers\Admin\RevenueAnalyticsController;
+use App\Http\Controllers\Admin\NetworkMonitoringController;
 
 /*
 |--------------------------------------------------------------------------
@@ -440,6 +441,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('reports.daily-trend');
         Route::get('/analytics/revenue', [RevenueAnalyticsController::class, 'index'])
             ->name('analytics.revenue');
+        Route::get('/analytics/network', [NetworkMonitoringController::class, 'index'])
+            ->name('analytics.network');
+        Route::get('/analytics/network/refresh', [NetworkMonitoringController::class, 'refresh'])
+            ->name('analytics.network.refresh');
     });
     Route::middleware(['permission:reports.export'])->group(function () {
         Route::get('/reports/collectors/export', [ReportController::class, 'exportCollectorPerformance'])

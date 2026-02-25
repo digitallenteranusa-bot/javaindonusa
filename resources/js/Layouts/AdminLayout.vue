@@ -52,6 +52,7 @@ const mobileMenuOpen = ref(false)
 const expandedSections = ref({
     billing: localStorage.getItem('sidebar_billing') !== 'false',
     finance: localStorage.getItem('sidebar_finance') !== 'false',
+    network: localStorage.getItem('sidebar_network') !== 'false',
     master: localStorage.getItem('sidebar_master') !== 'false',
     system: localStorage.getItem('sidebar_system') !== 'false',
 })
@@ -88,6 +89,10 @@ const financeNavigation = [
     { name: 'Dashboard', href: '/admin/finance', icon: 'banknotes' },
     { name: 'Pengeluaran Ops', href: '/admin/finance/expenses', icon: 'receipt' },
     { name: 'Analisa Pendapatan', href: '/admin/analytics/revenue', icon: 'chart' },
+]
+
+const networkNavigation = [
+    { name: 'Kesehatan Jaringan', href: '/admin/analytics/network', icon: 'signal' },
 ]
 
 const masterNavigation = [
@@ -197,6 +202,9 @@ const icons = {
     },
     close: {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`
+    },
+    signal: {
+        template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>`
     },
     'chevron-down': {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`
@@ -336,6 +344,38 @@ const getIcon = (name) => ({
                         >
                             <ul v-show="expandedSections.finance" class="space-y-1 overflow-hidden">
                                 <li v-for="item in financeNavigation" :key="item.name">
+                                    <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                        <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                        <span class="truncate">{{ item.name }}</span>
+                                    </Link>
+                                </li>
+                            </ul>
+                        </Transition>
+                    </div>
+
+                    <!-- Jaringan -->
+                    <div class="mb-4">
+                        <button
+                            @click="toggleSection('network')"
+                            class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-cyan-400 uppercase tracking-wider hover:text-cyan-300 transition-colors"
+                        >
+                            <span>Jaringan</span>
+                            <component
+                                :is="getIcon('chevron-down')"
+                                class="w-4 h-4 transition-transform duration-200"
+                                :class="{ 'rotate-180': !expandedSections.network }"
+                            />
+                        </button>
+                        <Transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-96"
+                            leave-active-class="transition-all duration-200 ease-in"
+                            leave-from-class="opacity-100 max-h-96"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
+                            <ul v-show="expandedSections.network" class="space-y-1 overflow-hidden">
+                                <li v-for="item in networkNavigation" :key="item.name">
                                     <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                         <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                         <span class="truncate">{{ item.name }}</span>
@@ -544,6 +584,39 @@ const getIcon = (name) => ({
                     >
                         <ul v-show="expandedSections.finance || !sidebarOpen" class="space-y-1 overflow-hidden">
                             <li v-for="item in financeNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </Transition>
+                </div>
+
+                <!-- Jaringan -->
+                <div class="mb-4">
+                    <button
+                        v-if="sidebarOpen"
+                        @click="toggleSection('network')"
+                        class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-cyan-400 uppercase tracking-wider hover:text-cyan-300 transition-colors"
+                    >
+                        <span>Jaringan</span>
+                        <component
+                            :is="getIcon('chevron-down')"
+                            class="w-4 h-4 transition-transform duration-200"
+                            :class="{ 'rotate-180': !expandedSections.network }"
+                        />
+                    </button>
+                    <Transition
+                        enter-active-class="transition-all duration-200 ease-out"
+                        enter-from-class="opacity-0 max-h-0"
+                        enter-to-class="opacity-100 max-h-96"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="opacity-100 max-h-96"
+                        leave-to-class="opacity-0 max-h-0"
+                    >
+                        <ul v-show="expandedSections.network || !sidebarOpen" class="space-y-1 overflow-hidden">
+                            <li v-for="item in networkNavigation" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>

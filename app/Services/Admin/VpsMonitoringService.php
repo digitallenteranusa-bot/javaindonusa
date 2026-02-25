@@ -287,7 +287,13 @@ class VpsMonitoringService
 
     public function getServiceStatuses(): array
     {
-        $services = ['nginx', 'mysql', 'redis-server', 'php8.2-fpm', 'php8.3-fpm', 'supervisor'];
+        $services = ['nginx', 'mysql', 'redis-server', 'supervisor'];
+
+        // Auto-detect active PHP-FPM version
+        $phpFpmService = $this->detectPhpFpm();
+        if ($phpFpmService) {
+            $services[] = $phpFpmService;
+        }
 
         $statuses = [];
         foreach ($services as $service) {
@@ -307,14 +313,14 @@ class VpsMonitoringService
             }
         }
 
-        // Check queue worker via supervisor
+        // Check queue worker via supervisor (any worker process)
         try {
-            $output = shell_exec('supervisorctl status 2>/dev/null | grep laravel-worker');
-            $queueRunning = $output && str_contains($output, 'RUNNING');
+            $output = shell_exec('supervisorctl status 2>/dev/null');
+            $queueRunning = $output && preg_match('/\bRUNNING\b/', $output);
             $statuses[] = [
                 'name' => 'queue-worker',
                 'status' => $queueRunning ? 'active' : 'inactive',
-                'is_active' => $queueRunning,
+                'is_active' => (bool) $queueRunning,
             ];
         } catch (\Exception $e) {
             $statuses[] = [
@@ -325,6 +331,25 @@ class VpsMonitoringService
         }
 
         return $statuses;
+    }
+
+    protected function detectPhpFpm(): ?string
+    {
+        try {
+            // Check common PHP-FPM versions from newest to oldest
+            foreach (['8.4', '8.3', '8.2', '8.1', '8.0'] as $version) {
+                $output = trim(shell_exec("systemctl is-active php{$version}-fpm 2>/dev/null") ?? '');
+                if ($output === 'active') {
+                    return "php{$version}-fpm";
+                }
+            }
+            // If none active, return current PHP version's fpm
+            $major = PHP_MAJOR_VERSION;
+            $minor = PHP_MINOR_VERSION;
+            return "php{$major}.{$minor}-fpm";
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     public function getTopProcesses(): array

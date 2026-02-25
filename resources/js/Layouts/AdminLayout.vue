@@ -88,6 +88,7 @@ const billingNavigation = [
 const financeNavigation = [
     { name: 'Dashboard', href: '/admin/finance', icon: 'banknotes' },
     { name: 'Pengeluaran Ops', href: '/admin/finance/expenses', icon: 'receipt' },
+    { name: 'Performa Penagih', href: '/admin/finance/collector-performance', icon: 'user-group' },
     { name: 'Analisa Pendapatan', href: '/admin/analytics/revenue', icon: 'chart' },
 ]
 

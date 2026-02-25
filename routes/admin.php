@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\IsolationController;
 use App\Http\Controllers\Admin\RevenueAnalyticsController;
 use App\Http\Controllers\Admin\NetworkMonitoringController;
 use App\Http\Controllers\Admin\VpsMonitoringController;
+use App\Http\Controllers\Admin\CollectorPerformanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -323,6 +324,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:finance.view'])->group(function () {
         Route::get('/finance', [FinanceController::class, 'dashboard'])->name('finance.dashboard');
         Route::get('/finance/expenses', [FinanceController::class, 'expenses'])->name('finance.expenses');
+    });
+    Route::middleware(['permission:reports.view'])->group(function () {
+        Route::get('/finance/collector-performance', [CollectorPerformanceController::class, 'index'])
+            ->name('finance.collector-performance');
+        Route::get('/finance/collector-performance/export', [CollectorPerformanceController::class, 'export'])
+            ->name('finance.collector-performance.export');
+        Route::get('/finance/collector-performance/export/{collector}', [CollectorPerformanceController::class, 'exportCollector'])
+            ->name('finance.collector-performance.export-collector');
     });
     Route::middleware(['permission:finance.manage'])->group(function () {
         Route::get('/finance/expenses/create', [FinanceController::class, 'createExpense'])

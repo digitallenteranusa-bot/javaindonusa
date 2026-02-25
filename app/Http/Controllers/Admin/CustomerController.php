@@ -337,6 +337,8 @@ class CustomerController extends Controller
             return back()->with('error', 'Tidak dapat menghapus pelanggan dengan tagihan belum lunas');
         }
 
+        $odpId = $customer->odp_id;
+
         $customer->update([
             'status' => Customer::STATUS_TERMINATED,
             'termination_date' => now(),
@@ -344,6 +346,14 @@ class CustomerController extends Controller
         ]);
 
         $customer->delete();
+
+        // Recalculate ODP used_ports after customer deletion
+        if ($odpId) {
+            $odp = \App\Models\Odp::find($odpId);
+            if ($odp) {
+                $odp->recalculateUsedPorts();
+            }
+        }
 
         return redirect()->route('admin.customers.index')
             ->with('success', 'Pelanggan berhasil dihapus');
@@ -451,6 +461,13 @@ class CustomerController extends Controller
             // Count after import
             $countAfter = Customer::count();
             $importedCount = $countAfter - $countBefore;
+
+            // Recalculate ODP used_ports for all ODPs that have customers
+            if ($importedCount > 0) {
+                \App\Models\Odp::whereHas('customers')->each(function ($odp) {
+                    $odp->recalculateUsedPorts();
+                });
+            }
 
             $failures = $import->failures();
             $errors = $import->errors();

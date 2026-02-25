@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\RevenueAnalyticsController;
 use App\Http\Controllers\Admin\NetworkMonitoringController;
 use App\Http\Controllers\Admin\VpsMonitoringController;
 use App\Http\Controllers\Admin\CollectorPerformanceController;
+use App\Http\Controllers\Admin\UnpaidMonitoringController;
 
 /*
 |--------------------------------------------------------------------------
@@ -227,6 +228,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
             ->name('invoices.update-overdue');
     });
     Route::middleware(['permission:invoices.view'])->group(function () {
+        Route::get('/billing/unpaid', [UnpaidMonitoringController::class, 'index'])->name('billing.unpaid');
+        Route::get('/billing/unpaid/export', [UnpaidMonitoringController::class, 'export'])->name('billing.unpaid.export');
         Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
         Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])

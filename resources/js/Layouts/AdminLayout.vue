@@ -79,6 +79,7 @@ const mainNavigation = [
 
 const billingNavigation = [
     { name: 'Invoice', href: '/admin/invoices', icon: 'document' },
+    { name: 'Belum Bayar', href: '/admin/billing/unpaid', icon: 'clipboard' },
     { name: 'Pembayaran', href: '/admin/payments', icon: 'credit-card' },
     { name: 'Pengeluaran', href: '/admin/expenses', icon: 'receipt' },
     { name: 'Setoran', href: '/admin/settlements', icon: 'cash' },

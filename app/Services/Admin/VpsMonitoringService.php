@@ -313,14 +313,26 @@ class VpsMonitoringService
             }
         }
 
-        // Check queue worker via supervisor (any worker process)
+        // Check queue worker via supervisor or direct process
         try {
+            $queueRunning = false;
+
+            // Check via supervisorctl first
             $output = shell_exec('supervisorctl status 2>/dev/null');
-            $queueRunning = $output && preg_match('/\bRUNNING\b/', $output);
+            if ($output && preg_match('/\bRUNNING\b/', $output)) {
+                $queueRunning = true;
+            }
+
+            // Fallback: check if queue:work process is running directly
+            if (!$queueRunning) {
+                $output = shell_exec('pgrep -f "queue:work" 2>/dev/null');
+                $queueRunning = !empty(trim($output ?? ''));
+            }
+
             $statuses[] = [
                 'name' => 'queue-worker',
                 'status' => $queueRunning ? 'active' : 'inactive',
-                'is_active' => (bool) $queueRunning,
+                'is_active' => $queueRunning,
             ];
         } catch (\Exception $e) {
             $statuses[] = [

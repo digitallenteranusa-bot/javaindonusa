@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Traits\LogsAdminActivity;
 use App\Models\AdminAuditLog;
+use App\Http\Requests\Admin\User\StoreUserRequest;
+use App\Http\Requests\Admin\User\UpdateUserRequest;
+use App\Http\Requests\Admin\User\ResetPasswordRequest;
 use App\Models\User;
 use App\Models\Area;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -80,17 +81,9 @@ class UserController extends Controller
     /**
      * Store new user
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'phone' => 'nullable|string|max:20',
-            'password' => ['required', Password::defaults()],
-            'role' => 'required|in:admin,penagih,technician,finance',
-            'area_id' => 'nullable|exists:areas,id',
-            'is_active' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         $validated['password'] = Hash::make($validated['password']);
         $validated['is_active'] = $validated['is_active'] ?? true;
@@ -157,17 +150,9 @@ class UserController extends Controller
     /**
      * Update user
      */
-    public function update(Request $request, User $user)
+    public function update(UpdateUserRequest $request, User $user)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
-            'phone' => 'nullable|string|max:20',
-            'password' => ['nullable', Password::defaults()],
-            'role' => 'required|in:admin,penagih,technician,finance',
-            'area_id' => 'nullable|exists:areas,id',
-            'is_active' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
         // Store old values for audit
         $oldValues = $user->only(['name', 'email', 'phone', 'role', 'area_id', 'is_active']);
@@ -248,11 +233,9 @@ class UserController extends Controller
     /**
      * Reset user password
      */
-    public function resetPassword(Request $request, User $user)
+    public function resetPassword(ResetPasswordRequest $request, User $user)
     {
-        $validated = $request->validate([
-            'password' => ['required', Password::defaults()],
-        ]);
+        $validated = $request->validated();
 
         $user->update([
             'password' => Hash::make($validated['password']),

@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Http\Requests\Admin\Router;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class UpdateRouterRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string|max:500',
+            'ip_address' => ['required', 'ip', Rule::unique('routers')->ignore($this->route('router'))],
+            'api_port' => 'required|integer|min:1|max:65535',
+            'username' => 'required|string|max:50',
+            'password' => 'nullable|string|max:100',
+            'is_active' => 'boolean',
+            'notes' => 'nullable|string|max:1000',
+        ];
+    }
+}

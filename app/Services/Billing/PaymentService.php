@@ -2,11 +2,11 @@
 
 namespace App\Services\Billing;
 
+use App\Events\PaymentReceived;
 use App\Models\Payment;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Models\User;
-use App\Jobs\ReopenCustomerJob;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -68,10 +68,11 @@ class PaymentService
                 "Payment #{$payment->payment_number}"
             );
 
-            // Check if customer should be reopened
-            $this->checkAndReopenCustomer($customer);
+            // Dispatch event for reopen check and other side effects
+            $freshPayment = $payment->fresh(['customer', 'invoices', 'collector']);
+            PaymentReceived::dispatch($customer, $freshPayment);
 
-            return $payment->fresh(['customer', 'invoices', 'collector']);
+            return $freshPayment;
         });
     }
 
@@ -130,25 +131,6 @@ class PaymentService
             'invoice_total' => $invoiceTotal,
             'debt_total' => $debtTotal,
         ];
-    }
-
-    /**
-     * Check if customer should be reopened after payment
-     */
-    protected function checkAndReopenCustomer(Customer $customer): void
-    {
-        $customer->refresh();
-
-        // If customer is isolated and has no overdue invoices, reopen
-        if ($customer->status === 'isolated') {
-            $hasOverdue = Invoice::where('customer_id', $customer->id)
-                ->where('status', 'overdue')
-                ->exists();
-
-            if (!$hasOverdue || $customer->total_debt <= 0) {
-                dispatch(new ReopenCustomerJob($customer->id));
-            }
-        }
     }
 
     /**

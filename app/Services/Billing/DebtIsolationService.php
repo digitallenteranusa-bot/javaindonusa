@@ -2,6 +2,8 @@
 
 namespace App\Services\Billing;
 
+use App\Events\CustomerIsolated;
+use App\Events\CustomerReopened;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\DebtHistory;
@@ -560,8 +562,8 @@ class DebtIsolationService
                 'isolation_reason' => $reason,
             ]);
 
-            // 5. Kirim notifikasi
-            $this->notification->sendIsolationNotice($customer, $reason);
+            // 5. Dispatch isolation event (sends notification via listener)
+            CustomerIsolated::dispatch($customer, $reason);
 
             // 6. Log aktivitas
             BillingLog::logCustomer(
@@ -648,8 +650,8 @@ class DebtIsolationService
                 'isolation_reason' => null,
             ]);
 
-            // 5. Kirim notifikasi
-            $this->notification->sendAccessOpenedNotice($customer);
+            // 5. Dispatch reopen event (sends notification via listener)
+            CustomerReopened::dispatch($customer);
 
             // 6. Log aktivitas
             BillingLog::logCustomer(

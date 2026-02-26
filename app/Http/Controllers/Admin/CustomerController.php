@@ -11,12 +11,18 @@ use App\Models\User;
 use App\Models\Odp;
 use App\Services\Billing\DebtService;
 use App\Services\Billing\InvoiceService;
+use App\Http\Requests\Admin\Customer\StoreCustomerRequest;
+use App\Http\Requests\Admin\Customer\UpdateCustomerRequest;
+use App\Http\Requests\Admin\Customer\AdjustDebtRequest;
+use App\Http\Requests\Admin\Customer\AddHistoricalInvoiceRequest;
+use App\Http\Requests\Admin\Customer\WriteOffDebtRequest;
+use App\Http\Requests\Admin\Customer\ImportCustomerRequest;
 use App\Imports\CustomerImport;
 use App\Exports\CustomerTemplateExport;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
+
 
 class CustomerController extends Controller
 {
@@ -131,53 +137,9 @@ class CustomerController extends Controller
     /**
      * Store new customer
      */
-    public function store(Request $request)
+    public function store(StoreCustomerRequest $request)
     {
-        // Convert empty strings to null for optional fields
-        $request->merge([
-            'ip_address' => $request->ip_address ?: null,
-            'email' => $request->email ?: null,
-            'latitude' => $request->latitude ?: null,
-            'longitude' => $request->longitude ?: null,
-            'collector_id' => $request->collector_id ?: null,
-            'odp_id' => $request->odp_id ?: null,
-            'billing_start_date' => $request->billing_start_date ?: null,
-        ]);
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'required|string|max:500',
-            'rt_rw' => 'nullable|string|max:20',
-            'kelurahan' => 'nullable|string|max:100',
-            'kecamatan' => 'nullable|string|max:100',
-            'phone' => 'required|string|max:20',
-            'phone_alt' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'nik' => 'nullable|string|max:20',
-            'package_id' => 'required|exists:packages,id',
-            'area_id' => 'required|exists:areas,id',
-            'router_id' => 'required|exists:routers,id',
-            'collector_id' => 'nullable|exists:users,id',
-            'odp_id' => 'nullable|exists:odps,id',
-            'connection_type' => 'required|in:pppoe,static,hotspot',
-            'pppoe_username' => 'nullable|string|max:100|unique:customers,pppoe_username',
-            'pppoe_password' => 'nullable|string|max:100',
-            'ip_address' => 'nullable|ip',
-            'mac_address' => 'nullable|string|max:20',
-            'onu_serial' => 'nullable|string|max:50',
-            'billing_type' => 'required|in:prepaid,postpaid',
-            'billing_date' => 'nullable|integer|min:1|max:28',
-            'billing_start_date' => 'nullable|date',
-            'is_rapel' => 'boolean',
-            'rapel_months' => 'nullable|integer|min:1|max:12',
-            'discount_type' => 'required|in:none,nominal,percentage',
-            'discount_value' => 'nullable|numeric|min:0',
-            'discount_reason' => 'nullable|string|max:255',
-            'is_taxed' => 'boolean',
-            'notes' => 'nullable|string|max:1000',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
+        $validated = $request->validated();
 
         // Clear ODP if not PPPoE
         if ($validated['connection_type'] !== 'pppoe') {
@@ -249,54 +211,9 @@ class CustomerController extends Controller
     /**
      * Update customer
      */
-    public function update(Request $request, Customer $customer)
+    public function update(UpdateCustomerRequest $request, Customer $customer)
     {
-        // Convert empty strings to null for optional fields
-        $request->merge([
-            'ip_address' => $request->ip_address ?: null,
-            'email' => $request->email ?: null,
-            'latitude' => $request->latitude ?: null,
-            'longitude' => $request->longitude ?: null,
-            'collector_id' => $request->collector_id ?: null,
-            'odp_id' => $request->odp_id ?: null,
-            'billing_start_date' => $request->billing_start_date ?: null,
-        ]);
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'required|string|max:500',
-            'rt_rw' => 'nullable|string|max:20',
-            'kelurahan' => 'nullable|string|max:100',
-            'kecamatan' => 'nullable|string|max:100',
-            'phone' => 'required|string|max:20',
-            'phone_alt' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'nik' => 'nullable|string|max:20',
-            'package_id' => 'required|exists:packages,id',
-            'area_id' => 'required|exists:areas,id',
-            'router_id' => 'required|exists:routers,id',
-            'collector_id' => 'nullable|exists:users,id',
-            'odp_id' => 'nullable|exists:odps,id',
-            'connection_type' => 'required|in:pppoe,static,hotspot',
-            'pppoe_username' => ['nullable', 'string', 'max:100', Rule::unique('customers')->ignore($customer->id)],
-            'pppoe_password' => 'nullable|string|max:100',
-            'ip_address' => 'nullable|ip',
-            'mac_address' => 'nullable|string|max:20',
-            'onu_serial' => 'nullable|string|max:50',
-            'status' => 'required|in:active,isolated,suspended,terminated',
-            'billing_type' => 'required|in:prepaid,postpaid',
-            'billing_date' => 'nullable|integer|min:1|max:28',
-            'billing_start_date' => 'nullable|date',
-            'is_rapel' => 'boolean',
-            'rapel_months' => 'nullable|integer|min:1|max:12',
-            'discount_type' => 'required|in:none,nominal,percentage',
-            'discount_value' => 'nullable|numeric|min:0',
-            'discount_reason' => 'nullable|string|max:255',
-            'is_taxed' => 'boolean',
-            'notes' => 'nullable|string|max:1000',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
+        $validated = $request->validated();
 
         // Clear ODP if not PPPoE
         if ($validated['connection_type'] !== 'pppoe') {
@@ -362,12 +279,9 @@ class CustomerController extends Controller
     /**
      * Adjust customer debt
      */
-    public function adjustDebt(Request $request, Customer $customer)
+    public function adjustDebt(AdjustDebtRequest $request, Customer $customer)
     {
-        $validated = $request->validate([
-            'amount' => 'required|numeric',
-            'reason' => 'required|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $this->debtService->adjustDebt($customer, $validated['amount'], $validated['reason']);
 
@@ -377,14 +291,9 @@ class CustomerController extends Controller
     /**
      * Add historical invoice (hutang lama)
      */
-    public function addHistoricalInvoice(Request $request, Customer $customer)
+    public function addHistoricalInvoice(AddHistoricalInvoiceRequest $request, Customer $customer)
     {
-        $validated = $request->validate([
-            'month' => 'required|integer|min:1|max:12',
-            'year' => 'required|integer|min:2020|max:' . now()->year,
-            'amount' => 'required|numeric|min:1000',
-            'description' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         try {
             $invoice = $this->invoiceService->createHistoricalInvoice(
@@ -404,12 +313,9 @@ class CustomerController extends Controller
     /**
      * Write off customer debt
      */
-    public function writeOffDebt(Request $request, Customer $customer)
+    public function writeOffDebt(WriteOffDebtRequest $request, Customer $customer)
     {
-        $validated = $request->validate([
-            'amount' => 'required|numeric|min:0|max:' . $customer->total_debt,
-            'reason' => 'required|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $this->debtService->writeOffDebt($customer, $validated['amount'], $validated['reason']);
 
@@ -441,15 +347,8 @@ class CustomerController extends Controller
     /**
      * Import customers from Excel
      */
-    public function import(Request $request)
+    public function import(ImportCustomerRequest $request)
     {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv|max:10240', // max 10MB
-        ], [
-            'file.required' => 'File Excel wajib diupload',
-            'file.mimes' => 'Format file harus xlsx, xls, atau csv',
-            'file.max' => 'Ukuran file maksimal 10MB',
-        ]);
 
         try {
             // Count before import

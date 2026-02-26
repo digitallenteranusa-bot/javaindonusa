@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Router;
+use App\Http\Requests\Admin\Router\StoreRouterRequest;
+use App\Http\Requests\Admin\Router\UpdateRouterRequest;
 use App\Services\Mikrotik\MikrotikService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class RouterController extends Controller
@@ -61,18 +62,9 @@ class RouterController extends Controller
     /**
      * Store new router
      */
-    public function store(Request $request)
+    public function store(StoreRouterRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'description' => 'nullable|string|max:500',
-            'ip_address' => 'required|ip|unique:routers,ip_address',
-            'api_port' => 'required|integer|min:1|max:65535',
-            'username' => 'required|string|max:50',
-            'password' => 'required|string|max:100',
-            'is_active' => 'boolean',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         $validated['is_active'] = $validated['is_active'] ?? true;
 
@@ -188,18 +180,9 @@ class RouterController extends Controller
     /**
      * Update router
      */
-    public function update(Request $request, Router $router)
+    public function update(UpdateRouterRequest $request, Router $router)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'description' => 'nullable|string|max:500',
-            'ip_address' => ['required', 'ip', Rule::unique('routers')->ignore($router->id)],
-            'api_port' => 'required|integer|min:1|max:65535',
-            'username' => 'required|string|max:50',
-            'password' => 'nullable|string|max:100',
-            'is_active' => 'boolean',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         // Only update password if provided
         if (empty($validated['password'])) {

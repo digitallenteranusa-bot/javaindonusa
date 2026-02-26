@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Services\Billing\DebtIsolationService;
 use App\Services\Notification\NotificationService;
 use App\Services\PdfService;
+use App\Http\Requests\Admin\Payment\StorePaymentRequest;
+use App\Http\Requests\Admin\Payment\CancelPaymentRequest;
 use App\Exports\PaymentExport;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -147,15 +149,9 @@ class PaymentController extends Controller
     /**
      * Store manual payment
      */
-    public function store(Request $request)
+    public function store(StorePaymentRequest $request)
     {
-        $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'amount' => 'required|numeric|min:1000',
-            'payment_method' => 'required|in:cash,transfer',
-            'transfer_proof' => 'nullable|string',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $customer = Customer::findOrFail($validated['customer_id']);
 
@@ -187,16 +183,14 @@ class PaymentController extends Controller
     /**
      * Cancel payment (reverse)
      */
-    public function cancel(Request $request, Payment $payment)
+    public function cancel(CancelPaymentRequest $request, Payment $payment)
     {
         // Only recent payments can be cancelled (within 24 hours)
         if ($payment->created_at->lt(now()->subDay())) {
             return back()->with('error', 'Pembayaran lebih dari 24 jam tidak dapat dibatalkan');
         }
 
-        $validated = $request->validate([
-            'reason' => 'required|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         // This is a complex operation that should:
         // 1. Reverse invoice payments

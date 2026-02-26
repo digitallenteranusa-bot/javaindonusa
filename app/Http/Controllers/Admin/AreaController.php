@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Area\StoreAreaRequest;
+use App\Http\Requests\Admin\Area\UpdateAreaRequest;
 use App\Models\Area;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AreaController extends Controller
@@ -55,19 +56,9 @@ class AreaController extends Controller
     /**
      * Store new area
      */
-    public function store(Request $request)
+    public function store(StoreAreaRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'code' => ['required', 'string', 'max:20', Rule::unique('areas')->whereNull('deleted_at')],
-            'description' => 'nullable|string|max:500',
-            'parent_id' => 'nullable|exists:areas,id',
-            'collector_id' => 'nullable|exists:users,id',
-            'is_active' => 'boolean',
-            'coverage_radius' => 'nullable|numeric|min:0',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
+        $validated = $request->validated();
 
         $validated['is_active'] = $validated['is_active'] ?? true;
 
@@ -113,19 +104,9 @@ class AreaController extends Controller
     /**
      * Update area
      */
-    public function update(Request $request, Area $area)
+    public function update(UpdateAreaRequest $request, Area $area)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'code' => ['required', 'string', 'max:20', Rule::unique('areas')->ignore($area->id)->whereNull('deleted_at')],
-            'description' => 'nullable|string|max:500',
-            'parent_id' => 'nullable|exists:areas,id',
-            'collector_id' => 'nullable|exists:users,id',
-            'is_active' => 'boolean',
-            'coverage_radius' => 'nullable|numeric|min:0',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
+        $validated = $request->validated();
 
         // Prevent self-reference
         if (isset($validated['parent_id']) && $validated['parent_id'] == $area->id) {

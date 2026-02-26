@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Olt\StoreOltRequest;
+use App\Http\Requests\Admin\Olt\UpdateOltRequest;
+use App\Http\Requests\Admin\Olt\UpdateOltStatusRequest;
 use App\Models\Olt;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class OltController extends Controller
@@ -62,22 +64,9 @@ class OltController extends Controller
     /**
      * Store new OLT
      */
-    public function store(Request $request)
+    public function store(StoreOltRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'ip_address' => 'required|ip|unique:olts,ip_address',
-            'type' => ['required', Rule::in(array_keys(Olt::getTypes()))],
-            'pon_ports' => ['required', Rule::in(array_keys(Olt::getPonPortOptions()))],
-            'username' => 'nullable|string|max:100',
-            'password' => 'nullable|string|max:100',
-            'telnet_port' => 'required|integer|min:1|max:65535',
-            'ssh_port' => 'required|integer|min:1|max:65535',
-            'snmp_community' => 'nullable|string|max:100',
-            'status' => ['required', Rule::in(array_keys(Olt::getStatuses()))],
-            'notes' => 'nullable|string|max:1000',
-            'firmware_version' => 'nullable|string|max:100',
-        ]);
+        $validated = $request->validated();
 
         Olt::create($validated);
 
@@ -114,22 +103,9 @@ class OltController extends Controller
     /**
      * Update OLT
      */
-    public function update(Request $request, Olt $olt)
+    public function update(UpdateOltRequest $request, Olt $olt)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'ip_address' => ['required', 'ip', Rule::unique('olts')->ignore($olt->id)],
-            'type' => ['required', Rule::in(array_keys(Olt::getTypes()))],
-            'pon_ports' => ['required', Rule::in(array_keys(Olt::getPonPortOptions()))],
-            'username' => 'nullable|string|max:100',
-            'password' => 'nullable|string|max:100',
-            'telnet_port' => 'required|integer|min:1|max:65535',
-            'ssh_port' => 'required|integer|min:1|max:65535',
-            'snmp_community' => 'nullable|string|max:100',
-            'status' => ['required', Rule::in(array_keys(Olt::getStatuses()))],
-            'notes' => 'nullable|string|max:1000',
-            'firmware_version' => 'nullable|string|max:100',
-        ]);
+        $validated = $request->validated();
 
         // Don't update password if empty
         if (empty($validated['password'])) {
@@ -156,11 +132,9 @@ class OltController extends Controller
     /**
      * Update OLT status
      */
-    public function updateStatus(Request $request, Olt $olt)
+    public function updateStatus(UpdateOltStatusRequest $request, Olt $olt)
     {
-        $validated = $request->validate([
-            'status' => ['required', Rule::in(array_keys(Olt::getStatuses()))],
-        ]);
+        $validated = $request->validated();
 
         $olt->update($validated);
 

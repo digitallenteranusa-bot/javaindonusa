@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Services\Billing\DebtIsolationService;
+use App\Http\Requests\Admin\Invoice\GenerateForSelectedRequest;
+use App\Http\Requests\Admin\Invoice\MarkPaidRequest;
+use App\Http\Requests\Admin\Invoice\CancelInvoiceRequest;
+use App\Http\Requests\Admin\Invoice\BulkExportPdfRequest;
 use App\Services\PdfService;
 use App\Exports\InvoiceExport;
 use Illuminate\Http\Request;
@@ -234,14 +238,9 @@ class InvoiceController extends Controller
     /**
      * Generate invoices for selected customers
      */
-    public function generateForSelected(Request $request)
+    public function generateForSelected(GenerateForSelectedRequest $request)
     {
-        $validated = $request->validate([
-            'customer_ids' => 'required|array|min:1',
-            'customer_ids.*' => 'exists:customers,id',
-            'month' => 'required|integer|min:1|max:12',
-            'year' => 'required|integer|min:2020|max:2099',
-        ]);
+        $validated = $request->validated();
 
         $periodMonth = $validated['month'];
         $periodYear = $validated['year'];
@@ -299,11 +298,9 @@ class InvoiceController extends Controller
     /**
      * Mark invoice as paid manually
      */
-    public function markPaid(Request $request, Invoice $invoice)
+    public function markPaid(MarkPaidRequest $request, Invoice $invoice)
     {
-        $validated = $request->validate([
-            'notes' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $invoice->update([
             'status' => 'paid',
@@ -321,7 +318,7 @@ class InvoiceController extends Controller
     /**
      * Cancel invoice
      */
-    public function cancel(Request $request, Invoice $invoice)
+    public function cancel(CancelInvoiceRequest $request, Invoice $invoice)
     {
         // Only unpaid invoices can be cancelled
         if (in_array($invoice->status, ['paid', 'cancelled'])) {
@@ -333,9 +330,7 @@ class InvoiceController extends Controller
             return back()->with('error', 'Invoice dengan pembayaran tidak dapat dibatalkan');
         }
 
-        $validated = $request->validate([
-            'reason' => 'required|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         // Save reference before deletion
         $customer = $invoice->customer;
@@ -442,12 +437,9 @@ class InvoiceController extends Controller
     /**
      * Bulk export invoices to PDF
      */
-    public function bulkExportPdf(Request $request, PdfService $pdfService)
+    public function bulkExportPdf(BulkExportPdfRequest $request, PdfService $pdfService)
     {
-        $validated = $request->validate([
-            'invoice_ids' => 'required|array|min:1',
-            'invoice_ids.*' => 'exists:invoices,id',
-        ]);
+        $validated = $request->validated();
 
         $pdf = $pdfService->generateBulkInvoicesPdf($validated['invoice_ids']);
 

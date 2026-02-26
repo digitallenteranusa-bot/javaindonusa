@@ -2,9 +2,9 @@
 
 namespace App\Services\Billing;
 
+use App\Events\InvoiceGenerated;
 use App\Models\Invoice;
 use App\Models\Customer;
-use App\Models\BillingLog;
 use App\Models\DebtHistory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -51,14 +51,8 @@ class InvoiceService
             }
         }
 
-        // Log the batch generation
-        BillingLog::logSystem('invoice_generation', "Generated invoices for {$month}/{$year}", [
-            'month' => $month,
-            'year' => $year,
-            'generated' => $generated,
-            'skipped' => $skipped,
-            'errors' => $errors,
-        ]);
+        // Dispatch event (logging handled by listener)
+        InvoiceGenerated::dispatch($month, $year, $generated, $skipped, $errors);
 
         return [
             'generated' => $generated,

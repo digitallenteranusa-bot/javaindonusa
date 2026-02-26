@@ -7,6 +7,8 @@ use App\Models\Area;
 use App\Models\Customer;
 use App\Models\Odp;
 use App\Models\Package;
+use App\Http\Requests\Collector\Customer\StoreCollectorCustomerRequest;
+use App\Http\Requests\Collector\Customer\UpdateCollectorCustomerRequest;
 use App\Models\Router;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,33 +34,9 @@ class CustomerController extends Controller
     /**
      * Store new customer
      */
-    public function store(Request $request)
+    public function store(StoreCollectorCustomerRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'address' => 'required|string|max:500',
-            'kelurahan' => 'nullable|string|max:100',
-            'package_id' => 'required|exists:packages,id',
-            'area_id' => 'required|exists:areas,id',
-            'router_id' => 'nullable|exists:routers,id',
-            'odp_id' => 'nullable|exists:odps,id',
-            'pppoe_username' => 'nullable|string|max:100',
-            'ip_address' => 'nullable|string|max:45',
-            'onu_serial' => 'nullable|string|max:100',
-            'connection_type' => 'required|in:pppoe,static',
-            'billing_date' => 'required|integer|min:1|max:28',
-            'billing_start_date' => 'nullable|date',
-            'total_debt' => 'nullable|numeric|min:0',
-            'rapel_months' => 'nullable|integer|min:0|max:12',
-            'discount_type' => 'nullable|in:none,nominal,percentage',
-            'discount_value' => 'nullable|numeric|min:0',
-            'discount_reason' => 'nullable|string|max:255',
-            'is_taxed' => 'boolean',
-            'notes' => 'nullable|string|max:1000',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
+        $validated = $request->validated();
 
         // Set default discount_type if not provided
         $validated['discount_type'] = $validated['discount_type'] ?? 'none';
@@ -128,7 +106,7 @@ class CustomerController extends Controller
     /**
      * Update customer
      */
-    public function update(Request $request, Customer $customer)
+    public function update(UpdateCollectorCustomerRequest $request, Customer $customer)
     {
         // Check if this customer belongs to this collector
         if ($customer->collector_id !== Auth::id()) {
@@ -136,31 +114,7 @@ class CustomerController extends Controller
                 ->with('error', 'Anda tidak memiliki akses ke pelanggan ini');
         }
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'address' => 'required|string|max:500',
-            'kelurahan' => 'nullable|string|max:100',
-            'package_id' => 'required|exists:packages,id',
-            'area_id' => 'required|exists:areas,id',
-            'router_id' => 'nullable|exists:routers,id',
-            'odp_id' => 'nullable|exists:odps,id',
-            'pppoe_username' => 'nullable|string|max:100',
-            'ip_address' => 'nullable|string|max:45',
-            'onu_serial' => 'nullable|string|max:100',
-            'connection_type' => 'required|in:pppoe,static',
-            'billing_date' => 'required|integer|min:1|max:28',
-            'billing_start_date' => 'nullable|date',
-            'total_debt' => 'nullable|numeric|min:0',
-            'rapel_months' => 'nullable|integer|min:0|max:12',
-            'discount_type' => 'nullable|in:none,nominal,percentage',
-            'discount_value' => 'nullable|numeric|min:0',
-            'discount_reason' => 'nullable|string|max:255',
-            'is_taxed' => 'boolean',
-            'notes' => 'nullable|string|max:1000',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
+        $validated = $request->validated();
 
         // Set default discount_type if not provided
         $validated['discount_type'] = $validated['discount_type'] ?? 'none';

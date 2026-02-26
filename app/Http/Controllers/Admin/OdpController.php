@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Odp\StoreOdpRequest;
+use App\Http\Requests\Admin\Odp\UpdateOdpRequest;
 use App\Models\Odp;
 use App\Models\Area;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class OdpController extends Controller
@@ -70,19 +71,9 @@ class OdpController extends Controller
     /**
      * Store new ODP
      */
-    public function store(Request $request)
+    public function store(StoreOdpRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'code' => 'required|string|max:50|unique:odps,code',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'pole_type' => ['required', Rule::in(array_keys(Odp::getPoleTypes()))],
-            'capacity' => 'required|integer|min:1|max:255',
-            'area_id' => 'nullable|exists:areas,id',
-            'is_active' => 'boolean',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['used_ports'] = 0;
@@ -128,19 +119,9 @@ class OdpController extends Controller
     /**
      * Update ODP
      */
-    public function update(Request $request, Odp $odp)
+    public function update(UpdateOdpRequest $request, Odp $odp)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'code' => ['required', 'string', 'max:50', Rule::unique('odps')->ignore($odp->id)],
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'pole_type' => ['required', Rule::in(array_keys(Odp::getPoleTypes()))],
-            'capacity' => 'required|integer|min:1|max:255',
-            'area_id' => 'nullable|exists:areas,id',
-            'is_active' => 'boolean',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         $odp->update($validated);
 

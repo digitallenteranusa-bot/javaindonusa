@@ -25,7 +25,9 @@ return new class extends Migration
                 'adjustment_subtract', // Pengurangan manual
                 'discount',         // Diskon
                 'late_fee',         // Denda keterlambatan
-                'writeoff'          // Penghapusan piutang
+                'writeoff',         // Penghapusan piutang
+                'credit_added',     // Kredit ditambahkan
+                'credit_used'       // Kredit digunakan
             ]);
 
             // Amounts

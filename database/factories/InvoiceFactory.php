@@ -11,10 +11,14 @@ class InvoiceFactory extends Factory
 {
     protected $model = Invoice::class;
 
+    protected static int $monthSequence = 0;
+
     public function definition(): array
     {
-        $month = $this->faker->numberBetween(1, 12);
-        $year = $this->faker->numberBetween(2023, 2024);
+        // Use a sequence to avoid unique constraint collisions (customer_id + period_month + period_year)
+        $seq = static::$monthSequence++;
+        $month = ($seq % 12) + 1;
+        $year = 2023 + intdiv($seq, 12);
         $amount = $this->faker->randomElement([100000, 150000, 200000, 250000, 300000]);
 
         return [
@@ -22,8 +26,6 @@ class InvoiceFactory extends Factory
             'invoice_number' => 'INV' . $year . str_pad($month, 2, '0', STR_PAD_LEFT) . $this->faker->unique()->numerify('####'),
             'period_month' => $month,
             'period_year' => $year,
-            'period_start' => Carbon::create($year, $month, 1),
-            'period_end' => Carbon::create($year, $month, 1)->endOfMonth(),
             'package_name' => 'Paket Internet',
             'package_price' => $amount,
             'additional_charges' => 0,

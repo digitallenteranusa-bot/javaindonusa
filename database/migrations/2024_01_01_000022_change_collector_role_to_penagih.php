@@ -15,8 +15,10 @@ return new class extends Migration
         // First, update existing records from 'collector' to 'penagih'
         DB::table('users')->where('role', 'collector')->update(['role' => 'penagih']);
 
-        // Then modify the enum to use 'penagih' instead of 'collector'
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'penagih', 'technician', 'finance') DEFAULT 'penagih'");
+        // Then modify the enum to use 'penagih' instead of 'collector' (MySQL only)
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'penagih', 'technician', 'finance') DEFAULT 'penagih'");
+        }
     }
 
     /**
@@ -27,7 +29,9 @@ return new class extends Migration
         // Revert: update records from 'penagih' back to 'collector'
         DB::table('users')->where('role', 'penagih')->update(['role' => 'collector']);
 
-        // Revert enum back to original
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'collector', 'technician', 'finance') DEFAULT 'collector'");
+        // Revert enum back to original (MySQL only)
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'collector', 'technician', 'finance') DEFAULT 'collector'");
+        }
     }
 };

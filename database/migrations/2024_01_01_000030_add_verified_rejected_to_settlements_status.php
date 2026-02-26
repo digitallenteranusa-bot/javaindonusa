@@ -13,7 +13,9 @@ return new class extends Migration
     public function up(): void
     {
         // MySQL doesn't support easy ENUM modification, so we use raw SQL
-        DB::statement("ALTER TABLE settlements MODIFY COLUMN status ENUM('pending', 'settled', 'discrepancy', 'verified', 'rejected') DEFAULT 'pending'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE settlements MODIFY COLUMN status ENUM('pending', 'settled', 'discrepancy', 'verified', 'rejected') DEFAULT 'pending'");
+        }
 
         // Add verification_notes column if not exists
         if (!Schema::hasColumn('settlements', 'verification_notes')) {
@@ -37,7 +39,9 @@ return new class extends Migration
     {
         // Convert verified/rejected back to pending before removing enum values
         DB::statement("UPDATE settlements SET status = 'pending' WHERE status IN ('verified', 'rejected')");
-        DB::statement("ALTER TABLE settlements MODIFY COLUMN status ENUM('pending', 'settled', 'discrepancy') DEFAULT 'pending'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE settlements MODIFY COLUMN status ENUM('pending', 'settled', 'discrepancy') DEFAULT 'pending'");
+        }
 
         Schema::table('settlements', function (Blueprint $table) {
             $table->dropColumn(['verification_notes']);

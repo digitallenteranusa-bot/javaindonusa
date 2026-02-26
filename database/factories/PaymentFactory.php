@@ -20,10 +20,10 @@ class PaymentFactory extends Factory
             'payment_number' => 'PAY' . $dateCode . $this->faker->unique()->numerify('####'),
             'amount' => $this->faker->randomElement([100000, 150000, 200000, 250000, 300000]),
             'payment_method' => $this->faker->randomElement(['cash', 'transfer']),
-            'payment_channel' => 'admin',
+            'payment_channel' => 'office',
             'collector_id' => null,
             'received_by' => null,
-            'status' => 'success',
+            'status' => 'verified',
             'notes' => $this->faker->optional()->sentence(),
         ];
     }
@@ -51,10 +51,10 @@ class PaymentFactory extends Factory
         ]);
     }
 
-    public function cancelled(): static
+    public function rejected(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'cancelled',
+            'status' => 'rejected',
         ]);
     }
 }

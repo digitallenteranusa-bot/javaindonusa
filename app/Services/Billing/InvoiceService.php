@@ -52,16 +52,12 @@ class InvoiceService
         }
 
         // Log the batch generation
-        BillingLog::create([
-            'type' => 'invoice_generation',
-            'description' => "Generated invoices for {$month}/{$year}",
-            'data' => [
-                'month' => $month,
-                'year' => $year,
-                'generated' => $generated,
-                'skipped' => $skipped,
-                'errors' => $errors,
-            ],
+        BillingLog::logSystem('invoice_generation', "Generated invoices for {$month}/{$year}", [
+            'month' => $month,
+            'year' => $year,
+            'generated' => $generated,
+            'skipped' => $skipped,
+            'errors' => $errors,
         ]);
 
         return [

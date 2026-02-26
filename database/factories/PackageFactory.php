@@ -11,12 +11,15 @@ class PackageFactory extends Factory
 
     public function definition(): array
     {
-        $speeds = ['5 Mbps', '10 Mbps', '20 Mbps', '50 Mbps', '100 Mbps'];
-        $speed = $this->faker->randomElement($speeds);
+        $speedMap = [5 => 5120, 10 => 10240, 20 => 20480, 50 => 51200, 100 => 102400];
+        $speedMbps = $this->faker->randomElement(array_keys($speedMap));
+        $speedKbps = $speedMap[$speedMbps];
 
         return [
-            'name' => 'Paket ' . $speed,
-            'speed' => $speed,
+            'name' => 'Paket ' . $speedMbps . ' Mbps',
+            'code' => 'PKT' . $this->faker->unique()->numerify('###'),
+            'speed_download' => $speedKbps,
+            'speed_upload' => intval($speedKbps / 2),
             'price' => $this->faker->randomElement([100000, 150000, 200000, 300000, 500000]),
             'description' => $this->faker->sentence(),
             'is_active' => true,

@@ -24,7 +24,7 @@ class CustomerFactory extends Factory
             'connection_type' => $this->faker->randomElement(['pppoe', 'static']),
             'pppoe_username' => $this->faker->userName(),
             'payment_behavior' => 'regular',
-            'registration_date' => $this->faker->dateTimeBetween('-2 years', '-1 month'),
+            'join_date' => $this->faker->dateTimeBetween('-2 years', '-1 month'),
         ];
     }
 

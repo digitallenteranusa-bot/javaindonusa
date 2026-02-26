@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Package;
 use App\Models\Invoice;
 use App\Models\BillingLog;
+use App\Models\DebtHistory;
 use App\Services\Billing\InvoiceService;
 use App\Services\Billing\DebtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,8 +27,8 @@ class InvoiceServiceTest extends TestCase
         parent::setUp();
 
         $this->debtService = Mockery::mock(DebtService::class);
-        $this->debtService->shouldReceive('addDebt')->andReturn(null);
-        $this->debtService->shouldReceive('reduceDebt')->andReturn(null);
+        $this->debtService->shouldReceive('addDebt')->andReturn(new DebtHistory());
+        $this->debtService->shouldReceive('reduceDebt')->andReturn(new DebtHistory());
 
         $this->invoiceService = new InvoiceService($this->debtService);
     }
@@ -82,17 +83,21 @@ class InvoiceServiceTest extends TestCase
         $customer = Customer::factory()->create([
             'status' => 'active',
             'package_id' => $package->id,
-            'additional_charges' => 25000, // PPn atau biaya tambahan
-            'discount' => 10000, // Diskon
+            'discount_type' => 'nominal',
+            'discount_value' => 10000,
+            'discount_reason' => 'Promo',
+            'is_taxed' => true,  // PPN 11%
         ]);
 
         // Act
         $invoice = $this->invoiceService->generateInvoiceForCustomer($customer, 1, 2024);
 
         // Assert
-        // Total = 200000 + 25000 - 10000 = 215000
-        $this->assertEquals(215000, $invoice->total_amount);
-        $this->assertEquals(215000, $invoice->remaining_amount);
+        // Subtotal = 200000 - 10000 = 190000
+        // PPN = 190000 * 0.11 = 20900
+        // Total = 190000 + 20900 = 210900
+        $this->assertEquals(210900, $invoice->total_amount);
+        $this->assertEquals(210900, $invoice->remaining_amount);
         $this->assertEquals(0, $invoice->paid_amount);
     }
 
@@ -124,11 +129,15 @@ class InvoiceServiceTest extends TestCase
     /** @test */
     public function it_skips_customer_without_package()
     {
-        // Arrange
+        // Arrange - create customer with package, then delete the package
+        $package = Package::factory()->create();
         $customer = Customer::factory()->create([
             'status' => 'active',
-            'package_id' => null,
+            'package_id' => $package->id,
         ]);
+        // Delete package so relationship returns null
+        $package->delete();
+        $customer->unsetRelation('package');
 
         // Act
         $invoice = $this->invoiceService->generateInvoiceForCustomer($customer, 1, 2024);
@@ -290,11 +299,13 @@ class InvoiceServiceTest extends TestCase
     /** @test */
     public function it_calculates_invoice_statistics()
     {
-        // Arrange
-        $customer = Customer::factory()->create();
+        // Arrange - use different customers to avoid unique constraint on customer+period
+        $customer1 = Customer::factory()->create();
+        $customer2 = Customer::factory()->create();
+        $customer3 = Customer::factory()->create();
 
         Invoice::factory()->create([
-            'customer_id' => $customer->id,
+            'customer_id' => $customer1->id,
             'period_month' => 1,
             'period_year' => 2024,
             'total_amount' => 150000,
@@ -304,7 +315,7 @@ class InvoiceServiceTest extends TestCase
         ]);
 
         Invoice::factory()->create([
-            'customer_id' => $customer->id,
+            'customer_id' => $customer2->id,
             'period_month' => 1,
             'period_year' => 2024,
             'total_amount' => 200000,
@@ -314,7 +325,7 @@ class InvoiceServiceTest extends TestCase
         ]);
 
         Invoice::factory()->create([
-            'customer_id' => $customer->id,
+            'customer_id' => $customer3->id,
             'period_month' => 1,
             'period_year' => 2024,
             'total_amount' => 150000,

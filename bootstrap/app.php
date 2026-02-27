@@ -53,7 +53,14 @@ return Application::configure(basePath: dirname(__DIR__))
             return back()->with('error', $e->getMessage());
         });
 
-        $exceptions->renderable(function (InvoiceDuplicateException|InvoiceStateException $e, Request $request) {
+        $exceptions->renderable(function (InvoiceDuplicateException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+            return back()->with('error', $e->getMessage());
+        });
+
+        $exceptions->renderable(function (InvoiceStateException $e, Request $request) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => $e->getMessage()], 422);
             }
@@ -88,7 +95,14 @@ return Application::configure(basePath: dirname(__DIR__))
             return back()->with('error', $e->getMessage());
         });
 
-        $exceptions->renderable(function (CustomerHasUnpaidInvoicesException|CannotDeleteWithDependentsException $e, Request $request) {
+        $exceptions->renderable(function (CustomerHasUnpaidInvoicesException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 409);
+            }
+            return back()->with('error', $e->getMessage());
+        });
+
+        $exceptions->renderable(function (CannotDeleteWithDependentsException $e, Request $request) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => $e->getMessage()], 409);
             }

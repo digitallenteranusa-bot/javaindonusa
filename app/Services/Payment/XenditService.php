@@ -225,7 +225,9 @@ class XenditService
             ]);
 
             return $transaction;
-        } catch (NoPayableInvoiceException|PaymentGatewayException $e) {
+        } catch (NoPayableInvoiceException $e) {
+            throw $e;
+        } catch (PaymentGatewayException $e) {
             throw $e;
         } catch (\Exception $e) {
             Log::error('Xendit: Exception creating invoice', [

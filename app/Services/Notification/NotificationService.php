@@ -19,7 +19,7 @@ use App\Mail\PaymentReminder as PaymentReminderMail;
 use App\Mail\SevereOverdueNotice as SevereOverdueNoticeMail;
 use App\Services\Notification\Channels\WhatsAppChannel;
 use App\Jobs\SendNotificationJob;
-use Illuminate\Contracts\Mail\Mailable;
+use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 

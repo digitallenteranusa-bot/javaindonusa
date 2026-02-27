@@ -7,6 +7,7 @@ const props = defineProps({
     settlements: Object,
     dailySummary: Object,
     pendingSettlement: Object,
+    hasPendingSettlement: Boolean,
 })
 
 // Format currency
@@ -53,11 +54,19 @@ const openSettlementModal = () => {
     showSettlementModal.value = true
 }
 
+const isSubmitting = ref(false)
+
 const submitSettlement = () => {
+    if (isSubmitting.value) return
+    isSubmitting.value = true
+
     form.post(route('collector.settlement.store'), {
         onSuccess: () => {
             showSettlementModal.value = false
             form.reset()
+        },
+        onFinish: () => {
+            isSubmitting.value = false
         },
     })
 }
@@ -147,7 +156,7 @@ const canSettle = computed(() => {
 
                     <!-- Settle Button -->
                     <button
-                        v-if="canSettle"
+                        v-if="canSettle && !hasPendingSettlement"
                         @click="openSettlementModal"
                         class="w-full mt-4 py-3 bg-blue-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
                     >
@@ -156,6 +165,15 @@ const canSettle = computed(() => {
                         </svg>
                         Setor Sekarang
                     </button>
+
+                    <!-- Pending settlement info -->
+                    <div v-else-if="hasPendingSettlement" class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+                        <svg class="w-8 h-8 text-yellow-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="text-sm text-yellow-700 mt-2 font-medium">Setoran menunggu verifikasi admin</p>
+                        <p class="text-xs text-yellow-600 mt-1">Anda tidak bisa setor lagi sebelum setoran sebelumnya diverifikasi</p>
+                    </div>
 
                     <div v-else class="mt-4 p-3 bg-green-50 rounded-lg text-center">
                         <svg class="w-8 h-8 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,10 +331,10 @@ const canSettle = computed(() => {
                         <!-- Submit -->
                         <button
                             type="submit"
-                            :disabled="form.processing"
+                            :disabled="form.processing || isSubmitting"
                             class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50"
                         >
-                            {{ form.processing ? 'Memproses...' : 'Konfirmasi Setoran' }}
+                            {{ (form.processing || isSubmitting) ? 'Memproses...' : 'Konfirmasi Setoran' }}
                         </button>
                     </form>
                 </div>

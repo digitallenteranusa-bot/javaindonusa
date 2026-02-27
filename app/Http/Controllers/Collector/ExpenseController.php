@@ -129,10 +129,16 @@ class ExpenseController extends Controller
         // Pending settlement - SEMUA yang belum disetor (bukan hanya hari ini)
         $pendingSettlement = $this->collectorService->calculateUnsettledAmount($collector);
 
+        // Cek apakah sudah ada settlement pending (menunggu verifikasi)
+        $hasPendingSettlement = \App\Models\Settlement::where('collector_id', $collector->id)
+            ->where('status', 'pending')
+            ->exists();
+
         return Inertia::render('Collector/Settlement', [
             'dailySummary' => $dailySummary,
             'settlements' => $settlements,
             'pendingSettlement' => $pendingSettlement,
+            'hasPendingSettlement' => $hasPendingSettlement,
             'date' => $date->toDateString(),
         ]);
     }
@@ -150,6 +156,16 @@ class ExpenseController extends Controller
         $collector = auth()->user();
 
         try {
+            // Cegah double submit — cek apakah sudah ada settlement pending
+            $hasPending = \App\Models\Settlement::where('collector_id', $collector->id)
+                ->where('status', 'pending')
+                ->where('created_at', '>=', now()->subMinutes(5))
+                ->exists();
+
+            if ($hasPending) {
+                return back()->with('info', 'Setoran sudah dikirim dan menunggu verifikasi admin.');
+            }
+
             // Ambil periode dari unsettled calculation
             $unsettled = $this->collectorService->calculateUnsettledAmount($collector);
 

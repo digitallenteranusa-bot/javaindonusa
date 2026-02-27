@@ -14,6 +14,7 @@ use App\Services\Notification\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Exceptions\Collector\UnauthorizedCustomerAccessException;
 use Illuminate\Support\Collection;
 
 class CollectorService
@@ -238,7 +239,7 @@ class CollectorService
     ): array {
         // Validasi: penagih hanya bisa menagih pelanggannya
         if (!$this->isCustomerAssigned($collector, $customer)) {
-            throw new \Exception('Anda tidak memiliki akses ke pelanggan ini');
+            throw new UnauthorizedCustomerAccessException();
         }
 
         $result = DB::transaction(function () use ($collector, $customer, $amount, $notes) {
@@ -285,7 +286,7 @@ class CollectorService
     ): array {
         // Validasi: penagih hanya bisa menagih pelanggannya
         if (!$this->isCustomerAssigned($collector, $customer)) {
-            throw new \Exception('Anda tidak memiliki akses ke pelanggan ini');
+            throw new UnauthorizedCustomerAccessException();
         }
 
         $result = DB::transaction(function () use ($collector, $customer, $amount, $transferProofPath, $notes) {
@@ -333,7 +334,7 @@ class CollectorService
         ?float $longitude = null
     ): CollectionLog {
         if (!$this->isCustomerAssigned($collector, $customer)) {
-            throw new \Exception('Anda tidak memiliki akses ke pelanggan ini');
+            throw new UnauthorizedCustomerAccessException();
         }
 
         return CollectionLog::create([

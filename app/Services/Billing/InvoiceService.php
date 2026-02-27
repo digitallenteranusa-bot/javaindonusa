@@ -8,6 +8,8 @@ use App\Models\Customer;
 use App\Models\DebtHistory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Exceptions\Billing\InvoiceDuplicateException;
+use App\Exceptions\Billing\InvoiceStateException;
 use Carbon\Carbon;
 
 class InvoiceService
@@ -197,7 +199,7 @@ class InvoiceService
             ->first();
 
         if ($existingInvoice) {
-            throw new \Exception("Invoice untuk periode {$month}/{$year} sudah ada (#{$existingInvoice->invoice_number})");
+            throw new InvoiceDuplicateException($month, $year, $existingInvoice->invoice_number);
         }
 
         return DB::transaction(function () use ($customer, $month, $year, $amount, $description) {
@@ -298,7 +300,7 @@ class InvoiceService
         return DB::transaction(function () use ($invoice, $reason) {
             // Only pending invoices can be cancelled
             if (!in_array($invoice->status, ['pending'])) {
-                throw new \Exception('Hanya invoice pending yang dapat dibatalkan');
+                throw InvoiceStateException::cannotCancel();
             }
 
             // Reduce debt for cancelled invoice

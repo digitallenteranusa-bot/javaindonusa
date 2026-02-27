@@ -2,6 +2,7 @@
 
 namespace App\Services\Mikrotik;
 
+use App\Exceptions\Mikrotik\RouterConnectionException;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -49,7 +50,7 @@ class RouterOSClient
             );
 
             if (!$this->socket) {
-                throw new \Exception("Connection failed: {$errstr} ({$errno})");
+                throw RouterConnectionException::connectionFailed($errstr, $errno);
             }
 
             stream_set_timeout($this->socket, $this->timeout);
@@ -102,7 +103,7 @@ class RouterOSClient
         // Check for errors
         foreach ($response as $line) {
             if (str_starts_with($line, '!trap')) {
-                throw new \Exception('Login failed: Invalid credentials');
+                throw RouterConnectionException::loginFailed();
             }
         }
     }
@@ -126,7 +127,7 @@ class RouterOSClient
     public function send(array $command): array
     {
         if (!$this->socket) {
-            throw new \Exception('Not connected to router');
+            throw RouterConnectionException::notConnected();
         }
 
         // Send command

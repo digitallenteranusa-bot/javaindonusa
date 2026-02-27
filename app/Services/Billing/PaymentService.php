@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use App\Exceptions\Billing\PaymentCancellationException;
 use Carbon\Carbon;
 
 class PaymentService
@@ -141,11 +142,11 @@ class PaymentService
         return DB::transaction(function () use ($payment, $reason) {
             // Check if payment can be cancelled (within 24 hours)
             if ($payment->created_at->diffInHours(now()) > 24) {
-                throw new \Exception('Pembayaran hanya dapat dibatalkan dalam 24 jam');
+                throw PaymentCancellationException::tooLate();
             }
 
             if ($payment->status === 'cancelled') {
-                throw new \Exception('Pembayaran sudah dibatalkan');
+                throw PaymentCancellationException::alreadyCancelled();
             }
 
             // Reverse invoice allocations

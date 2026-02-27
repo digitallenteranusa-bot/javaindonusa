@@ -8,6 +8,7 @@ use App\Models\Settlement;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Exceptions\InvalidFileException;
 use Illuminate\Support\Facades\Storage;
 
 class ExpenseService
@@ -51,12 +52,12 @@ class ExpenseService
         $mimeType = $file->getMimeType();
 
         if (!in_array($extension, $allowedExtensions) || !in_array($mimeType, $allowedMimeTypes)) {
-            throw new \Exception('Tipe file tidak diizinkan. Hanya file gambar (JPG, PNG, GIF, WEBP) yang diperbolehkan.');
+            throw InvalidFileException::invalidType('gambar (JPG, PNG, GIF, WEBP)');
         }
 
         // Validate file size (max 5MB)
         if ($file->getSize() > 5 * 1024 * 1024) {
-            throw new \Exception('Ukuran file maksimal 5MB.');
+            throw InvalidFileException::tooLarge('5MB');
         }
 
         $filename = sprintf(

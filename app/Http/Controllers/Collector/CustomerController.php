@@ -64,10 +64,7 @@ class CustomerController extends Controller
 
         $customer = Customer::create($validated);
 
-        // Update ODP used_ports if assigned
-        if ($customer->odp_id) {
-            $customer->odp->recalculateUsedPorts();
-        }
+        // ODP used_ports recalculation handled by CustomerObserver
 
         return redirect()->route('collector.customer.detail', $customer)
             ->with('success', 'Pelanggan baru berhasil ditambahkan');
@@ -131,21 +128,9 @@ class CustomerController extends Controller
             $validated['rapel_months'] = null;
         }
 
-        // Track old ODP for recalculation
-        $oldOdpId = $customer->odp_id;
-
         $customer->update($validated);
 
-        // Recalculate used_ports for old and new ODP
-        if ($oldOdpId && $oldOdpId != $customer->odp_id) {
-            $oldOdp = Odp::find($oldOdpId);
-            if ($oldOdp) {
-                $oldOdp->recalculateUsedPorts();
-            }
-        }
-        if ($customer->odp_id) {
-            $customer->odp->recalculateUsedPorts();
-        }
+        // ODP used_ports recalculation handled by CustomerObserver
 
         return redirect()->route('collector.customer.detail', $customer)
             ->with('success', 'Data pelanggan berhasil diperbarui');

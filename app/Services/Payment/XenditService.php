@@ -9,6 +9,8 @@ use App\Models\Setting;
 use App\Models\XenditTransaction;
 use App\Services\Billing\PaymentService;
 use App\Services\Notification\NotificationService;
+use App\Exceptions\Billing\NoPayableInvoiceException;
+use App\Exceptions\Billing\PaymentGatewayException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -152,7 +154,7 @@ class XenditService
             ->get();
 
         if ($invoices->isEmpty()) {
-            throw new \Exception('Tidak ada tagihan yang bisa dibayar');
+            throw new NoPayableInvoiceException();
         }
 
         $amount = (int) $invoices->sum('remaining_amount');
@@ -201,7 +203,7 @@ class XenditService
                     'body' => $response->body(),
                     'payload' => array_merge($payload, ['customer' => '***']),
                 ]);
-                throw new \Exception('Gagal membuat transaksi: ' . ($response->json('message') ?? 'Unknown error'));
+                throw new PaymentGatewayException('Xendit', $response->json('message') ?? 'Unknown error');
             }
 
             $data = $response->json();
@@ -223,12 +225,12 @@ class XenditService
             ]);
 
             return $transaction;
+        } catch (NoPayableInvoiceException|PaymentGatewayException $e) {
+            throw $e;
         } catch (\Exception $e) {
-            if (!str_starts_with($e->getMessage(), 'Gagal membuat transaksi:')) {
-                Log::error('Xendit: Exception creating invoice', [
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            Log::error('Xendit: Exception creating invoice', [
+                'error' => $e->getMessage(),
+            ]);
             throw $e;
         }
     }

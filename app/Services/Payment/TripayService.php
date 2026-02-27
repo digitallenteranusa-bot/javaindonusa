@@ -9,6 +9,8 @@ use App\Models\Setting;
 use App\Models\TripayTransaction;
 use App\Services\Billing\PaymentService;
 use App\Services\Notification\NotificationService;
+use App\Exceptions\Billing\NoPayableInvoiceException;
+use App\Exceptions\Billing\PaymentGatewayException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -118,7 +120,7 @@ class TripayService
             ->get();
 
         if ($invoices->isEmpty()) {
-            throw new \Exception('Tidak ada tagihan yang bisa dibayar');
+            throw new NoPayableInvoiceException();
         }
 
         $amount = (int) $invoices->sum('remaining_amount');
@@ -159,7 +161,7 @@ class TripayService
                     'body' => $response->body(),
                     'payload' => array_merge($payload, ['signature' => '***']),
                 ]);
-                throw new \Exception('Gagal membuat transaksi: ' . ($response->json('message') ?? 'Unknown error'));
+                throw new PaymentGatewayException('Tripay', $response->json('message') ?? 'Unknown error');
             }
 
             $data = $response->json('data');
@@ -187,12 +189,12 @@ class TripayService
             ]);
 
             return $transaction;
+        } catch (NoPayableInvoiceException|PaymentGatewayException $e) {
+            throw $e;
         } catch (\Exception $e) {
-            if ($e->getMessage() !== 'Gagal membuat transaksi: Unknown error' && !str_starts_with($e->getMessage(), 'Gagal membuat transaksi:')) {
-                Log::error('Tripay: Exception creating transaction', [
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            Log::error('Tripay: Exception creating transaction', [
+                'error' => $e->getMessage(),
+            ]);
             throw $e;
         }
     }

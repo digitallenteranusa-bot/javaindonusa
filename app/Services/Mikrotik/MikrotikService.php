@@ -5,6 +5,7 @@ namespace App\Services\Mikrotik;
 use App\Models\Router;
 use App\Models\Customer;
 use App\Models\BillingLog;
+use App\Exceptions\Mikrotik\RouterConnectionException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
@@ -881,7 +882,7 @@ class MikrotikService
     protected function ensureConnected(): void
     {
         if (!$this->client || !$this->client->isConnected()) {
-            throw new \Exception('Not connected to router');
+            throw RouterConnectionException::notConnected();
         }
     }
 

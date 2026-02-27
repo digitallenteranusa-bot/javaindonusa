@@ -309,8 +309,7 @@ class InvoiceController extends Controller
             'paid_at' => now(),
         ]);
 
-        // Update customer debt
-        $invoice->customer->recalculateTotalDebt();
+        // Customer debt recalculation handled by InvoiceObserver
 
         return back()->with('success', 'Invoice berhasil ditandai lunas');
     }
@@ -333,14 +332,11 @@ class InvoiceController extends Controller
         $validated = $request->validated();
 
         // Save reference before deletion
-        $customer = $invoice->customer;
         $invoiceNumber = $invoice->invoice_number;
 
         // Force delete invoice (not soft delete) to avoid unique constraint blocking regeneration
+        // Customer debt recalculation handled by InvoiceObserver
         $invoice->forceDelete();
-
-        // Update customer debt
-        $customer->recalculateTotalDebt();
 
         return back()->with('success', "Invoice {$invoiceNumber} berhasil dibatalkan dan dihapus");
     }
@@ -360,17 +356,11 @@ class InvoiceController extends Controller
             return back()->with('error', 'Invoice yang sudah lunas tidak dapat dihapus');
         }
 
-        // Save customer reference before deletion
-        $customer = $invoice->customer;
         $invoiceNumber = $invoice->invoice_number;
 
         // Delete the invoice permanently (force delete, not soft delete)
+        // Customer debt recalculation handled by InvoiceObserver
         $invoice->forceDelete();
-
-        // Update customer debt if customer exists
-        if ($customer) {
-            $customer->recalculateTotalDebt();
-        }
 
         return redirect()->route('admin.invoices.index')
             ->with('success', "Invoice {$invoiceNumber} berhasil dihapus");

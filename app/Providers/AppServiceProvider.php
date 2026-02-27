@@ -10,6 +10,12 @@ use App\Listeners\CheckAndReopenCustomer;
 use App\Listeners\LogInvoiceGeneration;
 use App\Listeners\SendIsolationNotification;
 use App\Listeners\SendReopenNotification;
+use App\Models\Customer;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Observers\CustomerObserver;
+use App\Observers\InvoiceObserver;
+use App\Observers\PaymentObserver;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -33,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
+
+        // Register observers
+        Customer::observe(CustomerObserver::class);
+        Invoice::observe(InvoiceObserver::class);
+        Payment::observe(PaymentObserver::class);
 
         // Register event listeners
         Event::listen(PaymentReceived::class, CheckAndReopenCustomer::class);

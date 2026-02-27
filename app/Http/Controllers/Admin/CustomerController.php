@@ -160,10 +160,7 @@ class CustomerController extends Controller
 
         $customer = Customer::create($validated);
 
-        // Update ODP used_ports if assigned
-        if ($customer->odp_id) {
-            $customer->odp->recalculateUsedPorts();
-        }
+        // ODP used_ports recalculation handled by CustomerObserver
 
         return redirect()->route('admin.customers.show', $customer)
             ->with('success', 'Pelanggan berhasil ditambahkan');
@@ -220,21 +217,9 @@ class CustomerController extends Controller
             $validated['odp_id'] = null;
         }
 
-        // Track old ODP for recalculation
-        $oldOdpId = $customer->odp_id;
-
         $customer->update($validated);
 
-        // Recalculate used_ports for old and new ODP
-        if ($oldOdpId && $oldOdpId != $customer->odp_id) {
-            $oldOdp = Odp::find($oldOdpId);
-            if ($oldOdp) {
-                $oldOdp->recalculateUsedPorts();
-            }
-        }
-        if ($customer->odp_id) {
-            $customer->odp->recalculateUsedPorts();
-        }
+        // ODP used_ports recalculation handled by CustomerObserver
 
         return redirect()->route('admin.customers.show', $customer)
             ->with('success', 'Data pelanggan berhasil diperbarui');
@@ -254,8 +239,6 @@ class CustomerController extends Controller
             return back()->with('error', 'Tidak dapat menghapus pelanggan dengan tagihan belum lunas');
         }
 
-        $odpId = $customer->odp_id;
-
         $customer->update([
             'status' => Customer::STATUS_TERMINATED,
             'termination_date' => now(),
@@ -264,13 +247,7 @@ class CustomerController extends Controller
 
         $customer->delete();
 
-        // Recalculate ODP used_ports after customer deletion
-        if ($odpId) {
-            $odp = \App\Models\Odp::find($odpId);
-            if ($odp) {
-                $odp->recalculateUsedPorts();
-            }
-        }
+        // ODP used_ports recalculation handled by CustomerObserver
 
         return redirect()->route('admin.customers.index')
             ->with('success', 'Pelanggan berhasil dihapus');

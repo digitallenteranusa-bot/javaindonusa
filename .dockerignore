@@ -1,0 +1,16 @@
+vendor/
+node_modules/
+.env
+.env.backup
+.git/
+.github/
+storage/logs/*.log
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+docker-compose.yml
+.dockerignore
+tests/
+.claude/
+docs/
+*.md

@@ -8,8 +8,18 @@ use App\Models\Payment;
 use App\Models\IspInfo;
 use App\Models\Setting;
 use App\Models\BillingLog;
+use App\Mail\AccessReopenedNotice;
+use App\Mail\InvoiceNotification as InvoiceNotificationMail;
+use App\Mail\IsolationNotice as IsolationNoticeMail;
+use App\Mail\MaintenanceNotice as MaintenanceNoticeMail;
+use App\Mail\OtpCode;
+use App\Mail\OverdueNotice as OverdueNoticeMail;
+use App\Mail\PaymentConfirmation as PaymentConfirmationMail;
+use App\Mail\PaymentReminder as PaymentReminderMail;
+use App\Mail\SevereOverdueNotice as SevereOverdueNoticeMail;
 use App\Services\Notification\Channels\WhatsAppChannel;
 use App\Jobs\SendNotificationJob;
+use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -55,23 +65,29 @@ class NotificationService
     }
 
     /**
-     * Send Email
+     * Send Email using Mailable or raw text
      */
-    public function sendEmail(string $email, string $subject, string $body, ?array $attachments = []): array
+    public function sendEmail(string $email, string|Mailable $subjectOrMailable, ?string $body = null, ?array $attachments = []): array
     {
         try {
             if (!$this->isEmailEnabled()) {
                 return ['success' => false, 'message' => 'Email notifications disabled'];
             }
 
-            Mail::raw($body, function ($mail) use ($email, $subject, $attachments) {
-                $mail->to($email)
-                    ->subject($subject);
+            if ($subjectOrMailable instanceof Mailable) {
+                Mail::to($email)->send($subjectOrMailable);
+                $subject = $subjectOrMailable->subject ?? get_class($subjectOrMailable);
+            } else {
+                $subject = $subjectOrMailable;
+                Mail::raw($body ?? '', function ($mail) use ($email, $subject, $attachments) {
+                    $mail->to($email)
+                        ->subject($subject);
 
-                foreach ($attachments as $attachment) {
-                    $mail->attach($attachment);
-                }
-            });
+                    foreach ($attachments ?? [] as $attachment) {
+                        $mail->attach($attachment);
+                    }
+                });
+            }
 
             $this->logNotification('email', $email, $subject, true);
 
@@ -121,6 +137,11 @@ class NotificationService
 
         $message = $this->buildInvoiceMessage($customer, $invoice);
 
+        // Send email if customer has email
+        if ($customer->email) {
+            $this->sendEmail($customer->email, new InvoiceNotificationMail($customer, $invoice));
+        }
+
         return $this->sendWhatsApp($customer->phone, $message, [
             'notification_type' => 'invoice',
             'template_id' => $this->getMekariTemplateId('invoice'),
@@ -147,6 +168,10 @@ class NotificationService
 
         $message = $this->buildReminderMessage($customer, $daysBeforeDue);
 
+        if ($customer->email) {
+            $this->sendEmail($customer->email, new PaymentReminderMail($customer, $daysBeforeDue));
+        }
+
         return $this->sendWhatsApp($customer->phone, $message, [
             'notification_type' => 'reminder',
             'template_id' => $this->getMekariTemplateId('reminder'),
@@ -169,6 +194,10 @@ class NotificationService
         }
 
         $message = $this->buildOverdueMessage($customer);
+
+        if ($customer->email) {
+            $this->sendEmail($customer->email, new OverdueNoticeMail($customer));
+        }
 
         return $this->sendWhatsApp($customer->phone, $message, [
             'notification_type' => 'overdue',
@@ -200,6 +229,10 @@ class NotificationService
         }
 
         $message = $this->buildSevereOverdueMessage($customer, $overdueMonths);
+
+        if ($customer->email) {
+            $this->sendEmail($customer->email, new SevereOverdueNoticeMail($customer, $overdueMonths));
+        }
 
         return $this->sendWhatsApp($customer->phone, $message);
     }
@@ -237,6 +270,10 @@ class NotificationService
     {
         $message = $this->buildIsolationMessage($customer);
 
+        if ($customer->email) {
+            $this->sendEmail($customer->email, new IsolationNoticeMail($customer));
+        }
+
         return $this->sendWhatsApp($customer->phone, $message, [
             'notification_type' => 'isolation',
             'template_id' => $this->getMekariTemplateId('isolation'),
@@ -255,6 +292,10 @@ class NotificationService
     public function sendAccessOpenedNotice(Customer $customer): array
     {
         $message = $this->buildAccessOpenedMessage($customer);
+
+        if ($customer->email) {
+            $this->sendEmail($customer->email, new AccessReopenedNotice($customer));
+        }
 
         return $this->sendWhatsApp($customer->phone, $message, [
             'notification_type' => 'access_opened',
@@ -275,6 +316,10 @@ class NotificationService
         $amount    = number_format($payment->amount, 0, ',', '.');
         $remaining = number_format($customer->total_debt, 0, ',', '.');
         $status    = $customer->total_debt > 0 ? 'Sisa Rp ' . $remaining : 'LUNAS';
+
+        if ($customer->email) {
+            $this->sendEmail($customer->email, new PaymentConfirmationMail($customer, $payment));
+        }
 
         return $this->sendWhatsApp($customer->phone, $message, [
             'notification_type' => 'payment',

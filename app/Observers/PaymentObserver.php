@@ -8,7 +8,7 @@ class PaymentObserver
 {
     public function created(Payment $payment): void
     {
-        $payment->customer->update([
+        $payment->customer?->update([
             'last_payment_date' => $payment->created_at,
         ]);
     }
@@ -16,7 +16,7 @@ class PaymentObserver
     public function updated(Payment $payment): void
     {
         if ($payment->isDirty('status') && $payment->status === 'cancelled') {
-            $payment->customer->recalculateTotalDebt();
+            $payment->customer?->recalculateTotalDebt();
         }
     }
 }

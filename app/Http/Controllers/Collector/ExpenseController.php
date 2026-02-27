@@ -77,7 +77,7 @@ class ExpenseController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:1000',
             'description' => 'required|string|max:255',
-            'receipt_photo' => 'nullable|image|max:5120', // Max 5MB
+            'receipt_photo' => 'required|image|max:5120', // Max 5MB, wajib
             'expense_date' => 'nullable|date',
         ]);
 

@@ -10,7 +10,7 @@ class CustomerObserver
     public function created(Customer $customer): void
     {
         if ($customer->odp_id) {
-            $customer->odp->recalculateUsedPorts();
+            $customer->odp?->recalculateUsedPorts();
         }
     }
 
@@ -20,12 +20,11 @@ class CustomerObserver
             $oldOdpId = $customer->getOriginal('odp_id');
 
             if ($oldOdpId) {
-                $oldOdp = Odp::find($oldOdpId);
-                $oldOdp?->recalculateUsedPorts();
+                Odp::find($oldOdpId)?->recalculateUsedPorts();
             }
 
             if ($customer->odp_id) {
-                $customer->odp->recalculateUsedPorts();
+                $customer->odp?->recalculateUsedPorts();
             }
         }
     }
@@ -33,8 +32,7 @@ class CustomerObserver
     public function deleted(Customer $customer): void
     {
         if ($customer->odp_id) {
-            $odp = Odp::find($customer->odp_id);
-            $odp?->recalculateUsedPorts();
+            Odp::find($customer->odp_id)?->recalculateUsedPorts();
         }
     }
 }

@@ -109,13 +109,13 @@ class NotificationServiceTest extends TestCase
     {
         $this->enableWhatsApp();
 
-        $customer = Customer::factory()->create(['total_debt' => 500000]);
+        $customer = Customer::factory()->create(['total_debt' => 500000, 'email' => null]);
 
-        $this->whatsappMock
-            ->method('send')
-            ->willReturn(['success' => true]);
+        $mock = $this->createMock(WhatsAppChannel::class);
+        $mock->method('send')->willReturn(['success' => true]);
+        $service = new NotificationService($mock);
 
-        $result = $this->service->sendIsolationNotice($customer);
+        $result = $service->sendIsolationNotice($customer);
 
         $this->assertTrue($result['success']);
     }
@@ -124,17 +124,17 @@ class NotificationServiceTest extends TestCase
     {
         $this->enableWhatsApp();
 
-        $customer = Customer::factory()->create(['total_debt' => 100000]);
+        $customer = Customer::factory()->create(['total_debt' => 100000, 'email' => null]);
         $payment = Payment::factory()->create([
             'customer_id' => $customer->id,
             'amount' => 200000,
         ]);
 
-        $this->whatsappMock
-            ->method('send')
-            ->willReturn(['success' => true]);
+        $mock = $this->createMock(WhatsAppChannel::class);
+        $mock->method('send')->willReturn(['success' => true]);
+        $service = new NotificationService($mock);
 
-        $result = $this->service->sendPaymentConfirmation($customer, $payment);
+        $result = $service->sendPaymentConfirmation($customer, $payment);
 
         $this->assertTrue($result['success']);
     }
@@ -153,13 +153,13 @@ class NotificationServiceTest extends TestCase
     {
         $this->enableWhatsApp();
 
-        $customer = Customer::factory()->create(['total_debt' => 200000]);
+        $customer = Customer::factory()->create(['total_debt' => 200000, 'email' => null]);
 
-        $this->whatsappMock
-            ->method('send')
-            ->willReturn(['success' => true]);
+        $mock = $this->createMock(WhatsAppChannel::class);
+        $mock->method('send')->willReturn(['success' => true]);
+        $service = new NotificationService($mock);
 
-        $result = $this->service->sendPaymentReminder($customer, 3);
+        $result = $service->sendPaymentReminder($customer, 3);
 
         $this->assertTrue($result['success']);
     }

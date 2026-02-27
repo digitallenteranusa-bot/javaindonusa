@@ -270,22 +270,25 @@ const closeImagePreview = () => {
                             <p v-if="form.errors.description" class="text-red-500 text-sm mt-1">{{ form.errors.description }}</p>
                         </div>
 
-                        <!-- Receipt Photo -->
+                        <!-- Receipt Photo (Wajib) -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Foto Bukti (Opsional)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Foto Bukti <span class="text-red-500">*</span></label>
                             <input
                                 type="file"
                                 accept="image/*"
                                 capture="environment"
                                 @change="handleReceiptUpload"
                                 class="w-full px-4 py-2 rounded-lg border border-gray-300"
+                                required
                             >
+                            <p v-if="form.errors.receipt_photo" class="text-red-500 text-sm mt-1">{{ form.errors.receipt_photo }}</p>
+                            <p v-else class="text-xs text-gray-400 mt-1">Wajib lampirkan foto nota/bukti pengeluaran</p>
                         </div>
 
                         <!-- Submit -->
                         <button
                             type="submit"
-                            :disabled="form.processing || !form.amount || !form.description"
+                            :disabled="form.processing || !form.amount || !form.description || !form.receipt_photo"
                             class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50"
                         >
                             {{ form.processing ? 'Menyimpan...' : 'Simpan Belanja' }}

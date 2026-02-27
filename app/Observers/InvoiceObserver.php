@@ -11,7 +11,7 @@ class InvoiceObserver
         if ($invoice->isDirty('status')) {
             $newStatus = $invoice->status;
             if (in_array($newStatus, ['paid', 'cancelled'])) {
-                $invoice->customer->recalculateTotalDebt();
+                $invoice->customer?->recalculateTotalDebt();
             }
         }
     }

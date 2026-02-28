@@ -35,6 +35,9 @@ class ExpenseSeeder extends Seeder
             'other' => [5000, 10000, 15000, 20000],
         ];
 
+        // Sequential counter to guarantee unique expense numbers
+        $counter = 1;
+
         // Generate expenses for last 60 days
         for ($day = 60; $day >= 0; $day--) {
             $date = Carbon::now()->subDays($day);
@@ -85,7 +88,7 @@ class ExpenseSeeder extends Seeder
 
                     Expense::create([
                         'user_id' => $collector->id,
-                        'expense_number' => 'EXP-' . $date->format('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                        'expense_number' => 'EXP-' . $date->format('Ymd') . '-' . str_pad($counter++, 4, '0', STR_PAD_LEFT),
                         'amount' => $amount,
                         'category' => $category,
                         'description' => $description,

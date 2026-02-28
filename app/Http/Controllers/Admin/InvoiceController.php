@@ -95,7 +95,7 @@ class InvoiceController extends Controller
             'invoices' => $invoices,
             'filters' => $request->only(['status', 'period_year', 'period_month', 'search', 'overdue']),
             'stats' => $stats,
-            'years' => range(now()->year, now()->year - 2),
+            'years' => range(now()->year, now()->year - 3),
             'months' => collect(range(1, 12))->map(fn($m) => [
                 'value' => $m,
                 'label' => Carbon::create()->month($m)->translatedFormat('F'),
@@ -132,7 +132,8 @@ class InvoiceController extends Controller
         $customers = Customer::whereIn('status', ['active', 'isolated'])
             ->whereDoesntHave('invoices', function ($q) use ($periodMonth, $periodYear) {
                 $q->where('period_month', $periodMonth)
-                    ->where('period_year', $periodYear);
+                    ->where('period_year', $periodYear)
+                    ->where('status', '!=', 'cancelled');
             })
             // Filter pelanggan yang billing_start_date belum tercapai
             ->where(function ($q) use ($periodFirstDay) {
@@ -207,17 +208,19 @@ class InvoiceController extends Controller
         if (!$showAll) {
             $query->whereDoesntHave('invoices', function ($q) use ($periodMonth, $periodYear) {
                 $q->where('period_month', $periodMonth)
-                    ->where('period_year', $periodYear);
+                    ->where('period_year', $periodYear)
+                    ->where('status', '!=', 'cancelled');
             });
         }
 
-        $customers = $query->orderBy('name')->limit(100)->get([
+        $customers = $query->orderBy('name')->limit(500)->get([
             'id', 'customer_id', 'name', 'phone', 'status', 'package_id', 'area_id'
         ]);
 
-        // Mark customers that already have invoice for this period
+        // Mark customers that already have invoice for this period (exclude cancelled)
         $customersWithInvoice = Invoice::where('period_month', $periodMonth)
             ->where('period_year', $periodYear)
+            ->where('status', '!=', 'cancelled')
             ->pluck('customer_id')
             ->toArray();
 
@@ -256,10 +259,11 @@ class InvoiceController extends Controller
 
         foreach ($customers as $customer) {
             try {
-                // Check if invoice already exists
+                // Check if invoice already exists (exclude cancelled)
                 $exists = Invoice::where('customer_id', $customer->id)
                     ->where('period_month', $periodMonth)
                     ->where('period_year', $periodYear)
+                    ->where('status', '!=', 'cancelled')
                     ->exists();
 
                 if ($exists) {

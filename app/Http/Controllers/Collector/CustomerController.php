@@ -48,7 +48,7 @@ class CustomerController extends Controller
 
         // Set defaults - otomatis
         $validated['status'] = 'active';
-        $validated['kecamatan'] = 'Pule'; // Otomatis Pule
+        $validated['kecamatan'] = $validated['kecamatan'] ?? 'Pule';
         $validated['billing_type'] = 'prepaid'; // Otomatis bayar di muka
         $validated['pppoe_password'] = Crypt::encryptString('client001'); // Otomatis client001
         $validated['total_debt'] = $validated['total_debt'] ?? 0;

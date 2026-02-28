@@ -17,6 +17,7 @@ class UpdateCollectorCustomerRequest extends FormRequest
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'address' => 'required|string|max:500',
+            'kecamatan' => 'nullable|string|max:100',
             'kelurahan' => 'nullable|string|max:100',
             'package_id' => 'required|exists:packages,id',
             'area_id' => 'required|exists:areas,id',

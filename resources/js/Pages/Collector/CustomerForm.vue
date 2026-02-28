@@ -14,8 +14,29 @@ const props = defineProps({
 const isEditing = computed(() => !!props.customer?.id)
 
 // Dropdown options
+const kecamatanOptions = ['Pule']
 const kelurahanOptions = ['Pule', 'Pakel', 'Kembangan', 'Joho', 'Tanggaran', 'Jombok', 'Karanganyar', 'Sukokidul']
 const routerMerkOptions = ['TENDA', 'TOTOLINK N200RE', 'TOTOLINK N300RE', 'ZTE', 'HUAWEI', 'GM', 'NETIS', 'DLINK', 'TP-LINK', 'NOKIA', 'GLOBAL']
+
+// Custom kecamatan input toggle
+const showCustomKecamatan = ref(false)
+const customKecamatanValue = ref('')
+
+const existingKecamatan = props.customer?.kecamatan || ''
+if (existingKecamatan && !kecamatanOptions.includes(existingKecamatan)) {
+    showCustomKecamatan.value = true
+    customKecamatanValue.value = existingKecamatan
+}
+
+// Custom kelurahan input toggle
+const showCustomKelurahan = ref(false)
+const customKelurahanValue = ref('')
+
+const existingKelurahan = props.customer?.kelurahan || ''
+if (existingKelurahan && !kelurahanOptions.includes(existingKelurahan)) {
+    showCustomKelurahan.value = true
+    customKelurahanValue.value = existingKelurahan
+}
 
 // Custom router input toggle
 const showCustomRouter = ref(false)
@@ -32,6 +53,7 @@ const form = useForm({
     name: props.customer?.name || '',
     phone: props.customer?.phone || '',
     address: props.customer?.address || '',
+    kecamatan: props.customer?.kecamatan || 'Pule',
     kelurahan: props.customer?.kelurahan || '',
     package_id: props.customer?.package_id || '',
     area_id: props.customer?.area_id || '',
@@ -295,18 +317,63 @@ const dismissMessage = () => {
                         </div>
 
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Kecamatan</label>
+                            <select
+                                :value="showCustomKecamatan ? '__custom__' : form.kecamatan"
+                                @change="(e) => {
+                                    if (e.target.value === '__custom__') {
+                                        showCustomKecamatan = true
+                                        form.kecamatan = customKecamatanValue
+                                    } else {
+                                        showCustomKecamatan = false
+                                        customKecamatanValue = ''
+                                        form.kecamatan = e.target.value
+                                    }
+                                }"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Pilih Kecamatan</option>
+                                <option v-for="kec in kecamatanOptions" :key="kec" :value="kec">{{ kec }}</option>
+                                <option value="__custom__">Lainnya...</option>
+                            </select>
+                            <input
+                                v-if="showCustomKecamatan"
+                                v-model="customKecamatanValue"
+                                @input="form.kecamatan = customKecamatanValue"
+                                type="text"
+                                placeholder="Masukkan nama kecamatan"
+                                class="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Kelurahan/Desa</label>
                             <select
-                                v-model="form.kelurahan"
+                                :value="showCustomKelurahan ? '__custom__' : form.kelurahan"
+                                @change="(e) => {
+                                    if (e.target.value === '__custom__') {
+                                        showCustomKelurahan = true
+                                        form.kelurahan = customKelurahanValue
+                                    } else {
+                                        showCustomKelurahan = false
+                                        customKelurahanValue = ''
+                                        form.kelurahan = e.target.value
+                                    }
+                                }"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="">Pilih Kelurahan</option>
                                 <option v-for="kel in kelurahanOptions" :key="kel" :value="kel">{{ kel }}</option>
-                                <option
-                                    v-if="form.kelurahan && !kelurahanOptions.includes(form.kelurahan)"
-                                    :value="form.kelurahan"
-                                >{{ form.kelurahan }}</option>
+                                <option value="__custom__">Lainnya...</option>
                             </select>
+                            <input
+                                v-if="showCustomKelurahan"
+                                v-model="customKelurahanValue"
+                                @input="form.kelurahan = customKelurahanValue"
+                                type="text"
+                                placeholder="Masukkan nama kelurahan/desa"
+                                class="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
                         </div>
                     </div>
                 </div>

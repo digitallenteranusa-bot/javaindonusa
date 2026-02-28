@@ -45,6 +45,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // Sentry error monitoring
+        Sentry\Laravel\Integration::handles($exceptions);
+
         // Custom exception rendering — typed exceptions return proper HTTP status codes
         $exceptions->renderable(function (UnauthorizedCustomerAccessException $e, Request $request) {
             if ($request->expectsJson()) {

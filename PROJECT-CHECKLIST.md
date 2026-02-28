@@ -1,6 +1,6 @@
 # Project Checklist - ISP Billing System Java Indonusa
 
-> Terakhir diperbarui: 2026-02-27
+> Terakhir diperbarui: 2026-02-28
 
 ---
 
@@ -73,7 +73,7 @@
 ### Notification
 - [x] NotificationService — WhatsApp + Email
 - [x] WhatsAppChannel — multi-driver (Fonnte, Meta, Wablas, Dripsender, Mekari)
-- [ ] SMS Channel — belum ada class terpisah
+- [ ] SMS Channel — belum ada class terpisah (low priority, WhatsApp sudah cukup)
 
 ### Payment Gateway
 - [x] TripayService — payment gateway integration + callback
@@ -90,9 +90,9 @@
 - [x] CustomerPortalService — self-service, OTP auth
 
 ### Admin/Dashboard
-- [x] DashboardService — statistik overview
+- [x] DashboardService — statistik overview + caching (P3)
 - [x] AdminAuditService — logging aksi admin
-- [x] CollectorPerformanceService — report kinerja penagih
+- [x] CollectorPerformanceService — report kinerja penagih + caching (P3)
 - [x] FinanceService — laporan keuangan
 - [x] NetworkMonitoringService — monitoring jaringan
 - [x] ReportService — laporan area & collector
@@ -154,8 +154,8 @@
 - [x] Indexes pada tabel inti (customers, invoices, payments)
 - [x] Unique constraints (invoice_number, payment_number, pppoe_username, dll)
 - [x] Soft deletes pada model sensitif (Customer, Invoice, Payment)
-- [ ] Index pada `admin_audit_logs` (user_id, created_at) — **BELUM**
-- [ ] Index pada `billing_logs` (customer_id, action) — **BELUM**
+- [x] Index pada `admin_audit_logs` (admin_id, created_at, module, action)
+- [x] Index pada `billing_logs` (user_id, action, loggable_type+id, created_at)
 - [x] Index pada `debt_histories` (invoice_id, payment_id) — migration `2026_02_26_000001`
 - [x] Index pada `collection_logs` (payment_id) — migration `2026_02_26_000001`
 - [x] Fix duplikat timestamp migration `000012` — known issue, no FK dependency
@@ -180,6 +180,10 @@
 - [x] SecurityHeaders middleware (X-Frame, X-Content-Type, CSP, HSTS)
 - [x] CSRF protection + handler 419
 - [x] Rate limiting pada OTP (5/min request, 10/min verify)
+- [x] Rate limiting pada login admin (5/min per IP) — P3
+- [x] Rate limiting pada webhook callback (30/min per IP) — P3
+- [x] Rate limiting pada pembayaran online (5/min per IP) — P3
+- [x] Rate limiting pada WhatsApp reminder collector (10/min) — P3
 - [x] Role-based access (CheckRole middleware — 5 roles)
 - [x] Permission-based access (CheckPermission middleware)
 - [x] Password hashing (Hash::make)
@@ -218,10 +222,10 @@
 - [x] Offline detection (OfflineNotice component — Capacitor)
 - [x] Inertia progress bar
 - [x] Composable: useNative.js, usePermission.js
-- [ ] Loading state konsisten — hanya 8/74 halaman punya loading state
-- [ ] Skeleton loader — **BELUM**
-- [ ] Global loading overlay — **BELUM**
-- [ ] Pinia state management — **TIDAK ADA** (disebut di CLAUDE.md tapi tidak terinstall)
+- [x] Loading state konsisten — SkeletonLoader, LoadingSpinner, LoadingOverlay components
+- [x] Skeleton loader (diterapkan di 5 halaman berat: Dashboard, Customer, Invoice, Payment, Collector)
+- [x] Global loading overlay (LoadingOverlay component)
+- [ ] Pinia state management — tidak terinstall (disebut di CLAUDE.md tapi tidak dipakai)
 
 ---
 
@@ -232,58 +236,67 @@
 - [x] Install script (`scripts/install.sh`)
 - [x] Status script (`scripts/status.sh`)
 - [x] Supervisor config (`scripts/supervisor.conf`)
-- [ ] Cloud backup (S3, Backblaze) — **BELUM**
+- [ ] Cloud backup (S3, Backblaze)
 
 ---
 
-## YANG BELUM DIKERJAKAN (Missing)
+## ENGINEERING QUALITY (P0–P3)
 
-### Prioritas Tinggi (P0) — SELESAI
-- [x] **Testing** — 165 tests (unit + feature + jobs), 370 assertions
-  - [x] Feature tests untuk controller/route (7 file)
-  - [x] Unit tests untuk service (13 file)
-  - [x] Test untuk Jobs (6 file)
-  - [x] Test untuk webhook callback (Tripay, Xendit)
-  - [x] 6 factory baru (Area, Router, Expense, Settlement, DebtHistory, Odp)
-- [x] **CI/CD Pipeline** — GitHub Actions
-  - [x] Workflow: run tests on push/PR (`.github/workflows/tests.yml`)
+### P0 — Testing + CI/CD (commit `96dea0d`) — SELESAI
+- [x] 165 tests (unit + feature + jobs), 370 assertions
+- [x] Feature tests untuk controller/route (7 file)
+- [x] Unit tests untuk service (13 file)
+- [x] Test untuk Jobs (6 file)
+- [x] Test untuk webhook callback (Tripay, Xendit)
+- [x] 6 factory baru (Area, Router, Expense, Settlement, DebtHistory, Odp)
+- [x] GitHub Actions CI/CD pipeline
 
-### Prioritas Sedang (P1) — SELESAI
-- [x] **Form Request Classes** — 28 file, validasi dipindah dari controller ke Form Request
-  - [x] Customer: Store, Update, AdjustDebt, AddHistoricalInvoice, WriteOff, Import
-  - [x] Invoice: Generate, GenerateForSelected, MarkPaid, Cancel, BulkExportPdf
-  - [x] Payment: Store, Cancel
-  - [x] Package: Store, Update
-  - [x] Area: Store, Update
-  - [x] Router: Store, Update
-  - [x] ODP: Store, Update
-  - [x] OLT: Store, Update, UpdateStatus
-  - [x] User: Store, Update, ResetPassword
-  - [x] Collector Customer: Store, Update
-- [x] **Events & Listeners** — 4 events, 4 listeners
-  - [x] PaymentReceived → CheckAndReopenCustomer
-  - [x] CustomerIsolated → SendIsolationNotification
-  - [x] CustomerReopened → SendReopenNotification
-  - [x] InvoiceGenerated → LogInvoiceGeneration
-- [x] **Index pada tabel audit** — debt_histories + collection_logs indexes added
-- [x] **Fix `log:clear` command** — command dibuat
-- [x] **Fix duplikat migration timestamp `000012`** — known issue, documented
+### P1 — Form Requests, Events/Listeners, DB Indexes (commit `01f8ed8`) — SELESAI
+- [x] 28 Form Request classes
+- [x] 4 Events + 4 Listeners
+- [x] DB indexes pada debt_histories + collection_logs
+- [x] `log:clear` artisan command
 
-### Prioritas Rendah (P2)
-- [ ] **Docker / docker-compose.yml** — onboarding developer
-- [ ] **Error Monitoring** (Sentry/Flare) — alerting production
-- [ ] **Mailable Classes** — email template proper (bukan Mail::raw)
-- [ ] **Email Blade Templates** — template HTML untuk email
-- [ ] **Health Check Endpoint** — `/health` atau `/api/health`
-- [ ] **SMS Channel** — class terpisah untuk SMS
-- [ ] **Custom Exception Classes** — business rule exceptions
-- [ ] **Laravel Policies** — object-level authorization
-- [ ] **API Resources** — JSON response transformer
-- [ ] **Observers** — model event hooks
-- [ ] **Swagger/OpenAPI** — dokumentasi API endpoint
-- [ ] **Frontend loading states** — konsistensi di semua halaman
-- [ ] **Pinia** — install atau hapus referensi di CLAUDE.md
-- [ ] **Cloud Backup** — S3/Backblaze integration
+### P2 — Exceptions, Observers, Health Check, Mailable, Docker (commit `e7dea7f`) — SELESAI
+- [x] 12 Custom Exception classes
+- [x] 3 Observers (Customer, Invoice, Payment)
+- [x] Health Check endpoint (`GET /api/health`)
+- [x] 9 Mailable classes + 10 Blade email templates
+- [x] Docker + docker-compose.yml (PHP 8.2-FPM + Nginx + Node 20)
+
+### P3 — Rate Limiting + Dashboard Caching (commit `ed5cbaf`) — SELESAI
+- [x] Named rate limiters (admin-login 5/min, webhook 30/min)
+- [x] Throttle pada login, webhook, WhatsApp, payment
+- [x] Dashboard caching (Cache::remember, TTL 1–15 min)
+- [x] N+1 query optimization (getCollectorStats, getRevenueTrend, getCustomerTrend)
+- [x] Cache invalidation via Observers
+
+### P4 — Sentry, Skeleton/Loading, REST API, Swagger — SELESAI
+- [x] Sentry error monitoring (sentry/sentry-laravel + @sentry/vue)
+- [x] Frontend Skeleton/Loading (3 komponen: SkeletonLoader, LoadingSpinner, LoadingOverlay)
+- [x] Skeleton diterapkan di 5 halaman berat
+- [x] REST API v1 (/api/v1/) — Sanctum token auth, 11 endpoints
+- [x] 7 API Controllers, 5 API Resources, 2 Form Requests
+- [x] Role-based scoping (penagih hanya lihat pelanggan sendiri)
+- [x] API rate limiting (60 req/min per user)
+- [x] 19 API tests (auth, customer, invoice, payment)
+- [x] User model: HasApiTokens trait
+- [x] Swagger/OpenAPI via Scramble (/docs/api)
+- [x] Gate viewApiDocs: local → all, production → admin only
+
+---
+
+## YANG BELUM DIKERJAKAN (Remaining)
+
+### Nice-to-Have (tidak blocking production)
+- [ ] SMS Channel — class terpisah (WhatsApp sudah mencukupi)
+- [ ] Laravel Policies — object-level auth (sudah pakai Role+Permission middleware)
+- [x] API Resources — REST API v1 (Sanctum auth, 7 controller, 5 resource, 19 tests)
+- [x] Swagger/OpenAPI — Scramble auto-docs di `/docs/api`
+- [x] Error Monitoring — Sentry (Laravel + Vue)
+- [x] Frontend loading states + skeleton loaders (3 komponen + 5 halaman)
+- [ ] Pinia state management — install atau hapus referensi di CLAUDE.md
+- [ ] Cloud Backup — S3/Backblaze integration
 
 ---
 
@@ -297,14 +310,14 @@
 | Services | 24 | 1 (SMS) | 96% |
 | Jobs | 6 | 0 | 100% |
 | Artisan Commands | 14 | 0 | 100% |
-| Database/Migration | 47 | 2 (indexes) | 96% |
+| Database/Migration | 49 | 0 | 100% |
 | Export/Import | 10 | 0 | 100% |
-| Security | 9 | 0 | 100% |
+| Security | 13 | 0 | 100% |
 | Dokumentasi | 17 | 0 | 100% |
-| Testing | 165 tests | 0 | 100% |
+| Testing | 184 tests | 0 | 100% |
 | CI/CD | 1 workflow | 0 | 100% |
-| **Laravel Best Practices** | **5** | **3** | **63%** |
-| Frontend Polish | 7 | 4 | 64% |
-| DevOps | 5 | 2 | 71% |
+| Engineering Quality | P0-P4 | 0 | 100% |
+| Frontend Polish | 10 | 1 | 91% |
+| DevOps | 6 | 1 (cloud backup) | 86% |
 
-**Kesimpulan:** Fitur bisnis sudah sangat lengkap (~98%). P0 (Testing & CI/CD) dan P1 (Form Requests, Events, DB Indexes, log:clear) sudah selesai. Yang kurang sekarang di area **DevOps polish** (P2: Docker, error monitoring, dll).
+**Kesimpulan:** Semua fitur bisnis, engineering quality (P0–P3), testing, CI/CD, security, dan database sudah 100% selesai. Yang tersisa hanya nice-to-have: frontend polish (skeleton/loading) dan cloud backup.

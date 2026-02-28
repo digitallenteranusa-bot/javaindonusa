@@ -2,6 +2,7 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 
 const props = defineProps({
     payments: Object,
@@ -338,8 +339,9 @@ const previewReceipt = (payment) => {
             </div>
         </div>
 
-        <!-- Table -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <!-- Table (with skeleton) -->
+        <SkeletonLoader v-if="!payments.data" type="table" :rows="8" :columns="8" />
+        <div v-else class="bg-white rounded-xl shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50">

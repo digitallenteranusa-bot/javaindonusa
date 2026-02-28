@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import CollectorLayout from '@/Layouts/CollectorLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 
 const props = defineProps({
     stats: Object,
@@ -279,9 +280,12 @@ const handleFileUpload = (event) => {
                 <p class="text-blue-100 text-sm mt-1">{{ new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
             </div>
 
-            <!-- Statistik Pelanggan -->
+            <!-- Statistik Pelanggan (with skeleton) -->
             <div class="px-4 -mt-4">
-                <div class="grid grid-cols-2 gap-3">
+                <div v-if="!stats" class="grid grid-cols-2 gap-3">
+                    <SkeletonLoader v-for="i in 4" :key="i" type="card" />
+                </div>
+                <div v-else class="grid grid-cols-2 gap-3">
                     <div
                         v-for="stat in statCards"
                         :key="stat.label"

@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 import { Line } from 'vue-chartjs'
 import {
     Chart as ChartJS,
@@ -169,8 +170,11 @@ const overviewCards = computed(() => [
             </select>
         </div>
 
-        <!-- Overview Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Overview Cards (with skeleton) -->
+        <div v-if="!stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <SkeletonLoader v-for="i in 4" :key="i" type="card" />
+        </div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Link
                 v-for="card in overviewCards"
                 :key="card.label"

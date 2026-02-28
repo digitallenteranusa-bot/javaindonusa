@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 import debounce from 'lodash/debounce'
 
 const props = defineProps({
@@ -202,8 +203,9 @@ const deleteCustomer = (customer) => {
             </div>
         </div>
 
-        <!-- Table -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <!-- Table (with skeleton for initial load) -->
+        <SkeletonLoader v-if="!customers.data" type="table" :rows="8" :columns="7" />
+        <div v-else class="bg-white rounded-xl shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50">

@@ -5,6 +5,7 @@ import { createApp, h } from 'vue';
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from 'ziggy-js';
+import * as Sentry from '@sentry/vue';
 
 const appName = import.meta.env.VITE_APP_NAME || 'ISP Billing';
 
@@ -68,8 +69,25 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
-        const app = createApp({ render: () => h(App, props) })
-            .use(plugin)
+        const app = createApp({ render: () => h(App, props) });
+
+        // Initialize Sentry (only if DSN is configured)
+        const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
+        if (sentryDsn) {
+            Sentry.init({
+                app,
+                dsn: sentryDsn,
+                integrations: [
+                    Sentry.browserTracingIntegration(),
+                    Sentry.replayIntegration(),
+                ],
+                tracesSampleRate: 0.1,
+                replaysSessionSampleRate: 0,
+                replaysOnErrorSampleRate: 1.0,
+            });
+        }
+
+        app.use(plugin)
             .use(ZiggyVue)
             .mount(el);
 

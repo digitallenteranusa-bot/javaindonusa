@@ -2,6 +2,8 @@
 import { ref, watch, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
+import LoadingSpinner from '@/Components/LoadingSpinner.vue'
 import axios from 'axios'
 
 const props = defineProps({
@@ -381,8 +383,11 @@ const toggleSelectAll = () => {
             </div>
         </template>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <!-- Stats Cards (with skeleton) -->
+        <div v-if="!stats" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <SkeletonLoader v-for="i in 5" :key="i" type="card" />
+        </div>
+        <div v-else class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div class="bg-white rounded-xl shadow-sm p-4">
                 <p class="text-gray-500 text-xs">Total Invoice</p>
                 <p class="text-2xl font-bold">{{ stats?.total || 0 }}</p>
@@ -722,12 +727,8 @@ const toggleSelectAll = () => {
 
                 <!-- Customer List -->
                 <div class="flex-1 overflow-y-auto p-4">
-                    <div v-if="loadingCustomers" class="flex items-center justify-center py-8">
-                        <svg class="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                        <span class="ml-2 text-gray-600">Memuat pelanggan...</span>
+                    <div v-if="loadingCustomers" class="py-8">
+                        <LoadingSpinner size="lg" label="Memuat pelanggan..." />
                     </div>
 
                     <div v-else-if="availableCustomers.length === 0" class="text-center py-8 text-gray-500">

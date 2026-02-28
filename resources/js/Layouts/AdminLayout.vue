@@ -51,6 +51,7 @@ const mobileMenuOpen = ref(false)
 // Collapsible menu sections - load from localStorage
 const expandedSections = ref({
     billing: localStorage.getItem('sidebar_billing') !== 'false',
+    collector: localStorage.getItem('sidebar_collector') !== 'false',
     finance: localStorage.getItem('sidebar_finance') !== 'false',
     network: localStorage.getItem('sidebar_network') !== 'false',
     master: localStorage.getItem('sidebar_master') !== 'false',
@@ -71,8 +72,6 @@ const closeMobileMenu = () => {
 const mainNavigation = [
     { name: 'Dashboard', href: '/admin', icon: 'home' },
     { name: 'Pelanggan', href: '/admin/customers', icon: 'users' },
-    { name: 'Isolir', href: '/admin/isolation', icon: 'shield' },
-    { name: 'Perangkat', href: '/admin/devices', icon: 'device' },
     { name: 'Mapping', href: '/admin/mapping', icon: 'globe' },
     { name: 'Broadcast', href: '/admin/broadcasts/create', icon: 'megaphone' },
 ]
@@ -80,22 +79,28 @@ const mainNavigation = [
 const billingNavigation = [
     { name: 'Invoice', href: '/admin/invoices', icon: 'document' },
     { name: 'Belum Bayar', href: '/admin/billing/unpaid', icon: 'clipboard' },
+    { name: 'Isolir', href: '/admin/isolation', icon: 'shield' },
     { name: 'Pembayaran', href: '/admin/payments', icon: 'credit-card' },
-    { name: 'Pengeluaran', href: '/admin/expenses', icon: 'receipt' },
+]
+
+const collectorNavigation = [
+    { name: 'Pengeluaran Penagih', href: '/admin/expenses', icon: 'receipt' },
     { name: 'Setoran', href: '/admin/settlements', icon: 'cash' },
-    { name: 'Laporan', href: '/admin/reports', icon: 'chart' },
+    { name: 'Performa Penagih', href: '/admin/finance/collector-performance', icon: 'user-group' },
 ]
 
 const financeNavigation = [
     { name: 'Dashboard', href: '/admin/finance', icon: 'banknotes' },
-    { name: 'Pengeluaran Ops', href: '/admin/finance/expenses', icon: 'receipt' },
-    { name: 'Performa Penagih', href: '/admin/finance/collector-performance', icon: 'user-group' },
+    { name: 'Pengeluaran Operasional', href: '/admin/finance/expenses', icon: 'receipt' },
     { name: 'Analisa Pendapatan', href: '/admin/analytics/revenue', icon: 'chart' },
+    { name: 'Laporan', href: '/admin/reports', icon: 'chart' },
 ]
 
 const networkNavigation = [
+    { name: 'Perangkat', href: '/admin/devices', icon: 'device' },
     { name: 'Kesehatan Jaringan', href: '/admin/analytics/network', icon: 'signal' },
     { name: 'Kesehatan VPS', href: '/admin/analytics/vps', icon: 'server' },
+    { name: 'VPN Server', href: '/admin/vpn-server', icon: 'vpn' },
 ]
 
 const masterNavigation = [
@@ -105,11 +110,10 @@ const masterNavigation = [
     { name: 'Merk Router', href: '/admin/router-brands', icon: 'wifi' },
     { name: 'ODP', href: '/admin/odps', icon: 'odp' },
     { name: 'OLT', href: '/admin/olts', icon: 'olt' },
-    { name: 'Users', href: '/admin/users', icon: 'user-group' },
 ]
 
 const systemNavigation = [
-    { name: 'VPN Server', href: '/admin/vpn-server', icon: 'vpn' },
+    { name: 'Users', href: '/admin/users', icon: 'user-group' },
     { name: 'Audit Log', href: '/admin/audit-logs', icon: 'clipboard' },
     { name: 'Roles', href: '/admin/roles', icon: 'shield' },
     { name: 'Pengaturan', href: '/admin/settings', icon: 'cog' },
@@ -209,6 +213,9 @@ const icons = {
     signal: {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>`
     },
+    vpn: {
+        template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>`
+    },
     'chevron-down': {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`
     }
@@ -292,13 +299,13 @@ const getIcon = (name) => ({
                         </ul>
                     </div>
 
-                    <!-- Billing -->
+                    <!-- Billing & Tagihan -->
                     <div class="mb-4">
                         <button
                             @click="toggleSection('billing')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
                         >
-                            <span>Billing</span>
+                            <span>Billing & Tagihan</span>
                             <component
                                 :is="getIcon('chevron-down')"
                                 class="w-4 h-4 transition-transform duration-200"
@@ -315,6 +322,38 @@ const getIcon = (name) => ({
                         >
                             <ul v-show="expandedSections.billing" class="space-y-1 overflow-hidden">
                                 <li v-for="item in billingNavigation" :key="item.name">
+                                    <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
+                                        <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                        <span class="truncate">{{ item.name }}</span>
+                                    </Link>
+                                </li>
+                            </ul>
+                        </Transition>
+                    </div>
+
+                    <!-- Penagih -->
+                    <div class="mb-4">
+                        <button
+                            @click="toggleSection('collector')"
+                            class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-orange-400 uppercase tracking-wider hover:text-orange-300 transition-colors"
+                        >
+                            <span>Penagih</span>
+                            <component
+                                :is="getIcon('chevron-down')"
+                                class="w-4 h-4 transition-transform duration-200"
+                                :class="{ 'rotate-180': !expandedSections.collector }"
+                            />
+                        </button>
+                        <Transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-96"
+                            leave-active-class="transition-all duration-200 ease-in"
+                            leave-from-class="opacity-100 max-h-96"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
+                            <ul v-show="expandedSections.collector" class="space-y-1 overflow-hidden">
+                                <li v-for="item in collectorNavigation" :key="item.name">
                                     <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                         <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                         <span class="truncate">{{ item.name }}</span>
@@ -530,14 +569,14 @@ const getIcon = (name) => ({
                     </ul>
                 </div>
 
-                <!-- Billing -->
+                <!-- Billing & Tagihan -->
                 <div class="mb-4">
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('billing')"
                         class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
                     >
-                        <span>Billing</span>
+                        <span>Billing & Tagihan</span>
                         <component
                             :is="getIcon('chevron-down')"
                             class="w-4 h-4 transition-transform duration-200"
@@ -554,6 +593,39 @@ const getIcon = (name) => ({
                     >
                         <ul v-show="expandedSections.billing || !sidebarOpen" class="space-y-1 overflow-hidden">
                             <li v-for="item in billingNavigation" :key="item.name">
+                                <Link :href="item.href" :class="navLinkClass(item.href)">
+                                    <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
+                                    <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </Transition>
+                </div>
+
+                <!-- Penagih -->
+                <div class="mb-4">
+                    <button
+                        v-if="sidebarOpen"
+                        @click="toggleSection('collector')"
+                        class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-orange-400 uppercase tracking-wider hover:text-orange-300 transition-colors"
+                    >
+                        <span>Penagih</span>
+                        <component
+                            :is="getIcon('chevron-down')"
+                            class="w-4 h-4 transition-transform duration-200"
+                            :class="{ 'rotate-180': !expandedSections.collector }"
+                        />
+                    </button>
+                    <Transition
+                        enter-active-class="transition-all duration-200 ease-out"
+                        enter-from-class="opacity-0 max-h-0"
+                        enter-to-class="opacity-100 max-h-96"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="opacity-100 max-h-96"
+                        leave-to-class="opacity-0 max-h-0"
+                    >
+                        <ul v-show="expandedSections.collector || !sidebarOpen" class="space-y-1 overflow-hidden">
+                            <li v-for="item in collectorNavigation" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>

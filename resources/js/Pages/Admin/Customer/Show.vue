@@ -12,6 +12,11 @@ const showAdjustModal = ref(false)
 const adjustAmount = ref(0)
 const adjustReason = ref('')
 
+const showSuspendModal = ref(false)
+const suspendReason = ref('')
+const suspendEndDate = ref('')
+const suspendProcessing = ref(false)
+
 const showHistoricalModal = ref(false)
 const historicalMonth = ref(new Date().getMonth()) // previous month default
 const historicalYear = ref(new Date().getFullYear())
@@ -35,6 +40,17 @@ const formatDate = (date) => {
         month: 'long',
         day: 'numeric',
     })
+}
+
+// Status label
+const statusLabel = (status) => {
+    const labels = {
+        active: 'Aktif',
+        isolated: 'Isolir',
+        suspended: 'Cuti',
+        terminated: 'Terminated',
+    }
+    return labels[status] || status
 }
 
 // Status badge
@@ -81,6 +97,31 @@ const submitHistoricalInvoice = () => {
     })
 }
 
+// Suspend customer
+const submitSuspend = () => {
+    suspendProcessing.value = true
+    router.post(`/admin/customers/${props.customer.id}/suspend`, {
+        reason: suspendReason.value,
+        end_date: suspendEndDate.value || null,
+    }, {
+        onSuccess: () => {
+            showSuspendModal.value = false
+            suspendReason.value = ''
+            suspendEndDate.value = ''
+        },
+        onFinish: () => {
+            suspendProcessing.value = false
+        },
+    })
+}
+
+// Unsuspend customer
+const unsuspendCustomer = () => {
+    if (confirm('Yakin ingin mengaktifkan kembali pelanggan ini?')) {
+        router.post(`/admin/customers/${props.customer.id}/unsuspend`)
+    }
+}
+
 // Recalculate debt
 const recalculateDebt = () => {
     if (confirm('Yakin ingin merekalkukasi hutang dari invoice?')) {
@@ -116,7 +157,7 @@ const recalculateDebt = () => {
                         <h2 class="text-lg font-semibold">Informasi Pelanggan</h2>
                         <div class="flex items-center gap-2">
                             <span :class="['px-3 py-1 text-sm rounded-full', statusClass(customer.status)]">
-                                {{ customer.status }}
+                                {{ statusLabel(customer.status) }}
                             </span>
                             <Link
                                 :href="`/admin/customers/${customer.id}/edit`"
@@ -361,6 +402,35 @@ const recalculateDebt = () => {
                     </div>
                 </div>
 
+                <!-- Suspension Info (if suspended) -->
+                <div v-if="customer.status === 'suspended'" class="bg-yellow-50 border border-yellow-200 rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold mb-4 text-yellow-800">Info Cuti Sementara</h2>
+
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-yellow-700">Mulai Cuti</span>
+                            <span class="font-medium text-yellow-900">{{ formatDate(customer.suspension_start_date) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-yellow-700">Perkiraan Selesai</span>
+                            <span class="font-medium text-yellow-900">{{ customer.suspension_end_date ? formatDate(customer.suspension_end_date) : 'Belum ditentukan' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-yellow-700">Alasan</span>
+                            <p class="font-medium text-yellow-900 mt-1">{{ customer.suspension_reason }}</p>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 border-yellow-200">
+
+                    <button
+                        @click="unsuspendCustomer"
+                        class="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                    >
+                        Aktifkan Kembali
+                    </button>
+                </div>
+
                 <!-- Quick Actions -->
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <h2 class="text-lg font-semibold mb-4">Aksi Cepat</h2>
@@ -382,6 +452,20 @@ const recalculateDebt = () => {
                         >
                             Input Pembayaran
                         </Link>
+                        <button
+                            v-if="customer.status === 'active'"
+                            @click="showSuspendModal = true"
+                            class="w-full py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm"
+                        >
+                            Cuti Sementara
+                        </button>
+                        <button
+                            v-if="customer.status === 'suspended'"
+                            @click="unsuspendCustomer"
+                            class="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                        >
+                            Aktifkan Kembali
+                        </button>
                     </div>
                 </div>
             </div>
@@ -434,6 +518,58 @@ const recalculateDebt = () => {
                 </div>
             </div>
         </div>
+        <!-- Suspend Modal -->
+        <div
+            v-if="showSuspendModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            @click.self="showSuspendModal = false"
+        >
+            <div class="bg-white rounded-xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">Cuti Sementara</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    Layanan internet akan dimatikan selama masa cuti. Tagihan tidak akan berjalan selama pelanggan berstatus cuti.
+                </p>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Cuti *</label>
+                        <textarea
+                            v-model="suspendReason"
+                            rows="2"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="Misal: Pindah rumah sementara, renovasi, dll"
+                        ></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Perkiraan Tanggal Selesai (opsional)</label>
+                        <input
+                            v-model="suspendEndDate"
+                            type="date"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                        <p class="text-xs text-gray-400 mt-1">Reaktivasi tetap dilakukan manual oleh admin</p>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button
+                            @click="showSuspendModal = false"
+                            class="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            @click="submitSuspend"
+                            :disabled="!suspendReason || suspendProcessing"
+                            class="flex-1 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"
+                        >
+                            {{ suspendProcessing ? 'Memproses...' : 'Cuti-kan' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Historical Invoice Modal -->
         <div
             v-if="showHistoricalModal"

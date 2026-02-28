@@ -42,6 +42,15 @@ class CustomerFactory extends Factory
         ]);
     }
 
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'suspended',
+            'suspension_start_date' => now()->subMonth(),
+            'suspension_reason' => 'Cuti sementara',
+        ]);
+    }
+
     public function withDebt(int $amount): static
     {
         return $this->state(fn (array $attributes) => [

@@ -97,7 +97,7 @@ const statusLabel = (status) => {
     const labels = {
         active: 'Aktif',
         isolated: 'Isolir',
-        suspended: 'Suspend',
+        suspended: 'Cuti',
         terminated: 'Terminated',
     }
     return labels[status] || status
@@ -159,7 +159,7 @@ const deleteCustomer = (customer) => {
                     <option value="">Semua Status</option>
                     <option value="active">Aktif</option>
                     <option value="isolated">Isolir</option>
-                    <option value="suspended">Suspend</option>
+                    <option value="suspended">Cuti</option>
                     <option value="terminated">Terminated</option>
                 </select>
                 <select

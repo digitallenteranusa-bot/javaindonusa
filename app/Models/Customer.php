@@ -60,6 +60,9 @@ class Customer extends Model
         'notes',
         'latitude',
         'longitude',
+        'suspension_start_date',
+        'suspension_end_date',
+        'suspension_reason',
     ];
 
     protected function casts(): array
@@ -80,6 +83,8 @@ class Customer extends Model
             'last_payment_date' => 'datetime',
             'latitude' => 'decimal:8',
             'longitude' => 'decimal:8',
+            'suspension_start_date' => 'date',
+            'suspension_end_date' => 'date',
         ];
     }
 
@@ -227,6 +232,11 @@ class Customer extends Model
         return $query->where('status', self::STATUS_ISOLATED);
     }
 
+    public function scopeSuspended($query)
+    {
+        return $query->where('status', self::STATUS_SUSPENDED);
+    }
+
     public function scopeHasDebt($query)
     {
         return $query->where('total_debt', '>', 0);
@@ -259,6 +269,11 @@ class Customer extends Model
     public function isIsolated(): bool
     {
         return $this->status === self::STATUS_ISOLATED;
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === self::STATUS_SUSPENDED;
     }
 
     public function getFullAddressAttribute(): string

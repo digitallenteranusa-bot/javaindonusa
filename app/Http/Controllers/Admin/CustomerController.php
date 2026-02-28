@@ -19,6 +19,8 @@ use App\Http\Requests\Admin\Customer\WriteOffDebtRequest;
 use App\Http\Requests\Admin\Customer\ImportCustomerRequest;
 use App\Imports\CustomerImport;
 use App\Exports\CustomerTemplateExport;
+use App\Jobs\SuspendCustomerJob;
+use App\Jobs\UnsuspendCustomerJob;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
@@ -319,6 +321,43 @@ class CustomerController extends Controller
     public function downloadTemplate()
     {
         return Excel::download(new CustomerTemplateExport, 'template_import_pelanggan.xlsx');
+    }
+
+    /**
+     * Suspend customer (cuti sementara)
+     */
+    public function suspend(Request $request, Customer $customer)
+    {
+        if ($customer->status !== Customer::STATUS_ACTIVE) {
+            return back()->with('error', 'Hanya pelanggan aktif yang bisa di-cuti-kan');
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|max:255',
+            'end_date' => 'nullable|date|after:today',
+        ]);
+
+        SuspendCustomerJob::dispatch(
+            $customer->id,
+            $validated['reason'],
+            $validated['end_date'] ?? null
+        );
+
+        return back()->with('success', 'Proses cuti sementara sedang dijalankan');
+    }
+
+    /**
+     * Unsuspend customer (aktifkan kembali dari cuti)
+     */
+    public function unsuspend(Customer $customer)
+    {
+        if ($customer->status !== Customer::STATUS_SUSPENDED) {
+            return back()->with('error', 'Pelanggan tidak dalam status cuti');
+        }
+
+        UnsuspendCustomerJob::dispatch($customer->id);
+
+        return back()->with('success', 'Proses aktivasi kembali sedang dijalankan');
     }
 
     /**

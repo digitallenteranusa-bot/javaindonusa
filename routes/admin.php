@@ -78,6 +78,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:customers.delete'])->group(function () {
         Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
     });
+    Route::middleware(['permission:customers.edit'])->group(function () {
+        Route::post('/customers/{customer}/suspend', [CustomerController::class, 'suspend'])
+            ->name('customers.suspend');
+        Route::post('/customers/{customer}/unsuspend', [CustomerController::class, 'unsuspend'])
+            ->name('customers.unsuspend');
+    });
     Route::middleware(['permission:customers.adjust-debt'])->group(function () {
         Route::post('/customers/{customer}/adjust-debt', [CustomerController::class, 'adjustDebt'])
             ->name('customers.adjust-debt');

@@ -700,6 +700,116 @@ sudo systemctl status billing-worker
 
 **Output yang diharapkan:** Status "active (running)"
 
+### 8.3 Alternatif: Menggunakan Supervisor (Rekomendasi)
+
+Supervisor lebih cocok untuk production karena mendukung multi-worker dan monitoring yang lebih baik.
+
+#### Install Supervisor
+
+```bash
+sudo apt update && sudo apt install -y supervisor
+```
+
+#### Copy Konfigurasi
+
+Project sudah menyediakan file konfigurasi di `scripts/supervisor.conf`:
+
+```bash
+sudo cp /var/www/billing/scripts/supervisor.conf /etc/supervisor/conf.d/billing-worker.conf
+```
+
+Atau buat manual:
+
+```bash
+sudo nano /etc/supervisor/conf.d/billing-worker.conf
+```
+
+**Isi dengan:**
+
+```ini
+[program:billing-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/billing/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600 --max-jobs=1000
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=2
+redirect_stderr=true
+stdout_logfile=/var/www/billing/storage/logs/worker.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=10
+stopwaitsecs=3600
+
+[program:billing-notifications]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/billing/artisan queue:work redis --queue=notifications --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=1
+redirect_stderr=true
+stdout_logfile=/var/www/billing/storage/logs/worker-notifications.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=5
+stopwaitsecs=3600
+
+[group:billing]
+programs=billing-worker,billing-notifications
+priority=999
+```
+
+**Simpan file:** `Ctrl+O`, `Enter`, `Ctrl+X`
+
+#### Aktifkan Supervisor
+
+```bash
+# Enable auto-start saat boot
+sudo systemctl enable supervisor
+sudo systemctl start supervisor
+
+# Load konfigurasi dan start worker
+sudo supervisorctl reread
+sudo supervisorctl update
+
+# Cek status
+sudo supervisorctl status
+```
+
+**Output yang diharapkan:**
+
+```
+billing-worker:billing-worker_00       RUNNING   pid 12345, uptime 0:00:05
+billing-worker:billing-worker_01       RUNNING   pid 12346, uptime 0:00:05
+billing-notifications:billing-notifications_00  RUNNING   pid 12347, uptime 0:00:05
+```
+
+#### Perintah Supervisor yang Sering Dipakai
+
+```bash
+# Lihat status semua worker
+sudo supervisorctl status
+
+# Restart semua worker (setelah deploy)
+sudo supervisorctl restart billing:*
+
+# Stop/start worker tertentu
+sudo supervisorctl stop billing-worker:*
+sudo supervisorctl start billing-worker:*
+
+# Reload konfigurasi (setelah edit .conf)
+sudo supervisorctl reread
+sudo supervisorctl update
+
+# Lihat log worker
+tail -f /var/www/billing/storage/logs/worker.log
+```
+
+> **Catatan:** Pilih salah satu antara **Systemd** (Section 8.1-8.2) atau **Supervisor** (Section 8.3). Jangan aktifkan keduanya bersamaan karena akan menjalankan worker duplikat.
+
 ---
 
 ## 9. Setup Scheduler (Cron)
@@ -1094,6 +1204,8 @@ sudo systemctl restart redis-server
 
 ### Error: Queue Worker Tidak Berjalan
 
+**Jika menggunakan Systemd:**
+
 ```bash
 # Cek status
 sudo systemctl status billing-worker
@@ -1103,8 +1215,34 @@ tail -50 /var/log/billing-worker.log
 
 # Restart worker
 sudo systemctl restart billing-worker
+```
 
-# Test manual
+**Jika menggunakan Supervisor:**
+
+```bash
+# Cek status
+sudo supervisorctl status
+
+# Jika "supervisor.service not found" → supervisor belum terinstall
+sudo apt install -y supervisor
+sudo systemctl enable supervisor
+sudo systemctl start supervisor
+
+# Jika status kosong → config belum ter-load
+sudo cp /var/www/billing/scripts/supervisor.conf /etc/supervisor/conf.d/billing-worker.conf
+sudo supervisorctl reread
+sudo supervisorctl update
+
+# Lihat log
+tail -50 /var/www/billing/storage/logs/worker.log
+
+# Restart worker
+sudo supervisorctl restart billing:*
+```
+
+**Test manual:**
+
+```bash
 cd /var/www/billing
 php artisan queue:work --once
 ```

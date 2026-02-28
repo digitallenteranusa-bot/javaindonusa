@@ -107,10 +107,11 @@ class DebtIsolationService
             }
         }
 
-        // Cek apakah invoice bulan ini sudah ada
+        // Cek apakah invoice bulan ini sudah ada (exclude cancelled)
         $existingInvoice = Invoice::where('customer_id', $customer->id)
             ->where('period_year', $periodYear)
             ->where('period_month', $periodMonth)
+            ->where('status', '!=', 'cancelled')
             ->first();
 
         if ($existingInvoice) {
@@ -682,18 +683,23 @@ class DebtIsolationService
         $prefix = Setting::getValue('billing', 'invoice_prefix', 'INV');
         $periodCode = sprintf('%04d%02d', $year, $month);
 
-        $lastInvoice = Invoice::where('period_year', $year)
+        // Count existing invoices for this period to determine next sequence
+        $count = Invoice::where('period_year', $year)
             ->where('period_month', $month)
-            ->orderBy('id', 'desc')
-            ->first();
+            ->count();
 
-        $sequence = 1;
-        if ($lastInvoice) {
-            preg_match('/(\d+)$/', $lastInvoice->invoice_number, $matches);
-            $sequence = intval($matches[1] ?? 0) + 1;
-        }
+        $sequence = $count + 1;
 
-        return sprintf('%s-%s-%05d', $prefix, $periodCode, $sequence);
+        // Ensure uniqueness by checking if generated number already exists
+        do {
+            $invoiceNumber = sprintf('%s-%s-%05d', $prefix, $periodCode, $sequence);
+            $exists = Invoice::where('invoice_number', $invoiceNumber)->exists();
+            if ($exists) {
+                $sequence++;
+            }
+        } while ($exists);
+
+        return $invoiceNumber;
     }
 
     protected function generatePaymentNumber(): string

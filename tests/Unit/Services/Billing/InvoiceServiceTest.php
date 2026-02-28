@@ -71,7 +71,7 @@ class InvoiceServiceTest extends TestCase
         $this->assertEquals(2024, $invoice->period_year);
         $this->assertEquals(150000, $invoice->total_amount);
         $this->assertEquals('pending', $invoice->status);
-        $this->assertStringStartsWith('INV202401', $invoice->invoice_number);
+        $this->assertStringStartsWith('INV-202401-', $invoice->invoice_number);
     }
 
     /** @test */
@@ -160,8 +160,8 @@ class InvoiceServiceTest extends TestCase
 
         // Assert
         $this->assertNotEquals($invoice1->invoice_number, $invoice2->invoice_number);
-        $this->assertEquals('INV2024010001', $invoice1->invoice_number);
-        $this->assertEquals('INV2024010002', $invoice2->invoice_number);
+        $this->assertEquals('INV-202401-00001', $invoice1->invoice_number);
+        $this->assertEquals('INV-202401-00002', $invoice2->invoice_number);
     }
 
     /** @test */

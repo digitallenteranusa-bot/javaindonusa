@@ -165,20 +165,25 @@ class InvoiceService
     protected function generateInvoiceNumber(int $year, int $month): string
     {
         $prefix = 'INV';
-        $dateCode = sprintf('%04d%02d', $year, $month);
+        $periodCode = sprintf('%04d%02d', $year, $month);
 
-        $lastInvoice = Invoice::where('invoice_number', 'like', "{$prefix}{$dateCode}%")
-            ->orderBy('invoice_number', 'desc')
-            ->first();
+        // Count existing invoices for this period to determine next sequence
+        $count = Invoice::where('period_year', $year)
+            ->where('period_month', $month)
+            ->count();
 
-        if ($lastInvoice) {
-            $lastNumber = (int) substr($lastInvoice->invoice_number, -4);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
+        $sequence = $count + 1;
 
-        return sprintf('%s%s%04d', $prefix, $dateCode, $newNumber);
+        // Ensure uniqueness by checking if generated number already exists
+        do {
+            $invoiceNumber = sprintf('%s-%s-%05d', $prefix, $periodCode, $sequence);
+            $exists = Invoice::where('invoice_number', $invoiceNumber)->exists();
+            if ($exists) {
+                $sequence++;
+            }
+        } while ($exists);
+
+        return $invoiceNumber;
     }
 
     /**

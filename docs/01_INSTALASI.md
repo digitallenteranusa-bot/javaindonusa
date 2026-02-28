@@ -286,21 +286,38 @@ sudo chgrp -R www-data /var/www/billing/bootstrap/cache
 
 ### 3.4 Install Dependencies PHP
 
+> **PENTING:** File `composer.lock` tidak disertakan di repository (gitignored).
+> Gunakan `composer update` (bukan `composer install`) pada instalasi pertama.
+
 ```bash
 cd /var/www/billing
 
-# Install dependencies
-composer install --optimize-autoloader --no-dev
+# Install dependencies (pertama kali — HARUS pakai update)
+composer update --no-dev --optimize-autoloader --ignore-platform-reqs
 
 # Jika error memory limit:
-COMPOSER_MEMORY_LIMIT=-1 composer install --optimize-autoloader --no-dev
+COMPOSER_MEMORY_LIMIT=-1 composer update --no-dev --optimize-autoloader --ignore-platform-reqs
 ```
+
+> **Untuk update berikutnya** (setelah `composer.lock` sudah ada di server):
+> ```bash
+> composer update --no-dev --optimize-autoloader --ignore-platform-reqs
+> ```
 
 ### 3.5 Install Dependencies JavaScript
 
 ```bash
 cd /var/www/billing
 npm install
+```
+
+### 3.6 Buat Direktori Storage
+
+```bash
+# Buat direktori yang dibutuhkan Laravel (WAJIB sebelum cache)
+mkdir -p storage/framework/{views,cache,sessions,testing}
+mkdir -p storage/backups
+mkdir -p storage/logs
 ```
 
 ---
@@ -780,6 +797,9 @@ sudo certbot renew --dry-run
 ```bash
 cd /var/www/billing
 
+# Pastikan direktori storage ada (mencegah error "View path not found")
+mkdir -p storage/framework/{views,cache,sessions,testing}
+
 # Cache konfigurasi
 php artisan config:cache
 
@@ -792,6 +812,9 @@ php artisan view:cache
 # Optimize autoloader
 composer dump-autoload --optimize
 ```
+
+> **Troubleshooting:** Jika muncul error `View path not found`, pastikan
+> `storage/framework/views` sudah dibuat dengan perintah `mkdir` di atas.
 
 ### 11.2 Verifikasi Semua Service
 
@@ -858,6 +881,29 @@ Buka browser dan akses:
 7. **Master Data > ODP** - Tambah ODP jika menggunakan FTTH (opsional)
 8. **Master Data > OLT** - Tambah OLT jika menggunakan FTTH (opsional)
 9. **Roles & Permissions** - Atur hak akses untuk setiap role (opsional)
+
+### 12.4 Konfigurasi Opsional
+
+#### Sentry (Error Monitoring)
+Tambahkan di `.env` jika ingin menggunakan Sentry:
+```env
+SENTRY_LARAVEL_DSN=https://xxx@sentry.io/xxx
+SENTRY_TRACES_SAMPLE_RATE=0.1
+VITE_SENTRY_DSN=https://xxx@sentry.io/xxx
+```
+> Buat project di [sentry.io](https://sentry.io), ambil DSN dari Settings > Projects > Client Keys.
+> Jika tidak diisi, aplikasi tetap berjalan normal tanpa error monitoring.
+
+#### REST API (untuk Mobile App)
+Dokumentasi API tersedia di `/docs/api` (hanya admin yang bisa akses di production).
+Endpoint API: `/api/v1/` — gunakan Sanctum Bearer Token untuk autentikasi.
+
+```bash
+# Test API login
+curl -X POST https://billing.domain.com/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@javaindonusa.net","password":"password"}'
+```
 
 ---
 
@@ -1076,10 +1122,58 @@ cd /var/www/billing && php artisan schedule:run
 php artisan schedule:list
 ```
 
+### Error: "View path not found" saat view:cache
+
+```bash
+# Penyebab: folder storage/framework/views belum ada (VPS baru)
+mkdir -p /var/www/billing/storage/framework/{views,cache,sessions,testing}
+chmod -R 775 /var/www/billing/storage
+php artisan view:cache
+```
+
+### Error: "Class Sentry\Laravel\Integration not found"
+
+```bash
+# Penyebab: package belum terinstall (composer.lock tidak ada di repo)
+cd /var/www/billing
+composer update --no-dev --optimize-autoloader --ignore-platform-reqs
+php artisan config:cache
+```
+
+### Error: "composer install" gagal — package not in lock file
+
+```bash
+# Penyebab: composer.lock di-gitignore, gunakan `update` bukan `install`
+cd /var/www/billing
+composer update --no-dev --optimize-autoloader --ignore-platform-reqs
+```
+
+### Error: "git pull" gagal — local changes would be overwritten
+
+```bash
+# Penyebab: ada file yang berubah di server (package-lock.json, dll)
+cd /var/www/billing
+git stash           # Simpan sementara perubahan lokal
+git pull origin main
+git stash drop      # Buang perubahan lokal (opsional)
+```
+
+### Error: Duplicate entry saat db:seed (expense_number)
+
+```bash
+# Penyebab: seeder lama pakai random number yang bisa duplikat
+# Solusi: pastikan code terbaru sudah di-pull, lalu:
+cd /var/www/billing
+php artisan migrate:fresh --seed --force
+```
+
 ### Clear Semua Cache (Jika Ada Masalah)
 
 ```bash
 cd /var/www/billing
+
+# Pastikan storage dirs ada
+mkdir -p storage/framework/{views,cache,sessions,testing}
 
 # Clear semua cache
 php artisan optimize:clear
@@ -1110,10 +1204,11 @@ mysqldump -u billing_user -p billing_javaindonusa > /backup/billing_$(date +%Y%m
 
 # Setelah update code dari git
 cd /var/www/billing
-git pull
-composer install --no-dev --optimize-autoloader
+git stash && git pull origin main
+composer update --no-dev --optimize-autoloader --ignore-platform-reqs
 npm install && npm run build
 php artisan migrate --force
+mkdir -p storage/framework/{views,cache,sessions,testing}
 php artisan optimize:clear && php artisan optimize
 sudo systemctl restart billing-worker
 ```
@@ -1189,8 +1284,9 @@ Jika mengalami kendala dalam instalasi:
 cd /var/www/billing                    # Masuk ke folder project
 
 # === UPDATE CODE ===
+git stash                              # Simpan local changes
 git pull origin main                   # Tarik update terbaru
-composer install --no-dev              # Install dependencies PHP
+composer update --no-dev --ignore-platform-reqs  # Update dependencies PHP
 npm install && npm run build           # Install & build frontend
 php artisan migrate --force            # Jalankan migrasi database
 
@@ -1276,15 +1372,22 @@ htop                                   # Cek CPU & memory (lebih bagus)
 ```bash
 # Update aplikasi dari Git (jalankan setelah ada update)
 cd /var/www/billing && \
+git stash && \
 git pull origin main && \
-composer install --no-dev --optimize-autoloader && \
+composer update --no-dev --optimize-autoloader --ignore-platform-reqs && \
 npm install && npm run build && \
 php artisan migrate --force && \
+mkdir -p storage/framework/{views,cache,sessions,testing} && \
 php artisan optimize:clear && \
 php artisan optimize && \
 sudo systemctl restart billing-worker && \
 echo "Update selesai!"
 ```
+
+> **PENTING:**
+> - `git stash` diperlukan jika ada local changes (misalnya `package-lock.json`)
+> - `composer update` (bukan `install`) karena `composer.lock` tidak ada di repository
+> - `mkdir -p storage/framework/...` mencegah error `view:cache` pada VPS baru
 
 ### Script Troubleshooting (Jika Ada Error)
 
@@ -1663,4 +1766,4 @@ icacls "C:\laragon\www\billing\bootstrap\cache" /grant Everyone:F /T
 ---
 
 *Dokumen ini dibuat untuk ISP Billing System Java Indonusa v1.0*
-*Terakhir diperbarui: Januari 2026*
+*Terakhir diperbarui: Februari 2026*

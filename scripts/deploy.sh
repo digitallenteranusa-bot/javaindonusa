@@ -100,10 +100,11 @@ pull_code() {
 install_dependencies() {
     log_info "Menginstall PHP dependencies..."
     cd "$APP_DIR"
-    composer install --no-dev --optimize-autoloader --no-interaction
+    # composer.lock is gitignored, so use `update` instead of `install`
+    composer update --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
 
     log_info "Menginstall Node dependencies..."
-    npm ci
+    npm install
 }
 
 # Build assets
@@ -136,6 +137,9 @@ run_migrations() {
 rebuild_cache() {
     log_info "Rebuilding cache..."
     cd "$APP_DIR"
+
+    # Ensure storage directories exist (required for view:cache on fresh VPS)
+    mkdir -p storage/framework/{views,cache,sessions,testing}
 
     # Clear all cache
     php artisan cache:clear

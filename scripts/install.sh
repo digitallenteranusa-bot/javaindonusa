@@ -76,8 +76,9 @@ else
 fi
 
 # Install PHP dependencies
+# composer.lock is gitignored, so we need `composer update` on fresh install
 log_info "Installing PHP dependencies..."
-composer install --optimize-autoloader
+composer update --optimize-autoloader --no-dev --ignore-platform-reqs --no-interaction
 
 # Install Node dependencies
 log_info "Installing Node dependencies..."
@@ -120,6 +121,7 @@ chmod -R 775 storage bootstrap/cache
 # Create required directories
 mkdir -p storage/backups
 mkdir -p storage/logs
+mkdir -p storage/framework/{views,cache,sessions,testing}
 
 # Optimize
 log_info "Optimizing application..."

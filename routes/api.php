@@ -15,7 +15,9 @@ use App\Http\Controllers\HealthController;
 Route::get('/health', HealthController::class)->name('api.health');
 
 Route::post('/tripay/callback', [TripayController::class, 'callback'])
+    ->middleware('throttle:webhook')
     ->name('api.tripay.callback');
 
 Route::post('/xendit/callback', [XenditController::class, 'callback'])
+    ->middleware('throttle:webhook')
     ->name('api.xendit.callback');

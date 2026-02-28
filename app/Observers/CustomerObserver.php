@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Customer;
 use App\Models\Odp;
+use App\Services\Admin\DashboardService;
 
 class CustomerObserver
 {
@@ -12,6 +13,8 @@ class CustomerObserver
         if ($customer->odp_id) {
             $customer->odp?->recalculateUsedPorts();
         }
+
+        DashboardService::clearDashboardCache();
     }
 
     public function updated(Customer $customer): void
@@ -27,6 +30,8 @@ class CustomerObserver
                 $customer->odp?->recalculateUsedPorts();
             }
         }
+
+        DashboardService::clearDashboardCache();
     }
 
     public function deleted(Customer $customer): void
@@ -34,5 +39,7 @@ class CustomerObserver
         if ($customer->odp_id) {
             Odp::find($customer->odp_id)?->recalculateUsedPorts();
         }
+
+        DashboardService::clearDashboardCache();
     }
 }

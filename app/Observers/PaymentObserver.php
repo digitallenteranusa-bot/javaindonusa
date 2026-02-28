@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Payment;
+use App\Services\Admin\DashboardService;
 
 class PaymentObserver
 {
@@ -11,6 +12,8 @@ class PaymentObserver
         $payment->customer?->update([
             'last_payment_date' => $payment->created_at,
         ]);
+
+        DashboardService::clearDashboardCache();
     }
 
     public function updated(Payment $payment): void
@@ -18,5 +21,7 @@ class PaymentObserver
         if ($payment->isDirty('status') && $payment->status === 'cancelled') {
             $payment->customer?->recalculateTotalDebt();
         }
+
+        DashboardService::clearDashboardCache();
     }
 }

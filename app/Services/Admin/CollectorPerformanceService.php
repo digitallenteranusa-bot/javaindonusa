@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class CollectorPerformanceService
 {
@@ -18,6 +19,13 @@ class CollectorPerformanceService
         $month = $month ?? now()->month;
         $year = $year ?? now()->year;
 
+        return Cache::remember("collector_performance:{$year}:{$month}", 600, function () use ($month, $year) {
+            return $this->buildPerformanceData($month, $year);
+        });
+    }
+
+    protected function buildPerformanceData(int $month, int $year): array
+    {
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
 
@@ -101,10 +109,12 @@ class CollectorPerformanceService
      */
     public function getAvailableYears(): array
     {
-        return Invoice::selectRaw('DISTINCT period_year')
-            ->orderByDesc('period_year')
-            ->pluck('period_year')
-            ->toArray();
+        return Cache::remember('collector_performance:available_years', 3600, function () {
+            return Invoice::selectRaw('DISTINCT period_year')
+                ->orderByDesc('period_year')
+                ->pluck('period_year')
+                ->toArray();
+        });
     }
 
     /**

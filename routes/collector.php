@@ -75,7 +75,7 @@ Route::middleware(['auth', 'role:penagih'])->prefix('collector')->name('collecto
     // ================================================================
     Route::middleware(['permission:customers.collect'])->group(function () {
         Route::post('/customers/{customer}/visit', [DashboardController::class, 'logVisit'])->name('visit.log');
-        Route::post('/customers/{customer}/whatsapp', [DashboardController::class, 'sendWhatsAppReminder'])->name('whatsapp');
+        Route::post('/customers/{customer}/whatsapp', [DashboardController::class, 'sendWhatsAppReminder'])->middleware('throttle:10,1')->name('whatsapp');
     });
 
     // ================================================================

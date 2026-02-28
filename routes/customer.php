@@ -55,12 +55,12 @@ Route::prefix('portal')->name('customer.')->group(function () {
         // Tripay Online Payment
         Route::get('/pay', [TripayController::class, 'payPage'])->name('tripay.pay');
         Route::get('/tripay/channels', [TripayController::class, 'getChannels'])->name('tripay.channels');
-        Route::post('/tripay/pay', [TripayController::class, 'createTransaction'])->name('tripay.create');
+        Route::post('/tripay/pay', [TripayController::class, 'createTransaction'])->middleware('throttle:5,1')->name('tripay.create');
         Route::get('/tripay/status/{transaction}', [TripayController::class, 'checkStatus'])->name('tripay.status');
 
         // Xendit Online Payment
         Route::get('/xendit/channels', [XenditController::class, 'getChannels'])->name('xendit.channels');
-        Route::post('/xendit/pay', [XenditController::class, 'createTransaction'])->name('xendit.create');
+        Route::post('/xendit/pay', [XenditController::class, 'createTransaction'])->middleware('throttle:5,1')->name('xendit.create');
         Route::get('/xendit/status/{transaction}', [XenditController::class, 'checkStatus'])->name('xendit.status');
     });
 });

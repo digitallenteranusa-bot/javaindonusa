@@ -16,7 +16,10 @@ use App\Models\Payment;
 use App\Observers\CustomerObserver;
 use App\Observers\InvoiceObserver;
 use App\Observers\PaymentObserver;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -35,6 +38,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Rate limiters
+        RateLimiter::for('admin-login', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+
+        RateLimiter::for('webhook', function (Request $request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
         // Force HTTPS in production
         if ($this->app->environment('production')) {
             URL::forceScheme('https');

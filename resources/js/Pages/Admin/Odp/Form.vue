@@ -99,8 +99,8 @@ const openMapPicker = async () => {
     }
 
     // Default center (Kantor Kecamatan Pule or ODP location)
-    const defaultLat = form.latitude || -8.1228
-    const defaultLng = form.longitude || 111.5617
+    const defaultLat = form.latitude || -8.1229061
+    const defaultLng = form.longitude || 111.5616855
 
     map = L.map(mapContainer.value).setView([defaultLat, defaultLng], 17)
 
@@ -279,13 +279,13 @@ const confirmLocation = () => {
                             <input
                                 v-model="form.latitude"
                                 type="text"
-                                placeholder="Latitude (contoh: -8.1228)"
+                                placeholder="Latitude (contoh: -8.1229061)"
                                 class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             >
                             <input
                                 v-model="form.longitude"
                                 type="text"
-                                placeholder="Longitude (contoh: 111.5617)"
+                                placeholder="Longitude (contoh: 111.5616855)"
                                 class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             >
                             <!-- Get Current Location -->

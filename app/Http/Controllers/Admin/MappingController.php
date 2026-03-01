@@ -259,8 +259,8 @@ class MappingController extends Controller
 
         // Default to Kantor Kecamatan Pule, Trenggalek
         return [
-            'lat' => -8.1228,
-            'lng' => 111.5617,
+            'lat' => -8.1229061,
+            'lng' => 111.5616855,
         ];
     }
 

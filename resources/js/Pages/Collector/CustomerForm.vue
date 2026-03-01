@@ -176,8 +176,8 @@ const openMapPicker = async () => {
     }
 
     // Default center (customer location or Kantor Kecamatan Pule)
-    const defaultLat = form.latitude || -8.1228
-    const defaultLng = form.longitude || 111.5617
+    const defaultLat = form.latitude || -8.1229061
+    const defaultLng = form.longitude || 111.5616855
 
     map = L.map(mapContainer.value, {
         zoomControl: true,

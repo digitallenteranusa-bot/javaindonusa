@@ -269,6 +269,7 @@ class DebtIsolationService
                 'payment_method' => $paymentMethod,
                 'payment_channel' => $paymentMethod === 'transfer' ? 'bank' : 'office',
                 'transfer_proof' => $transferProof,
+                'status' => 'verified',
                 'allocated_to_invoice' => $amount - $remainingPayment,
                 'allocated_to_debt' => $remainingPayment,
                 'allocated_invoices' => $allocations,

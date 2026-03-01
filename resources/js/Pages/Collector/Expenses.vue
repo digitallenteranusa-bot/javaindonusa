@@ -46,14 +46,8 @@ const handleReceiptUpload = (event) => {
 }
 
 const submitExpense = () => {
-    const formData = new FormData()
-    formData.append('amount', form.amount)
-    formData.append('description', form.description)
-    if (form.receipt_photo) {
-        formData.append('receipt_photo', form.receipt_photo)
-    }
-
-    router.post(route('collector.expenses.store'), formData, {
+    form.post('/collector/expenses', {
+        forceFormData: true,
         onSuccess: () => {
             showExpenseModal.value = false
             form.reset()

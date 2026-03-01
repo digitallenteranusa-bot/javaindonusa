@@ -93,6 +93,7 @@ class CollectorService
 
         // Total yang sudah dibayar (by this collector dalam periode)
         $collected = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->sum('amount');
 
@@ -366,11 +367,13 @@ class CollectorService
 
         // Total pembayaran yang diterima (uang masuk)
         $totalCollection = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->whereBetween('created_at', [$start, $end])
             ->sum('amount');
 
         // Total pembayaran tunai saja (yang harus disetor)
         $cashCollection = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->whereBetween('created_at', [$start, $end])
             ->where('payment_method', 'cash')
             ->sum('amount');
@@ -510,6 +513,7 @@ class CollectorService
         $date = $date ?? Carbon::today();
 
         $payments = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->whereDate('created_at', $date)
             ->with('customer:id,customer_id,name')
             ->get();

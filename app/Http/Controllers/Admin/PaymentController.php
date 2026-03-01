@@ -91,8 +91,8 @@ class PaymentController extends Controller
             $statsQuery->whereDate('created_at', '<=', $request->end_date);
         }
 
-        // Only count non-cancelled payments for amount stats
-        $validStatsQuery = (clone $statsQuery)->where('status', '!=', 'cancelled');
+        // Only count verified payments for amount stats
+        $validStatsQuery = (clone $statsQuery)->where('status', 'verified');
 
         $stats = [
             'total_amount' => $validStatsQuery->sum('amount'),

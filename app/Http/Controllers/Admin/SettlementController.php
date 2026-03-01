@@ -81,6 +81,7 @@ class SettlementController extends Controller
 
         // Get related payments (collected on that date by that collector)
         $payments = Payment::where('collector_id', $settlement->collector_id)
+            ->where('status', 'verified')
             ->whereDate('created_at', $settlement->settlement_date)
             ->with('customer:id,customer_id,name')
             ->get();
@@ -169,6 +170,7 @@ class SettlementController extends Controller
         foreach ($collectors as $collector) {
             // Total collected but not yet settled
             $unsettledPayments = Payment::where('collector_id', $collector->id)
+                ->where('status', 'verified')
                 ->where('payment_method', 'cash')
                 ->whereDoesntHave('settlement')
                 ->sum('amount');

@@ -266,6 +266,7 @@ class CustomerPortalService
     protected function getPaymentHistory(Customer $customer, int $limit = 10): array
     {
         $payments = Payment::where('customer_id', $customer->id)
+            ->where('status', 'verified')
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();

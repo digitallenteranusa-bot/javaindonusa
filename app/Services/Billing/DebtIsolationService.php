@@ -611,6 +611,7 @@ class DebtIsolationService
 
         // Cek apakah ada pembayaran dalam 24 jam terakhir
         $hasRecentPayment = \App\Models\Payment::where('customer_id', $customer->id)
+            ->where('status', 'verified')
             ->where('created_at', '>=', now()->subDay())
             ->exists();
 

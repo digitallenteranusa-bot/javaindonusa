@@ -70,6 +70,7 @@ class ProcessIsolation extends Command
 
             // Check recent payment
             $recentPayment = Payment::where('customer_id', $customer->id)
+                ->where('status', 'verified')
                 ->where('created_at', '>=', now()->subDays($recentPaymentDays))
                 ->exists();
 

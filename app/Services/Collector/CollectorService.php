@@ -442,18 +442,18 @@ class CollectorService
 
         // Total pembayaran cash yang belum disetor
         $cashCollection = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->where('created_at', '>=', $startDate)
             ->where('created_at', '<=', $endDate)
             ->where('payment_method', 'cash')
-            ->whereNotIn('status', ['rejected', 'cancelled'])
             ->sum('amount');
 
         // Total pembayaran transfer (info saja, tidak perlu disetor)
         $transferCollection = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->where('created_at', '>=', $startDate)
             ->where('created_at', '<=', $endDate)
             ->where('payment_method', 'transfer')
-            ->whereNotIn('status', ['rejected', 'cancelled'])
             ->sum('amount');
 
         // Total semua collection
@@ -482,9 +482,9 @@ class CollectorService
 
         // Hitung jumlah transaksi
         $paymentCount = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->where('created_at', '>=', $startDate)
             ->where('created_at', '<=', $endDate)
-            ->whereNotIn('status', ['rejected', 'cancelled'])
             ->count();
 
         return [

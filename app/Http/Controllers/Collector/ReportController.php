@@ -109,6 +109,7 @@ class ReportController extends Controller
     {
         // Pembayaran hari ini
         $payments = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->whereDate('created_at', $date)
             ->with('customer:id,customer_id,name,address')
             ->orderBy('created_at')
@@ -156,6 +157,7 @@ class ReportController extends Controller
 
         // Pembayaran bulan ini
         $payments = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->with('customer:id,customer_id,name')
             ->get();
@@ -228,6 +230,7 @@ class ReportController extends Controller
     ): array {
         // Pembayaran dalam periode
         $payments = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
             ->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])
             ->with('customer:id,customer_id,name,address')
             ->orderBy('created_at')

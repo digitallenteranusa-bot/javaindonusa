@@ -42,6 +42,7 @@ class CollectorPerformanceService
         $totalCashAll = 0;
         $totalTransferAll = 0;
         $totalExpenseAll = 0;
+        $totalCashDepositAll = 0;
 
         foreach ($collectors as $collector) {
             $payments = Payment::where('collector_id', $collector->id)
@@ -79,6 +80,7 @@ class CollectorPerformanceService
                     ? round(($totalCollected / $totalBillable) * 100, 1)
                     : 0,
                 'total_expense' => $totalExpense,
+                'cash_deposit' => $cashCollected - $totalExpense,
                 'net_income' => $totalCollected - $totalExpense,
             ];
 
@@ -87,6 +89,7 @@ class CollectorPerformanceService
             $totalCashAll += $cashCollected;
             $totalTransferAll += $transferCollected;
             $totalExpenseAll += $totalExpense;
+            $totalCashDepositAll += ($cashCollected - $totalExpense);
         }
 
         usort($performance, fn($a, $b) => $b['collection_rate'] <=> $a['collection_rate']);
@@ -100,6 +103,7 @@ class CollectorPerformanceService
                 'total_cash' => $totalCashAll,
                 'total_transfer' => $totalTransferAll,
                 'total_expense' => $totalExpenseAll,
+                'total_cash_deposit' => $totalCashDepositAll,
             ],
         ];
     }

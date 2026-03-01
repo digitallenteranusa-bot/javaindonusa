@@ -98,7 +98,7 @@ const exportCollector = (collectorId) => {
         </template>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-6">
             <div class="bg-white rounded-xl shadow-sm p-4">
                 <p class="text-sm text-gray-500">Total Penagih</p>
                 <p class="text-2xl font-bold mt-1">{{ summary?.total_collectors || 0 }}</p>
@@ -133,6 +133,12 @@ const exportCollector = (collectorId) => {
                     {{ formatCurrency(summary?.total_expense) }}
                 </p>
             </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <p class="text-sm text-gray-500">Total Setoran</p>
+                <p class="text-xl font-bold mt-1 text-orange-600">
+                    {{ formatCurrency(summary?.total_cash_deposit) }}
+                </p>
+            </div>
         </div>
 
         <!-- Collector Table -->
@@ -149,6 +155,7 @@ const exportCollector = (collectorId) => {
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cash</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Transfer</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pengeluaran</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Setoran</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net Income</th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Rate</th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
@@ -184,6 +191,9 @@ const exportCollector = (collectorId) => {
                             </td>
                             <td class="px-4 py-4 text-right text-sm text-red-600">
                                 {{ formatCurrency(collector.total_expense) }}
+                            </td>
+                            <td class="px-4 py-4 text-right font-semibold text-orange-600">
+                                {{ formatCurrency(collector.cash_deposit) }}
                             </td>
                             <td class="px-4 py-4 text-right font-semibold"
                                 :class="collector.net_income >= 0 ? 'text-green-700' : 'text-red-700'"

@@ -97,10 +97,6 @@ class InvoiceService
             $package = $customer->package;
             $dueDate = Carbon::create($year, $month, config('billing.due_days', 20));
 
-            // Calculate period
-            $periodStart = Carbon::create($year, $month, 1);
-            $periodEnd = $periodStart->copy()->endOfMonth();
-
             $packagePrice = $package->price;
 
             // Hitung diskon dari data pelanggan
@@ -131,8 +127,6 @@ class InvoiceService
                 'invoice_number' => $this->generateInvoiceNumber($year, $month),
                 'period_month' => $month,
                 'period_year' => $year,
-                'period_start' => $periodStart,
-                'period_end' => $periodEnd,
                 'package_name' => $package->name,
                 'package_price' => $packagePrice,
                 'additional_charges' => $ppn,
@@ -219,8 +213,6 @@ class InvoiceService
 
         return DB::transaction(function () use ($customer, $month, $year, $amount, $description) {
             $dueDate = Carbon::create($year, $month, config('billing.due_days', 20));
-            $periodStart = Carbon::create($year, $month, 1);
-            $periodEnd = $periodStart->copy()->endOfMonth();
 
             $packageName = $customer->package?->name ?? 'Paket tidak diketahui';
 
@@ -229,8 +221,6 @@ class InvoiceService
                 'invoice_number' => $this->generateInvoiceNumber($year, $month),
                 'period_month' => $month,
                 'period_year' => $year,
-                'period_start' => $periodStart,
-                'period_end' => $periodEnd,
                 'package_name' => $packageName,
                 'package_price' => $amount,
                 'additional_charges' => 0,

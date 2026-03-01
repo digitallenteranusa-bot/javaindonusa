@@ -10,6 +10,7 @@ use App\Models\Package;
 use App\Http\Requests\Collector\Customer\StoreCollectorCustomerRequest;
 use App\Http\Requests\Collector\Customer\UpdateCollectorCustomerRequest;
 use App\Models\Router;
+use App\Services\Billing\InvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
@@ -51,7 +52,8 @@ class CustomerController extends Controller
         $validated['kecamatan'] = $validated['kecamatan'] ?? 'Pule';
         $validated['billing_type'] = 'prepaid'; // Otomatis bayar di muka
         $validated['pppoe_password'] = Crypt::encryptString('client001'); // Otomatis client001
-        $validated['total_debt'] = $validated['total_debt'] ?? 0;
+        $initialDebt = $validated['total_debt'] ?? 0;
+        $validated['total_debt'] = 0; // akan diisi oleh createHistoricalInvoice
         $validated['billing_start_date'] = $validated['billing_start_date'] ?: null;
         $validated['join_date'] = now();
         $validated['collector_id'] = Auth::id(); // Assign to current collector
@@ -63,6 +65,19 @@ class CustomerController extends Controller
         }
 
         $customer = Customer::create($validated);
+
+        // Buat invoice untuk hutang awal agar bisa dibayar/dilunasi
+        if ($initialDebt > 0) {
+            $invoiceService = app(InvoiceService::class);
+            $previousMonth = now()->subMonth();
+            $invoiceService->createHistoricalInvoice(
+                $customer,
+                $previousMonth->month,
+                $previousMonth->year,
+                $initialDebt,
+                'Hutang awal pelanggan'
+            );
+        }
 
         // ODP used_ports recalculation handled by CustomerObserver
 

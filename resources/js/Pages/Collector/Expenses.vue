@@ -45,12 +45,18 @@ const handleReceiptUpload = (event) => {
     form.receipt_photo = event.target.files[0]
 }
 
+const submitting = ref(false)
 const submitExpense = () => {
+    if (submitting.value) return
+    submitting.value = true
     form.post('/collector/expenses', {
         forceFormData: true,
         onSuccess: () => {
             showExpenseModal.value = false
             form.reset()
+        },
+        onFinish: () => {
+            submitting.value = false
         },
     })
 }
@@ -282,10 +288,10 @@ const closeImagePreview = () => {
                         <!-- Submit -->
                         <button
                             type="submit"
-                            :disabled="form.processing || !form.amount || !form.description || !form.receipt_photo"
+                            :disabled="submitting || form.processing || !form.amount || !form.description || !form.receipt_photo"
                             class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50"
                         >
-                            {{ form.processing ? 'Menyimpan...' : 'Simpan Belanja' }}
+                            {{ (submitting || form.processing) ? 'Menyimpan...' : 'Simpan Belanja' }}
                         </button>
                     </form>
                 </div>

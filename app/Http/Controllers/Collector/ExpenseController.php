@@ -83,6 +83,17 @@ class ExpenseController extends Controller
 
         $collector = auth()->user();
 
+        // Cegah double submit — cek duplikat dalam 30 detik terakhir
+        $duplicate = Expense::where('user_id', $collector->id)
+            ->where('amount', $request->amount)
+            ->where('description', $request->description)
+            ->where('created_at', '>=', now()->subSeconds(30))
+            ->exists();
+
+        if ($duplicate) {
+            return back()->with('info', 'Pengeluaran sudah tercatat.');
+        }
+
         try {
             // Upload foto nota jika ada
             $receiptPath = null;

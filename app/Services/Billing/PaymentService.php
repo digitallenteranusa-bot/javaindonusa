@@ -140,11 +140,6 @@ class PaymentService
     public function cancelPayment(Payment $payment, string $reason): Payment
     {
         return DB::transaction(function () use ($payment, $reason) {
-            // Check if payment can be cancelled (within 24 hours)
-            if ($payment->created_at->diffInHours(now()) > 24) {
-                throw PaymentCancellationException::tooLate();
-            }
-
             if ($payment->status === 'cancelled') {
                 throw PaymentCancellationException::alreadyCancelled();
             }
@@ -168,7 +163,10 @@ class PaymentService
             $this->debtService->addDebt(
                 $payment->customer,
                 $payment->amount,
-                "Payment cancelled - #{$payment->payment_number}: {$reason}"
+                'adjustment_add',
+                'payment',
+                $payment->id,
+                "Pembatalan pembayaran #{$payment->payment_number}: {$reason}"
             );
 
             // Update payment status

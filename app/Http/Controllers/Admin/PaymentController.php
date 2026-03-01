@@ -7,7 +7,9 @@ use App\Models\Payment;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\Billing\DebtIsolationService;
+use App\Services\Billing\PaymentService;
 use App\Services\Notification\NotificationService;
+use App\Exceptions\Billing\PaymentCancellationException;
 use App\Services\PdfService;
 use App\Http\Requests\Admin\Payment\StorePaymentRequest;
 use App\Http\Requests\Admin\Payment\CancelPaymentRequest;
@@ -185,36 +187,16 @@ class PaymentController extends Controller
      */
     public function cancel(CancelPaymentRequest $request, Payment $payment)
     {
-        // Only recent payments can be cancelled (within 24 hours)
-        if ($payment->created_at->lt(now()->subDay())) {
-            return back()->with('error', 'Pembayaran lebih dari 24 jam tidak dapat dibatalkan');
-        }
-
         $validated = $request->validated();
 
-        // This is a complex operation that should:
-        // 1. Reverse invoice payments
-        // 2. Restore customer debt
-        // 3. Update payment status
-        // For now, just mark as cancelled
+        try {
+            $paymentService = app(PaymentService::class);
+            $paymentService->cancelPayment($payment, $validated['reason']);
 
-        $customer = $payment->customer;
-
-        // Reverse kredit yang mungkin ditambahkan dari pembayaran ini
-        if ($payment->allocated_to_debt > 0 && $customer->credit_balance > 0) {
-            $creditToReverse = min($payment->allocated_to_debt, $customer->credit_balance);
-            $customer->decrement('credit_balance', $creditToReverse);
+            return back()->with('success', 'Pembayaran berhasil dibatalkan');
+        } catch (PaymentCancellationException $e) {
+            return back()->with('error', $e->getMessage());
         }
-
-        $payment->update([
-            'status' => 'cancelled',
-            'notes' => ($payment->notes ?? '') . "\nDibatalkan: " . $validated['reason'],
-        ]);
-
-        // Recalculate customer debt
-        $customer->recalculateTotalDebt();
-
-        return back()->with('success', 'Pembayaran berhasil dibatalkan');
     }
 
     /**

@@ -139,6 +139,8 @@ class PaymentService
      */
     public function cancelPayment(Payment $payment, string $reason): Payment
     {
+        $payment->load(['invoices', 'customer']);
+
         return DB::transaction(function () use ($payment, $reason) {
             if ($payment->status === 'cancelled') {
                 throw PaymentCancellationException::alreadyCancelled();
@@ -146,12 +148,16 @@ class PaymentService
 
             // Reverse invoice allocations
             foreach ($payment->invoices as $invoice) {
-                $allocationAmount = $invoice->pivot->amount;
+                $allocationAmount = $invoice->pivot->amount ?? 0;
+                if ($allocationAmount <= 0) {
+                    continue;
+                }
 
+                $newPaidAmount = max(0, $invoice->paid_amount - $allocationAmount);
                 $invoice->update([
-                    'paid_amount' => $invoice->paid_amount - $allocationAmount,
-                    'remaining_amount' => $invoice->remaining_amount + $allocationAmount,
-                    'status' => $invoice->paid_amount - $allocationAmount <= 0 ? 'pending' : 'partial',
+                    'paid_amount' => $newPaidAmount,
+                    'remaining_amount' => $invoice->total_amount - $newPaidAmount,
+                    'status' => $newPaidAmount <= 0 ? 'pending' : 'partial',
                     'paid_at' => null,
                 ]);
             }
@@ -160,14 +166,16 @@ class PaymentService
             $payment->invoices()->detach();
 
             // Add back to debt
-            $this->debtService->addDebt(
-                $payment->customer,
-                $payment->amount,
-                'adjustment_add',
-                'payment',
-                $payment->id,
-                "Pembatalan pembayaran #{$payment->payment_number}: {$reason}"
-            );
+            if ($payment->customer) {
+                $this->debtService->addDebt(
+                    $payment->customer,
+                    $payment->amount,
+                    'adjustment_add',
+                    'payment',
+                    $payment->id,
+                    "Pembatalan pembayaran #{$payment->payment_number}: {$reason}"
+                );
+            }
 
             // Update payment status
             $payment->update([

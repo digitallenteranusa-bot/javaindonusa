@@ -196,6 +196,9 @@ class PaymentController extends Controller
             return back()->with('success', 'Pembayaran berhasil dibatalkan');
         } catch (PaymentCancellationException $e) {
             return back()->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            report($e);
+            return back()->with('error', 'Gagal membatalkan pembayaran: ' . $e->getMessage());
         }
     }
 

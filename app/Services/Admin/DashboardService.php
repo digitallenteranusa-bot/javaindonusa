@@ -69,8 +69,8 @@ class DashboardService
                 : 100;
 
             // Total Pendapatan Bulan Ini
-            $revenueThisMonth = Payment::where('created_at', '>=', $thisMonth)->sum('amount');
-            $revenueLastMonth = Payment::whereBetween('created_at', [$lastMonth, $lastMonthEnd])->sum('amount');
+            $revenueThisMonth = Payment::where('status', 'verified')->where('created_at', '>=', $thisMonth)->sum('amount');
+            $revenueLastMonth = Payment::where('status', 'verified')->whereBetween('created_at', [$lastMonth, $lastMonthEnd])->sum('amount');
             $revenueGrowth = $revenueLastMonth > 0
                 ? round((($revenueThisMonth - $revenueLastMonth) / $revenueLastMonth) * 100, 1)
                 : 100;
@@ -79,7 +79,7 @@ class DashboardService
             $totalDebt = Customer::sum('total_debt');
 
             // Pendapatan Hari Ini
-            $revenueToday = Payment::whereDate('created_at', $today)->sum('amount');
+            $revenueToday = Payment::where('status', 'verified')->whereDate('created_at', $today)->sum('amount');
 
             return [
                 'total_customers' => $totalCustomers,
@@ -126,7 +126,8 @@ class DashboardService
         $cacheKey = 'dashboard:revenue:' . $dateRange['start']->format('Y-m-d') . '_' . $dateRange['end']->format('Y-m-d');
 
         return Cache::remember($cacheKey, 300, function () use ($dateRange) {
-            $payments = Payment::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            $payments = Payment::where('status', 'verified')
+                ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                 ->get();
 
             $byMethod = $payments->groupBy('payment_method')->map(function ($items, $method) {
@@ -301,6 +302,7 @@ class DashboardService
                     DB::raw('SUM(amount) as total_amount'),
                     DB::raw('COUNT(*) as total_count')
                 )
+                ->where('status', 'verified')
                 ->whereIn('collector_id', $collectorIds)
                 ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                 ->groupBy('collector_id')
@@ -390,6 +392,7 @@ class DashboardService
                     DB::raw("{$monthExpr} as month"),
                     DB::raw('SUM(amount) as total')
                 )
+                ->where('status', 'verified')
                 ->where('created_at', '>=', $start)
                 ->groupBy(DB::raw($yearExpr), DB::raw($monthExpr))
                 ->get()
@@ -466,7 +469,8 @@ class DashboardService
         return Cache::remember('dashboard:chart:payment_methods', 300, function () {
             $thisMonth = Carbon::now()->startOfMonth();
 
-            return Payment::where('created_at', '>=', $thisMonth)
+            return Payment::where('status', 'verified')
+                ->where('created_at', '>=', $thisMonth)
                 ->select('payment_method', DB::raw('count(*) as count'), DB::raw('sum(amount) as total'))
                 ->groupBy('payment_method')
                 ->get()

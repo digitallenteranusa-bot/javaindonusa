@@ -533,8 +533,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     });
 
     // ================================================================
-    // RADIUS SERVER (Placeholder)
+    // RADIUS SERVER
     // ================================================================
+    Route::middleware(['permission:radius.edit'])->group(function () {
+        Route::post('/radius-servers/sync-nas', [RadiusServerController::class, 'syncNas'])
+            ->name('radius-servers.sync-nas');
+    });
     Route::middleware(['permission:radius.create'])->group(function () {
         Route::get('/radius-servers/create', [RadiusServerController::class, 'create'])->name('radius-servers.create');
         Route::post('/radius-servers', [RadiusServerController::class, 'store'])->name('radius-servers.store');

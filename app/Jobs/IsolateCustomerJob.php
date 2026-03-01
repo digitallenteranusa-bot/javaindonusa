@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Customer;
 use App\Services\Mikrotik\MikrotikService;
 use App\Services\Notification\NotificationService;
+use App\Services\Radius\RadiusService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -76,6 +77,16 @@ class IsolateCustomerJob implements ShouldQueue
                     'isolation_date' => now(),
                     'isolation_reason' => 'Tunggakan melebihi batas',
                 ]);
+
+                // Sync isolation to RADIUS (non-blocking)
+                try {
+                    app(RadiusService::class)->isolateCustomer($customer);
+                } catch (\Exception $e) {
+                    Log::warning('RADIUS isolation failed', [
+                        'customer_id' => $customer->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
                 Log::info('Customer isolated successfully', [
                     'customer_id' => $customer->id,

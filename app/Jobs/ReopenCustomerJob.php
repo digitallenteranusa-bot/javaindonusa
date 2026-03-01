@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Customer;
 use App\Services\Mikrotik\MikrotikService;
 use App\Services\Notification\NotificationService;
+use App\Services\Radius\RadiusService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -68,6 +69,16 @@ class ReopenCustomerJob implements ShouldQueue
                     'isolation_date' => null,
                     'isolation_reason' => null,
                 ]);
+
+                // Sync reopen to RADIUS (non-blocking)
+                try {
+                    app(RadiusService::class)->reopenCustomer($customer);
+                } catch (\Exception $e) {
+                    Log::warning('RADIUS reopen failed', [
+                        'customer_id' => $customer->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
                 Log::info('Customer access reopened successfully', [
                     'customer_id' => $customer->id,

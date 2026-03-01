@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\RadiusServer;
+use App\Services\Radius\RadiusService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -153,5 +154,19 @@ class RadiusServerController extends Controller
         }
 
         return back()->with('error', "Tidak dapat terhubung ke port {$radiusServer->auth_port}: {$errstr}");
+    }
+
+    /**
+     * Sync all routers to FreeRADIUS NAS table.
+     */
+    public function syncNas(RadiusService $radiusService)
+    {
+        if (!$radiusService->isEnabled()) {
+            return back()->with('error', 'Integrasi RADIUS belum diaktifkan. Set RADIUS_ENABLED=true di .env');
+        }
+
+        $stats = $radiusService->syncAllNas();
+
+        return back()->with('success', "NAS sync selesai: {$stats['synced']} berhasil, {$stats['failed']} gagal");
     }
 }

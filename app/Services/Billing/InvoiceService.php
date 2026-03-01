@@ -155,6 +155,16 @@ class InvoiceService
                 "Invoice #{$invoice->invoice_number} - Periode {$month}/{$year}"
             );
 
+            // Auto-apply credit balance jika pelanggan punya saldo kredit
+            $customer->refresh();
+            if ($customer->credit_balance > 0) {
+                $creditToApply = min($customer->credit_balance, $invoice->remaining_amount);
+                if ($creditToApply > 0) {
+                    $this->debtService->useCredit($customer, $invoice, $creditToApply);
+                    $invoice->refresh();
+                }
+            }
+
             return $invoice;
         });
     }

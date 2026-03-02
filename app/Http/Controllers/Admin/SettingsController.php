@@ -828,12 +828,10 @@ class SettingsController extends Controller
     public function clearCache()
     {
         try {
-            Artisan::call('cache:clear');
-            Artisan::call('config:clear');
-            Artisan::call('view:clear');
-            Artisan::call('route:clear');
+            Artisan::call('optimize:clear');
+            Artisan::call('optimize');
 
-            return back()->with('success', 'Cache berhasil dibersihkan');
+            return back()->with('success', 'Cache berhasil dibersihkan dan di-rebuild');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal membersihkan cache: ' . $e->getMessage());
         }

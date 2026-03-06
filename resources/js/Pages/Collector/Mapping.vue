@@ -60,17 +60,20 @@ const initMap = () => {
 
     baseLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap',
-        maxZoom: 19
+        maxZoom: 22,
+        maxNativeZoom: 19
     })
 
     baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: '© Esri',
-        maxZoom: 19
+        maxZoom: 22,
+        maxNativeZoom: 19
     })
 
-    baseLayers.labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+    baseLayers.labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
         attribution: '',
-        maxZoom: 19,
+        maxZoom: 22,
+        maxNativeZoom: 19,
         pane: 'shadowPane'
     })
 

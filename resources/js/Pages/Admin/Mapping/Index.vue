@@ -65,18 +65,21 @@ const initMap = () => {
     // Base layers
     baseLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
+        maxZoom: 22,
+        maxNativeZoom: 19
     })
 
     baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-        maxZoom: 19
+        attribution: 'Tiles © Esri',
+        maxZoom: 22,
+        maxNativeZoom: 19
     })
 
-    // Add hybrid labels on satellite
-    baseLayers.labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+    // Add hybrid labels on satellite (Esri reference overlay, no white boxes)
+    baseLayers.labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
         attribution: '',
-        maxZoom: 19,
+        maxZoom: 22,
+        maxNativeZoom: 19,
         pane: 'shadowPane'
     })
 

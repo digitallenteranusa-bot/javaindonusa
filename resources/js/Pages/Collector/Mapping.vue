@@ -70,15 +70,7 @@ const initMap = () => {
         maxNativeZoom: 19
     })
 
-    baseLayers.labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '',
-        maxZoom: 22,
-        maxNativeZoom: 19,
-        pane: 'shadowPane'
-    })
-
     baseLayers.satellite.addTo(map.value)
-    baseLayers.labels.addTo(map.value)
 
     if (L.markerClusterGroup) {
         markerLayers.value.customers = L.markerClusterGroup({ maxClusterRadius: 50 })
@@ -104,7 +96,6 @@ const switchMapStyle = (style) => {
         baseLayers.street.addTo(map.value)
     } else {
         baseLayers.satellite.addTo(map.value)
-        baseLayers.labels.addTo(map.value)
     }
 }
 

@@ -75,17 +75,8 @@ const initMap = () => {
         maxNativeZoom: 19
     })
 
-    // Add hybrid labels on satellite (Esri reference overlay, no white boxes)
-    baseLayers.labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '',
-        maxZoom: 22,
-        maxNativeZoom: 19,
-        pane: 'shadowPane'
-    })
-
     // Default to satellite view
     baseLayers.satellite.addTo(map.value)
-    baseLayers.labels.addTo(map.value)
 
     // Initialize marker cluster groups if available
     if (L.markerClusterGroup) {
@@ -124,7 +115,6 @@ const switchMapStyle = (style) => {
         baseLayers.street.addTo(map.value)
     } else {
         baseLayers.satellite.addTo(map.value)
-        baseLayers.labels.addTo(map.value)
     }
 }
 

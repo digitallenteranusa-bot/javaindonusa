@@ -555,7 +555,7 @@ class CollectorService
                 'count' => $visits->count(),
                 'by_type' => $visits->groupBy('action_type')->map->count(),
             ],
-            'settlement' => $this->calculateFinalSettlement($collector, $date, $date),
+            'settlement' => $this->calculateFinalSettlement($collector, $date->copy()->startOfDay(), $date->copy()->endOfDay()),
         ];
     }
 

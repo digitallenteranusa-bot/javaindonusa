@@ -12,7 +12,7 @@ const props = defineProps({
 })
 
 const search = ref(props.filters.search || '')
-const monthFilter = ref(props.filters.month || String(new Date().getMonth() + 1))
+const monthFilter = ref(props.filters.month || '')
 const yearFilter = ref(props.filters.year || String(new Date().getFullYear()))
 const categoryFilter = ref(props.filters.category || '')
 

@@ -52,12 +52,11 @@ class FinanceController extends Controller
      */
     public function expenses(Request $request)
     {
-        $query = OperationalExpense::with('createdBy:id,name');
+        $month = (int) $request->get('month', now()->month);
+        $year = (int) $request->get('year', now()->year);
 
-        // Filter by month/year
-        if ($request->filled('month') && $request->filled('year')) {
-            $query->byMonth((int) $request->month, (int) $request->year);
-        }
+        $query = OperationalExpense::with('createdBy:id,name')
+            ->byMonth($month, $year);
 
         // Filter by category
         if ($request->filled('category')) {
@@ -79,16 +78,18 @@ class FinanceController extends Controller
             ->withQueryString();
 
         // Summary for current filter
-        $summaryQuery = OperationalExpense::query();
-        if ($request->filled('month') && $request->filled('year')) {
-            $summaryQuery->byMonth((int) $request->month, (int) $request->year);
-        }
+        $summaryQuery = OperationalExpense::byMonth($month, $year);
         $totalAmount = $summaryQuery->sum('amount');
         $totalCount = $summaryQuery->count();
 
         return Inertia::render('Admin/Finance/Expenses', [
             'expenses' => $expenses,
-            'filters' => $request->only(['month', 'year', 'category', 'search']),
+            'filters' => [
+                'month' => (string) $month,
+                'year' => (string) $year,
+                'category' => $request->get('category'),
+                'search' => $request->get('search'),
+            ],
             'categories' => OperationalExpense::getCategories(),
             'totalAmount' => (float) $totalAmount,
             'totalCount' => $totalCount,

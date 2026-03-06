@@ -564,6 +564,11 @@ const zoomToAll = () => {
 </template>
 
 <style>
+.custom-marker,
+.my-location-marker {
+    background: none !important;
+    border: none !important;
+}
 .leaflet-popup-content-wrapper {
     border-radius: 8px;
 }

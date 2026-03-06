@@ -557,6 +557,10 @@ const zoomToAll = () => {
 </template>
 
 <style>
+.leaflet-tile {
+    width: 256.5px !important;
+    height: 256.5px !important;
+}
 .custom-marker,
 .my-location-marker {
     background: none !important;

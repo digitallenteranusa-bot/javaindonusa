@@ -7,6 +7,97 @@ body {
     font-family: 'Inter', sans-serif;
 }
 
+/* Dark mode global overrides */
+.dark body,
+.dark .min-h-screen.bg-gray-100 {
+    background-color: rgb(17 24 39); /* gray-900 */
+}
+
+.dark .bg-white {
+    background-color: rgb(31 41 55); /* gray-800 */
+    color: rgb(229 231 235); /* gray-200 */
+}
+
+.dark .bg-gray-50 {
+    background-color: rgb(55 65 81); /* gray-700 */
+}
+
+.dark .bg-gray-100 {
+    background-color: rgb(17 24 39); /* gray-900 */
+}
+
+.dark .border-gray-200,
+.dark .border-gray-300 {
+    border-color: rgb(75 85 99); /* gray-600 */
+}
+
+.dark .text-gray-800,
+.dark .text-gray-900 {
+    color: rgb(229 231 235); /* gray-200 */
+}
+
+.dark .text-gray-700 {
+    color: rgb(209 213 219); /* gray-300 */
+}
+
+.dark .text-gray-600 {
+    color: rgb(156 163 175); /* gray-400 */
+}
+
+.dark .text-gray-500 {
+    color: rgb(156 163 175); /* gray-400 */
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+    background-color: rgb(55 65 81); /* gray-700 */
+    border-color: rgb(75 85 99); /* gray-600 */
+    color: rgb(229 231 235); /* gray-200 */
+}
+
+.dark input::placeholder,
+.dark select::placeholder,
+.dark textarea::placeholder {
+    color: rgb(156 163 175); /* gray-400 */
+}
+
+.dark table thead {
+    background-color: rgb(55 65 81); /* gray-700 */
+}
+
+.dark table thead th {
+    color: rgb(209 213 219); /* gray-300 */
+}
+
+.dark table tbody tr {
+    border-color: rgb(75 85 99); /* gray-600 */
+}
+
+.dark table tbody td {
+    color: rgb(209 213 219); /* gray-300 */
+}
+
+.dark .shadow-sm,
+.dark .shadow,
+.dark .shadow-md,
+.dark .shadow-lg {
+    --tw-shadow-color: rgb(0 0 0 / 0.3);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+    background: rgb(31 41 55);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: rgb(75 85 99);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: rgb(107 114 128);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
     width: 6px;

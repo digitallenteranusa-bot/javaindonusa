@@ -25,19 +25,12 @@ const submit = () => {
         <div class="w-full max-w-md">
             <!-- Logo Section -->
             <div class="text-center mb-8">
-                <!-- Logo: tampilkan gambar jika ada, atau icon default -->
-                <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-4 overflow-hidden">
+                <div class="inline-flex items-center justify-center mb-4">
                     <img
-                        v-if="page.props.isp?.logo"
-                        :src="page.props.isp.logo"
+                        src="/img/logo-dark.png"
                         :alt="page.props.isp?.name || 'Logo'"
-                        class="w-full h-full object-contain p-2"
+                        class="h-20 w-auto object-contain"
                     >
-                    <div v-else class="flex items-center justify-center w-full h-full">
-                        <span class="text-2xl font-bold text-blue-600">
-                            {{ page.props.isp?.initials || 'ISP' }}
-                        </span>
-                    </div>
                 </div>
                 <h1 class="text-2xl font-bold text-white">
                     {{ page.props.isp?.name || 'ISP Billing System' }}

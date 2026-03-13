@@ -304,7 +304,35 @@ const handleFileUpload = (event) => {
                 </div>
             </div>
 
-            <!-- Statistik Pendapatan -->
+            <!-- Pendapatan Hari Ini -->
+            <div class="px-4 mt-4">
+                <h2 class="text-lg font-semibold mb-3">Pendapatan Hari Ini</h2>
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <div class="text-center mb-3">
+                        <p class="text-gray-500 text-xs">Total Hari Ini</p>
+                        <p class="text-2xl font-bold text-green-600">
+                            {{ formatCurrency(stats?.revenue?.today?.total ?? 0) }}
+                        </p>
+                        <p class="text-gray-400 text-xs mt-1">{{ stats?.revenue?.today?.count ?? 0 }} transaksi</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-green-50 rounded-lg p-3 text-center">
+                            <p class="text-gray-500 text-xs">Tunai</p>
+                            <p class="text-green-700 font-bold text-sm">
+                                {{ formatCurrency(stats?.revenue?.today?.cash ?? 0) }}
+                            </p>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-3 text-center">
+                            <p class="text-gray-500 text-xs">Transfer</p>
+                            <p class="text-blue-700 font-bold text-sm">
+                                {{ formatCurrency(stats?.revenue?.today?.transfer ?? 0) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ringkasan Tagihan Bulan Ini -->
             <div class="px-4 mt-4">
                 <h2 class="text-lg font-semibold mb-3">Ringkasan Tagihan</h2>
                 <div class="bg-white rounded-xl shadow-sm p-4">
@@ -316,8 +344,25 @@ const handleFileUpload = (event) => {
                         <hr class="my-2">
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600 text-sm">Tingkat Penagihan</span>
-                            <span class="font-semibold text-blue-600">{{ stats.revenue.collection_rate }}%</span>
+                            <span class="font-semibold text-blue-600">{{ stats?.revenue?.collection_rate ?? 0 }}%</span>
                         </div>
+                        <!-- Breakdown bulan ini -->
+                        <hr class="my-2">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-green-50 rounded-lg p-2 text-center">
+                                <p class="text-gray-500 text-xs">Tunai Bulan Ini</p>
+                                <p class="text-green-700 font-bold text-sm">
+                                    {{ formatCurrency(stats?.revenue?.this_month?.cash ?? 0) }}
+                                </p>
+                            </div>
+                            <div class="bg-blue-50 rounded-lg p-2 text-center">
+                                <p class="text-gray-500 text-xs">Transfer Bulan Ini</p>
+                                <p class="text-blue-700 font-bold text-sm">
+                                    {{ formatCurrency(stats?.revenue?.this_month?.transfer ?? 0) }}
+                                </p>
+                            </div>
+                        </div>
+                        <p class="text-gray-400 text-xs text-center">{{ stats?.revenue?.this_month?.count ?? 0 }} transaksi bulan ini</p>
                     </div>
                 </div>
             </div>
@@ -330,19 +375,19 @@ const handleFileUpload = (event) => {
                         <div>
                             <p class="text-gray-500 text-xs">Tagihan Masuk</p>
                             <p class="text-green-600 font-bold text-sm">
-                                {{ formatCurrency(dailySummary.settlement.cash_collection) }}
+                                {{ formatCurrency(dailySummary?.settlement?.cash_collection ?? 0) }}
                             </p>
                         </div>
                         <div>
                             <p class="text-gray-500 text-xs">Belanja</p>
                             <p class="text-red-600 font-bold text-sm">
-                                {{ formatCurrency(dailySummary.settlement.approved_expense) }}
+                                {{ formatCurrency(dailySummary?.settlement?.approved_expense ?? 0) }}
                             </p>
                         </div>
                         <div>
                             <p class="text-gray-500 text-xs">Harus Setor</p>
                             <p class="text-blue-600 font-bold text-sm">
-                                {{ formatCurrency(dailySummary.settlement.must_settle) }}
+                                {{ formatCurrency(dailySummary?.settlement?.must_settle ?? 0) }}
                             </p>
                         </div>
                     </div>

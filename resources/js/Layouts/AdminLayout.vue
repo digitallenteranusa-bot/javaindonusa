@@ -285,7 +285,7 @@ const getIcon = (name) => ({
                 <nav class="flex-1 overflow-y-auto py-4 px-3">
                     <!-- Main -->
                     <div class="mb-4">
-                        <p class="px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider">Menu Utama</p>
+                        <p class="px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider flex items-center gap-2"><component :is="getIcon('home')" class="w-4 h-4" />Menu Utama</p>
                         <ul class="space-y-1">
                             <li v-for="item in mainNavigation" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
@@ -302,7 +302,7 @@ const getIcon = (name) => ({
                             @click="toggleSection('billing')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
                         >
-                            <span>Billing & Tagihan</span>
+                            <span class="flex items-center gap-2"><component :is="getIcon('document')" class="w-4 h-4" />Billing & Tagihan</span>
                             <component
                                 :is="getIcon('chevron-down')"
                                 class="w-4 h-4 transition-transform duration-200"
@@ -334,7 +334,7 @@ const getIcon = (name) => ({
                             @click="toggleSection('collector')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-orange-400 uppercase tracking-wider hover:text-orange-300 transition-colors"
                         >
-                            <span>Penagih</span>
+                            <span class="flex items-center gap-2"><component :is="getIcon('user-group')" class="w-4 h-4" />Penagih</span>
                             <component
                                 :is="getIcon('chevron-down')"
                                 class="w-4 h-4 transition-transform duration-200"
@@ -366,7 +366,7 @@ const getIcon = (name) => ({
                             @click="toggleSection('finance')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-green-400 uppercase tracking-wider hover:text-green-300 transition-colors"
                         >
-                            <span>Keuangan</span>
+                            <span class="flex items-center gap-2"><component :is="getIcon('banknotes')" class="w-4 h-4" />Keuangan</span>
                             <component
                                 :is="getIcon('chevron-down')"
                                 class="w-4 h-4 transition-transform duration-200"
@@ -398,7 +398,7 @@ const getIcon = (name) => ({
                             @click="toggleSection('network')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-cyan-400 uppercase tracking-wider hover:text-cyan-300 transition-colors"
                         >
-                            <span>Jaringan</span>
+                            <span class="flex items-center gap-2"><component :is="getIcon('signal')" class="w-4 h-4" />Jaringan</span>
                             <component
                                 :is="getIcon('chevron-down')"
                                 class="w-4 h-4 transition-transform duration-200"
@@ -430,7 +430,7 @@ const getIcon = (name) => ({
                             @click="toggleSection('master')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
                         >
-                            <span>Master Data</span>
+                            <span class="flex items-center gap-2"><component :is="getIcon('cube')" class="w-4 h-4" />Master Data</span>
                             <component
                                 :is="getIcon('chevron-down')"
                                 class="w-4 h-4 transition-transform duration-200"
@@ -462,7 +462,7 @@ const getIcon = (name) => ({
                             @click="toggleSection('system')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
                         >
-                            <span>Sistem</span>
+                            <span class="flex items-center gap-2"><component :is="getIcon('cog')" class="w-4 h-4" />Sistem</span>
                             <component
                                 :is="getIcon('chevron-down')"
                                 class="w-4 h-4 transition-transform duration-200"
@@ -549,7 +549,7 @@ const getIcon = (name) => ({
             <nav class="flex-1 overflow-y-auto py-4 px-3">
                 <!-- Main -->
                 <div class="mb-4">
-                    <p v-if="sidebarOpen" class="px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider">Menu Utama</p>
+                    <p v-if="sidebarOpen" class="px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider flex items-center gap-2"><component :is="getIcon('home')" class="w-4 h-4" />Menu Utama</p>
                     <ul class="space-y-1">
                         <li v-for="item in mainNavigation" :key="item.name">
                             <Link :href="item.href" :class="navLinkClass(item.href)">
@@ -567,7 +567,7 @@ const getIcon = (name) => ({
                         @click="toggleSection('billing')"
                         class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
                     >
-                        <span>Billing & Tagihan</span>
+                        <span class="flex items-center gap-2"><component :is="getIcon('document')" class="w-4 h-4" />Billing & Tagihan</span>
                         <component
                             :is="getIcon('chevron-down')"
                             class="w-4 h-4 transition-transform duration-200"
@@ -600,7 +600,7 @@ const getIcon = (name) => ({
                         @click="toggleSection('collector')"
                         class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-orange-400 uppercase tracking-wider hover:text-orange-300 transition-colors"
                     >
-                        <span>Penagih</span>
+                        <span class="flex items-center gap-2"><component :is="getIcon('user-group')" class="w-4 h-4" />Penagih</span>
                         <component
                             :is="getIcon('chevron-down')"
                             class="w-4 h-4 transition-transform duration-200"
@@ -633,7 +633,7 @@ const getIcon = (name) => ({
                         @click="toggleSection('finance')"
                         class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-green-400 uppercase tracking-wider hover:text-green-300 transition-colors"
                     >
-                        <span>Keuangan</span>
+                        <span class="flex items-center gap-2"><component :is="getIcon('banknotes')" class="w-4 h-4" />Keuangan</span>
                         <component
                             :is="getIcon('chevron-down')"
                             class="w-4 h-4 transition-transform duration-200"
@@ -666,7 +666,7 @@ const getIcon = (name) => ({
                         @click="toggleSection('network')"
                         class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-cyan-400 uppercase tracking-wider hover:text-cyan-300 transition-colors"
                     >
-                        <span>Jaringan</span>
+                        <span class="flex items-center gap-2"><component :is="getIcon('signal')" class="w-4 h-4" />Jaringan</span>
                         <component
                             :is="getIcon('chevron-down')"
                             class="w-4 h-4 transition-transform duration-200"
@@ -699,7 +699,7 @@ const getIcon = (name) => ({
                         @click="toggleSection('master')"
                         class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
                     >
-                        <span>Master Data</span>
+                        <span class="flex items-center gap-2"><component :is="getIcon('cube')" class="w-4 h-4" />Master Data</span>
                         <component
                             :is="getIcon('chevron-down')"
                             class="w-4 h-4 transition-transform duration-200"
@@ -732,7 +732,7 @@ const getIcon = (name) => ({
                         @click="toggleSection('system')"
                         class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
                     >
-                        <span>Sistem</span>
+                        <span class="flex items-center gap-2"><component :is="getIcon('cog')" class="w-4 h-4" />Sistem</span>
                         <component
                             :is="getIcon('chevron-down')"
                             class="w-4 h-4 transition-transform duration-200"

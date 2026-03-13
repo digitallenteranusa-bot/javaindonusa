@@ -8,6 +8,7 @@ const props = defineProps({
     dailySummary: Object,
     pendingSettlement: Object,
     hasPendingSettlement: Boolean,
+    totalCollected: Object,
 })
 
 // Format currency
@@ -110,14 +111,26 @@ const canSettle = computed(() => {
             <!-- Total Collected Card -->
             <div class="px-4 -mt-4">
                 <div class="bg-white rounded-xl shadow-sm p-4">
-                    <h3 class="text-sm font-medium text-gray-500 mb-3">Ringkasan Tagihan</h3>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Sudah Ditagih</span>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-medium text-gray-500">Tagihan {{ totalCollected?.month }}</h3>
+                        <span class="text-xs text-gray-400">{{ totalCollected?.count || 0 }} transaksi</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="font-medium text-gray-800">Sudah Ditagih</span>
                         <span class="font-bold text-xl text-green-600">
-                            {{ formatCurrency((pendingSettlement?.cash_collection || 0) + (pendingSettlement?.transfer_collection || 0)) }}
+                            {{ formatCurrency(totalCollected?.total || 0) }}
                         </span>
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">Total semua pembayaran (cash + transfer) yang diklik bayar</p>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Cash</span>
+                            <span class="text-green-600">{{ formatCurrency(totalCollected?.cash || 0) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Transfer</span>
+                            <span class="text-blue-600">{{ formatCurrency(totalCollected?.transfer || 0) }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 

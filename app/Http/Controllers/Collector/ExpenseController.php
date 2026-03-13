@@ -145,11 +145,27 @@ class ExpenseController extends Controller
             ->where('status', 'pending')
             ->exists();
 
+        // Total pembayaran bulan ini oleh penagih
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthEnd = Carbon::now()->endOfMonth();
+        $collectedQuery = \App\Models\Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
+            ->whereBetween('created_at', [$monthStart, $monthEnd]);
+
+        $totalCollected = [
+            'total' => (clone $collectedQuery)->sum('amount'),
+            'cash' => (clone $collectedQuery)->where('payment_method', 'cash')->sum('amount'),
+            'transfer' => (clone $collectedQuery)->where('payment_method', 'transfer')->sum('amount'),
+            'count' => (clone $collectedQuery)->count(),
+            'month' => Carbon::now()->translatedFormat('F Y'),
+        ];
+
         return Inertia::render('Collector/Settlement', [
             'dailySummary' => $dailySummary,
             'settlements' => $settlements,
             'pendingSettlement' => $pendingSettlement,
             'hasPendingSettlement' => $hasPendingSettlement,
+            'totalCollected' => $totalCollected,
             'date' => $date->toDateString(),
         ]);
     }

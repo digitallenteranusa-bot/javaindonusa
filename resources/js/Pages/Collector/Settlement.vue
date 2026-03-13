@@ -107,8 +107,22 @@ const canSettle = computed(() => {
                 </div>
             </div>
 
-            <!-- Pending Settlement Card -->
+            <!-- Total Collected Card -->
             <div class="px-4 -mt-4">
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <h3 class="text-sm font-medium text-gray-500 mb-3">Ringkasan Tagihan</h3>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Sudah Ditagih</span>
+                        <span class="font-bold text-xl text-green-600">
+                            {{ formatCurrency((pendingSettlement?.cash_collection || 0) + (pendingSettlement?.transfer_collection || 0)) }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Total semua pembayaran (cash + transfer) yang diklik bayar</p>
+                </div>
+            </div>
+
+            <!-- Pending Settlement Card -->
+            <div class="px-4 mt-4">
                 <div class="bg-white rounded-xl shadow-sm p-4">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-medium text-gray-500">Belum Disetor</h3>

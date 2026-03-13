@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, h } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { useTheme } from '@/Composables/useTheme'
 
@@ -225,7 +225,17 @@ const icons = {
 }
 
 const getIcon = (name) => ({
-    template: icons[name]?.template || icons.home.template
+    inheritAttrs: true,
+    setup(_, { attrs }) {
+        const svg = icons[name]?.template || icons.home.template
+        return () => h('svg', {
+            ...attrs,
+            innerHTML: svg.replace(/<svg[^>]*>/, '').replace(/<\/svg>/, ''),
+            fill: 'none',
+            stroke: 'currentColor',
+            viewBox: '0 0 24 24',
+        })
+    }
 })
 </script>
 

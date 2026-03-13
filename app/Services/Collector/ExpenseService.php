@@ -322,7 +322,7 @@ class ExpenseService
         int $perPage = 20
     ) {
         return Settlement::where('collector_id', $collector->id)
-            ->with('receivedBy:id,name')
+            ->with(['receivedBy:id,name', 'verifiedBy:id,name'])
             ->orderBy('settlement_date', 'desc')
             ->paginate($perPage);
     }

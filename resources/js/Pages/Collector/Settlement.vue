@@ -197,7 +197,7 @@ const canSettle = computed(() => {
                         <div class="flex justify-between items-start">
                             <div>
                                 <p class="font-semibold text-gray-800">
-                                    {{ formatCurrency(settlement.amount) }}
+                                    {{ formatCurrency(settlement.actual_amount) }}
                                 </p>
                                 <p class="text-sm text-gray-500 mt-1">
                                     {{ formatDate(settlement.settlement_date) }}
@@ -213,8 +213,8 @@ const canSettle = computed(() => {
                                 >
                                     {{ getStatusBadge(settlement.status).text }}
                                 </span>
-                                <p v-if="settlement.verified_by" class="text-xs text-gray-400 mt-2">
-                                    {{ settlement.verified_by.name }}
+                                <p v-if="settlement.received_by" class="text-xs text-gray-400 mt-2">
+                                    {{ settlement.received_by.name }}
                                 </p>
                             </div>
                         </div>
@@ -223,17 +223,17 @@ const canSettle = computed(() => {
                         <div class="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2 text-sm">
                             <div>
                                 <span class="text-gray-500">Tagihan:</span>
-                                <span class="text-green-600 ml-1">{{ formatCurrency(settlement.cash_collected) }}</span>
+                                <span class="text-green-600 ml-1">{{ formatCurrency(settlement.cash_collection) }}</span>
                             </div>
                             <div>
                                 <span class="text-gray-500">Belanja:</span>
-                                <span class="text-red-600 ml-1">{{ formatCurrency(settlement.expense_used) }}</span>
+                                <span class="text-red-600 ml-1">{{ formatCurrency(settlement.approved_expense) }}</span>
                             </div>
                         </div>
 
                         <!-- Rejection reason -->
-                        <div v-if="settlement.status === 'rejected' && settlement.rejection_reason" class="mt-2 p-2 bg-red-50 rounded text-sm text-red-600">
-                            Alasan: {{ settlement.rejection_reason }}
+                        <div v-if="settlement.status === 'rejected' && settlement.verification_notes" class="mt-2 p-2 bg-red-50 rounded text-sm text-red-600">
+                            Alasan: {{ settlement.verification_notes }}
                         </div>
                     </div>
                 </div>

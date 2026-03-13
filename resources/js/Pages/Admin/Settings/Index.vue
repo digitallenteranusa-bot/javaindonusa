@@ -170,6 +170,8 @@ const whatsappForm = useForm({
     // Meta WhatsApp Cloud API specific
     meta_phone_number_id:     props.whatsappConfig?.meta_phone_number_id || '',
     meta_business_account_id: props.whatsappConfig?.meta_business_account_id || '',
+    // WatZap specific
+    watzap_number_key:        props.whatsappConfig?.watzap_number_key || '',
     meta_tpl_payment:         props.whatsappConfig?.meta_tpl_payment || '',
     meta_tpl_invoice:         props.whatsappConfig?.meta_tpl_invoice || '',
     meta_tpl_reminder:        props.whatsappConfig?.meta_tpl_reminder || '',
@@ -810,7 +812,41 @@ const tabs = [
                             </div>
                         </template>
 
-                        <!-- Fields untuk driver selain Mekari & Meta -->
+                        <!-- WatZap specific fields -->
+                        <template v-else-if="whatsappForm.driver === 'watzap'">
+                            <div class="bg-teal-50 border border-teal-200 rounded-lg p-4 text-sm text-teal-800 space-y-3">
+                                <div>
+                                    <p class="font-semibold mb-1">① Login ke Dashboard</p>
+                                    <p>Buka <strong>app.watzap.id</strong> → login dengan akun WatZap Anda.</p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold mb-1">② API Key</p>
+                                    <p>Di menu <strong>Integration</strong> → <strong>API Key & Apps</strong> → salin API Key.</p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold mb-1">③ Number Key</p>
+                                    <p>Di menu <strong>WhatsApp</strong> → <strong>Tab API</strong> → salin Number Key. Gunakan <code class="bg-teal-100 px-1 rounded">ALL</code> untuk menggunakan semua nomor.</p>
+                                </div>
+                                <div>
+                                    <p class="font-semibold mb-1">④ Hubungkan Nomor</p>
+                                    <p>Klik <strong>Add WhatsApp Number</strong> → scan QR Code dengan WhatsApp Business Anda → tunggu sampai status <strong>Connected</strong>.</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">API Key <span class="text-red-500">*</span></label>
+                                <input v-model="whatsappForm.api_key" type="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Kosongkan jika tidak ingin mengubah">
+                                <p class="text-xs text-gray-500 mt-1">API Key dari menu Integration → API Key & Apps</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Number Key <span class="text-red-500">*</span></label>
+                                <input v-model="whatsappForm.watzap_number_key" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Number Key atau ALL untuk semua nomor">
+                                <p class="text-xs text-gray-500 mt-1">Number Key dari menu WhatsApp → Tab API. Isi <code class="bg-gray-100 px-1 rounded">ALL</code> untuk menggunakan semua nomor aktif.</p>
+                            </div>
+                        </template>
+
+                        <!-- Fields untuk driver selain Mekari, Meta & WatZap -->
                         <template v-else>
                             <div v-if="whatsappForm.driver !== 'manual'">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">API Key / Token</label>

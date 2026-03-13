@@ -52,6 +52,8 @@ class SettingsController extends Controller
             'meta_tpl_isolation'        => $settings['whatsapp_meta_tpl_isolation'] ?? '',
             'meta_tpl_otp'              => $settings['whatsapp_meta_tpl_otp'] ?? '',
             'meta_tpl_access'           => $settings['whatsapp_meta_tpl_access_opened'] ?? '',
+            // WatZap specific
+            'watzap_number_key'         => $settings['whatsapp_watzap_number_key'] ?? '',
         ];
 
         // Get Tripay config (mask sensitive keys)
@@ -164,6 +166,8 @@ class SettingsController extends Controller
             'meta_tpl_isolation'       => 'nullable|string|max:255',
             'meta_tpl_otp'             => 'nullable|string|max:255',
             'meta_tpl_access'          => 'nullable|string|max:255',
+            // WatZap specific
+            'watzap_number_key'        => 'nullable|string|max:255',
         ]);
 
         Setting::updateOrCreate(
@@ -228,6 +232,16 @@ class SettingsController extends Controller
                         ['value' => $validated[$formKey]]
                     );
                 }
+            }
+        }
+
+        // WatZap specific settings
+        if ($validated['driver'] === 'watzap') {
+            if (!empty($validated['watzap_number_key'])) {
+                Setting::updateOrCreate(
+                    ['group' => 'notification', 'key' => 'whatsapp_watzap_number_key'],
+                    ['value' => $validated['watzap_number_key']]
+                );
             }
         }
 

@@ -21,6 +21,9 @@ class WhatsAppChannel
     protected string $metaPhoneNumberId;
     protected string $metaBusinessAccountId;
 
+    // WatZap specific
+    protected string $watzapNumberKey;
+
     public function __construct()
     {
         // Read from database first, fallback to config
@@ -36,12 +39,16 @@ class WhatsAppChannel
         $this->metaPhoneNumberId = $this->getSetting('whatsapp_meta_phone_number_id') ?? config('notification.whatsapp.meta.phone_number_id', '');
         $this->metaBusinessAccountId = $this->getSetting('whatsapp_meta_business_account_id') ?? config('notification.whatsapp.meta.business_account_id', '');
 
+        // WatZap specific settings
+        $this->watzapNumberKey = $this->getSetting('whatsapp_watzap_number_key') ?? config('notification.whatsapp.watzap.number_key', '');
+
         $this->baseUrl = match ($this->driver) {
             'fonnte' => 'https://api.fonnte.com',
             'wablas' => 'https://pati.wablas.com',
             'dripsender' => 'https://api.dripsender.id',
             'mekari' => 'https://service.qontak.com',
             'meta' => 'https://graph.facebook.com/v21.0',
+            'watzap' => 'https://api.watzap.id/v1',
             'manual' => '',
             default => '',
         };
@@ -75,6 +82,7 @@ class WhatsAppChannel
             'dripsender' => $this->sendViaDripsender($phone, $message, $options),
             'mekari' => $this->sendViaMekari($phone, $message, $options),
             'meta' => $this->sendViaMeta($phone, $message, $options),
+            'watzap' => $this->sendViaWatzap($phone, $message, $options),
             default => ['success' => false, 'message' => 'Unknown driver'],
         };
     }
@@ -408,6 +416,193 @@ class WhatsAppChannel
     }
 
     /**
+     * Send via WatZap API (WhatsApp Business API)
+     * Documentation: https://api-docs.watzap.id
+     *
+     * Endpoints:
+     * - waba_send_message: Send text message
+     * - waba_send_message_template: Send template message
+     * - waba_send_image_url: Send image via URL
+     * - waba_send_file_url: Send file/document via URL
+     * - waba_send_voice_url: Send voice/audio via URL
+     */
+    protected function sendViaWatzap(string $phone, string $message, array $options = []): array
+    {
+        try {
+            if (empty($this->watzapNumberKey)) {
+                return ['success' => false, 'message' => 'WatZap Number Key tidak dikonfigurasi'];
+            }
+
+            // Determine which endpoint to use based on options
+            if (!empty($options['template_name'])) {
+                return $this->sendWatzapTemplate($phone, $options);
+            }
+
+            if (!empty($options['image'])) {
+                return $this->sendWatzapImage($phone, $message, $options['image']);
+            }
+
+            if (!empty($options['document'])) {
+                return $this->sendWatzapFile($phone, $message, $options['document']);
+            }
+
+            if (!empty($options['voice'])) {
+                return $this->sendWatzapVoice($phone, $options['voice']);
+            }
+
+            // Default: send text message
+            $payload = [
+                'api_key' => $this->apiKey,
+                'number_key' => $this->watzapNumberKey,
+                'phone_no' => $phone,
+                'message' => $message,
+            ];
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUrl . '/waba_send_message', $payload);
+
+            return $this->parseWatzapResponse($response, 'WatZap');
+        } catch (\Exception $e) {
+            Log::error('WatZap API error', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Send template message via WatZap
+     */
+    protected function sendWatzapTemplate(string $phone, array $options): array
+    {
+        $payload = [
+            'api_key' => $this->apiKey,
+            'number_key' => $this->watzapNumberKey,
+            'phone_no' => $phone,
+            'template_name' => $options['template_name'],
+        ];
+
+        if (!empty($options['params']) && is_array($options['params'])) {
+            $payload['parameters'] = $options['params'];
+        }
+
+        if (!empty($options['language'])) {
+            $payload['language'] = $options['language'];
+        }
+
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post($this->baseUrl . '/waba_send_message_template', $payload);
+
+        return $this->parseWatzapResponse($response, 'WatZap Template');
+    }
+
+    /**
+     * Send image via WatZap
+     */
+    protected function sendWatzapImage(string $phone, string $caption, string $imageUrl): array
+    {
+        $payload = [
+            'api_key' => $this->apiKey,
+            'number_key' => $this->watzapNumberKey,
+            'phone_no' => $phone,
+            'image_url' => $imageUrl,
+            'caption' => $caption,
+        ];
+
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post($this->baseUrl . '/waba_send_image_url', $payload);
+
+        return $this->parseWatzapResponse($response, 'WatZap Image');
+    }
+
+    /**
+     * Send file/document via WatZap
+     */
+    protected function sendWatzapFile(string $phone, string $caption, string $fileUrl): array
+    {
+        $payload = [
+            'api_key' => $this->apiKey,
+            'number_key' => $this->watzapNumberKey,
+            'phone_no' => $phone,
+            'file_url' => $fileUrl,
+            'caption' => $caption,
+        ];
+
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post($this->baseUrl . '/waba_send_file_url', $payload);
+
+        return $this->parseWatzapResponse($response, 'WatZap File');
+    }
+
+    /**
+     * Send voice/audio via WatZap
+     */
+    protected function sendWatzapVoice(string $phone, string $voiceUrl): array
+    {
+        $payload = [
+            'api_key' => $this->apiKey,
+            'number_key' => $this->watzapNumberKey,
+            'phone_no' => $phone,
+            'voice_url' => $voiceUrl,
+        ];
+
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post($this->baseUrl . '/waba_send_voice_url', $payload);
+
+        return $this->parseWatzapResponse($response, 'WatZap Voice');
+    }
+
+    /**
+     * Parse WatZap API response
+     *
+     * Response codes:
+     * 200   = Success
+     * 1002  = Invalid API Key
+     * 1003  = Invalid Number Key
+     * 1004  = Pairing Failed
+     * 1005  = Fatal Error (Dynamic Message)
+     * 1006  = Other Error
+     * 3001  = Need Upgrade Package
+     */
+    protected function parseWatzapResponse($response, string $driver = 'WatZap'): array
+    {
+        $data = $response->json();
+        $statusCode = $data['status'] ?? $data['code'] ?? null;
+
+        if ($response->successful() && ($statusCode === 200 || $statusCode === true || ($data['success'] ?? false))) {
+            return [
+                'success' => true,
+                'message' => "Pesan terkirim via {$driver}",
+                'message_id' => $data['message_id'] ?? $data['id'] ?? null,
+                'response' => $data,
+            ];
+        }
+
+        $errorMessages = [
+            1002 => 'API Key tidak valid',
+            1003 => 'Number Key tidak valid',
+            1004 => 'Pairing gagal, akses ditolak',
+            1005 => 'Error pada dynamic message',
+            1006 => 'Terjadi kesalahan',
+            3001 => 'Perlu upgrade paket WatZap',
+        ];
+
+        $errorMsg = $errorMessages[$statusCode]
+            ?? $data['message']
+            ?? $data['error']
+            ?? 'Gagal mengirim pesan';
+
+        return [
+            'success' => false,
+            'message' => $errorMsg,
+            'response' => $data,
+        ];
+    }
+
+    /**
      * Generate manual WhatsApp URL (wa.me link)
      * For cases where automatic sending is not available
      */
@@ -498,6 +693,25 @@ class WhatsAppChannel
                 ];
             }
 
+            // WatZap: cek API key info
+            if ($this->driver === 'watzap') {
+                $response = Http::withHeaders([
+                    'Content-Type' => 'application/json',
+                ])->post($this->baseUrl . '/checking_key', [
+                    'api_key' => $this->apiKey,
+                ]);
+
+                $data = $response->json();
+
+                return [
+                    'success' => $response->successful() && ($data['status'] ?? false),
+                    'status' => $response->successful() && ($data['status'] ?? false)
+                        ? 'Connected - WatZap WABA'
+                        : ($data['message'] ?? 'API Key tidak valid'),
+                    'response' => $data,
+                ];
+            }
+
             $endpoint = match ($this->driver) {
                 'fonnte' => $this->baseUrl . '/device',
                 'wablas' => $this->baseUrl . '/api/device/info',
@@ -555,6 +769,11 @@ class WhatsAppChannel
                 'website' => 'https://developers.facebook.com/docs/whatsapp/cloud-api',
                 'description' => 'WhatsApp Business API langsung dari Meta (official)',
                 'requires_template' => true,
+            ],
+            'watzap' => [
+                'name' => 'WatZap',
+                'website' => 'https://watzap.id',
+                'description' => 'WhatsApp Business API (Official Meta Tech Provider)',
             ],
             'manual' => [
                 'name' => 'Manual (wa.me)',

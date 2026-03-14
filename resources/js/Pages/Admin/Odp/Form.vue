@@ -105,11 +105,10 @@ const openMapPicker = async () => {
     map = L.map(mapContainer.value).setView([defaultLat, defaultLng], 17)
 
     // Satellite layer
-    L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-        attribution: '© Google',
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri',
         maxZoom: 22,
-        maxNativeZoom: 21
+        maxNativeZoom: 18
     }).addTo(map)
 
     // Labels overlay

@@ -40,14 +40,6 @@ onMounted(async () => {
     L = await import('leaflet')
     await import('leaflet/dist/leaflet.css')
 
-    try {
-        await import('leaflet.markercluster')
-        await import('leaflet.markercluster/dist/MarkerCluster.css')
-        await import('leaflet.markercluster/dist/MarkerCluster.Default.css')
-    } catch (e) {
-        console.log('MarkerCluster not available')
-    }
-
     initMap()
     loadData()
 })
@@ -72,13 +64,8 @@ const initMap = () => {
 
     baseLayers.satellite.addTo(map.value)
 
-    if (L.markerClusterGroup) {
-        markerLayers.value.customers = L.markerClusterGroup({ maxClusterRadius: 50 })
-        markerLayers.value.odps = L.markerClusterGroup({ maxClusterRadius: 30 })
-    } else {
-        markerLayers.value.customers = L.layerGroup()
-        markerLayers.value.odps = L.layerGroup()
-    }
+    markerLayers.value.customers = L.layerGroup()
+    markerLayers.value.odps = L.layerGroup()
 
     map.value.addLayer(markerLayers.value.customers)
     map.value.addLayer(markerLayers.value.odps)

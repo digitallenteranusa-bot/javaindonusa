@@ -33,6 +33,9 @@ class MappingController extends Controller
      */
     public function getCustomers(Request $request)
     {
+        $center = $this->getCenterPoint();
+        $range = 0.5; // ~55km radius dari titik pusat
+
         $query = Customer::select([
             'id',
             'customer_id',
@@ -48,7 +51,11 @@ class MappingController extends Controller
         ])
             ->with(['package:id,name', 'area:id,name', 'odp:id,name,code'])
             ->whereNotNull('latitude')
-            ->whereNotNull('longitude');
+            ->whereNotNull('longitude')
+            ->where('latitude', '!=', 0)
+            ->where('longitude', '!=', 0)
+            ->whereBetween('latitude', [$center['lat'] - $range, $center['lat'] + $range])
+            ->whereBetween('longitude', [$center['lng'] - $range, $center['lng'] + $range]);
 
         if ($request->filled('area_id')) {
             $query->where('area_id', $request->area_id);
@@ -56,12 +63,6 @@ class MappingController extends Controller
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
-        }
-
-        if ($request->filled('bounds')) {
-            $bounds = $request->bounds;
-            $query->whereBetween('latitude', [$bounds['south'], $bounds['north']])
-                ->whereBetween('longitude', [$bounds['west'], $bounds['east']]);
         }
 
         $customers = $query->limit(2000)->get()->map(function ($customer) {
@@ -92,6 +93,9 @@ class MappingController extends Controller
      */
     public function getOdps(Request $request)
     {
+        $center = $this->getCenterPoint();
+        $range = 0.5;
+
         $query = Odp::select([
             'id',
             'name',
@@ -106,7 +110,11 @@ class MappingController extends Controller
         ])
             ->with(['area:id,name'])
             ->whereNotNull('latitude')
-            ->whereNotNull('longitude');
+            ->whereNotNull('longitude')
+            ->where('latitude', '!=', 0)
+            ->where('longitude', '!=', 0)
+            ->whereBetween('latitude', [$center['lat'] - $range, $center['lat'] + $range])
+            ->whereBetween('longitude', [$center['lng'] - $range, $center['lng'] + $range]);
 
         if ($request->filled('area_id')) {
             $query->where('area_id', $request->area_id);
@@ -114,12 +122,6 @@ class MappingController extends Controller
 
         if ($request->has('active_only')) {
             $query->active();
-        }
-
-        if ($request->filled('bounds')) {
-            $bounds = $request->bounds;
-            $query->whereBetween('latitude', [$bounds['south'], $bounds['north']])
-                ->whereBetween('longitude', [$bounds['west'], $bounds['east']]);
         }
 
         $odps = $query->limit(500)->get()->map(function ($odp) {

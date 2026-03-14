@@ -53,10 +53,7 @@ onMounted(async () => {
 })
 
 const initMap = () => {
-    map.value = L.map(mapContainer.value, {
-        markerZoomAnimation: false,
-        zoomSnap: 1,
-    }).setView(
+    map.value = L.map(mapContainer.value).setView(
         [props.centerPoint.lat, props.centerPoint.lng],
         17
     )
@@ -408,6 +405,10 @@ const zoomToAll = () => {
 </template>
 
 <style>
+.leaflet-tile {
+    width: 256.5px !important;
+    height: 256.5px !important;
+}
 .custom-marker,
 .my-location-marker {
     background: none !important;

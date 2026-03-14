@@ -379,7 +379,7 @@ class DashboardController extends Controller
                 ->whereBetween('longitude', [$bounds['west'], $bounds['east']]);
         }
 
-        $customers = $query->limit(500)->get()->map(function ($customer) {
+        $customers = $query->limit(2000)->get()->map(function ($customer) {
             return [
                 'id' => $customer->id,
                 'customer_id' => $customer->customer_id,
@@ -438,7 +438,7 @@ class DashboardController extends Controller
                 ->whereBetween('longitude', [$bounds['west'], $bounds['east']]);
         }
 
-        $odps = $query->limit(200)->get()->map(function ($odp) {
+        $odps = $query->limit(500)->get()->map(function ($odp) {
             return [
                 'id' => $odp->id,
                 'name' => $odp->name,

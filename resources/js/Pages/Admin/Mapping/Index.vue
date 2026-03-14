@@ -57,9 +57,12 @@ onMounted(async () => {
 })
 
 const initMap = () => {
-    map.value = L.map(mapContainer.value).setView(
+    map.value = L.map(mapContainer.value, {
+        markerZoomAnimation: false,
+        zoomSnap: 1,
+    }).setView(
         [props.centerPoint.lat, props.centerPoint.lng],
-        17 // Zoom lebih dekat untuk lihat rumah
+        17
     )
 
     // Base layers

@@ -91,23 +91,51 @@ class CollectorService
             ->whereIn('status', ['pending', 'partial', 'overdue'])
             ->sum('remaining_amount');
 
-        // Total yang sudah dibayar (by this collector dalam periode)
-        $collected = Payment::where('collector_id', $collector->id)
-            ->where('status', 'verified')
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
-            ->sum('amount');
-
         // Total hutang pelanggan
         $totalDebt = Customer::whereIn('id', $customerIds)
             ->sum('total_debt');
 
+        // Pendapatan bulan ini (cash + transfer)
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthEnd = Carbon::now()->endOfMonth();
+        $monthPayments = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->get();
+
+        $collectedThisMonth = $monthPayments->sum('amount');
+        $cashThisMonth = $monthPayments->where('payment_method', 'cash')->sum('amount');
+        $transferThisMonth = $monthPayments->where('payment_method', 'transfer')->sum('amount');
+
+        // Pendapatan hari ini (cash + transfer)
+        $todayPayments = Payment::where('collector_id', $collector->id)
+            ->where('status', 'verified')
+            ->whereDate('created_at', Carbon::today())
+            ->get();
+
+        $collectedToday = $todayPayments->sum('amount');
+        $cashToday = $todayPayments->where('payment_method', 'cash')->sum('amount');
+        $transferToday = $todayPayments->where('payment_method', 'transfer')->sum('amount');
+
         return [
             'total_billable' => $totalBillable,
-            'collected' => $collected,
+            'collected' => $collectedThisMonth,
             'total_debt' => $totalDebt,
             'collection_rate' => $totalBillable > 0
-                ? round(($collected / $totalBillable) * 100, 2)
+                ? round(($collectedThisMonth / $totalBillable) * 100, 2)
                 : 0,
+            'today' => [
+                'total' => $collectedToday,
+                'cash' => $cashToday,
+                'transfer' => $transferToday,
+                'count' => $todayPayments->count(),
+            ],
+            'this_month' => [
+                'total' => $collectedThisMonth,
+                'cash' => $cashThisMonth,
+                'transfer' => $transferThisMonth,
+                'count' => $monthPayments->count(),
+            ],
         ];
     }
 

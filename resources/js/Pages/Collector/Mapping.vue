@@ -64,8 +64,9 @@ const initMap = () => {
         maxNativeZoom: 19
     })
 
-    baseLayers.satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    baseLayers.satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
         attribution: '© Google',
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
         maxZoom: 22,
         maxNativeZoom: 21
     })

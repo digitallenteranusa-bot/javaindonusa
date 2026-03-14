@@ -52,14 +52,12 @@ const initMap = () => {
 
     baseLayers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap',
-        maxZoom: 22,
-        maxNativeZoom: 19
+        maxZoom: 19
     })
 
     baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: '© Esri',
-        maxZoom: 22,
-        maxNativeZoom: 18
+        maxZoom: 19
     })
 
     baseLayers.satellite.addTo(map.value)

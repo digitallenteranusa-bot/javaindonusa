@@ -129,12 +129,14 @@ const openMapPicker = async () => {
     // Satellite layer
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri',
-        maxZoom: 19
+        maxZoom: 22,
+        maxNativeZoom: 19
     }).addTo(map)
 
     // Labels overlay
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
+        maxZoom: 22,
+        maxNativeZoom: 19,
         pane: 'shadowPane'
     }).addTo(map)
 

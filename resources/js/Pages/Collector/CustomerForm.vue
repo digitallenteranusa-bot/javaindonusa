@@ -185,9 +185,9 @@ const openMapPicker = async () => {
     }).setView([defaultLat, defaultLng], 17)
 
     // Satellite layer
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
         maxZoom: 22,
-        maxNativeZoom: 19
+        maxNativeZoom: 21
     }).addTo(map)
 
     // Labels overlay

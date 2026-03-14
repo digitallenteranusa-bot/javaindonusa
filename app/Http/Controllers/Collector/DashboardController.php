@@ -365,7 +365,9 @@ class DashboardController extends Controller
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->where('latitude', '!=', 0)
-            ->where('longitude', '!=', 0);
+            ->where('longitude', '!=', 0)
+            ->whereBetween('latitude', [-11, 6])
+            ->whereBetween('longitude', [95, 141]);
 
         if ($request->filled('area_id')) {
             $query->where('area_id', $request->area_id);
@@ -426,7 +428,9 @@ class DashboardController extends Controller
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->where('latitude', '!=', 0)
-            ->where('longitude', '!=', 0);
+            ->where('longitude', '!=', 0)
+            ->whereBetween('latitude', [-11, 6])
+            ->whereBetween('longitude', [95, 141]);
 
         if ($request->filled('area_id')) {
             $query->where('area_id', $request->area_id);

@@ -1,45 +1,249 @@
 # Sprint 1: Backup Otomatis & DB Transaction Wrapping
 
-## 1. Backup Otomatis (spatie/laravel-backup v8.8)
+---
 
-### Lokasi File Backup di Server
+## 1. Panduan Update Server (Step by Step)
+
+### Tahap 1 — Masuk ke Server
+
+```bash
+ssh root@IP_SERVER
+```
+
+### Tahap 2 — Pindah ke Direktori Aplikasi
+
+```bash
+cd /var/www/billing
+```
+
+### Tahap 3 — Simpan Perubahan Lokal (jika ada)
+
+```bash
+git stash
+```
+
+### Tahap 4 — Tarik Kode Terbaru dari GitHub
+
+```bash
+git pull origin main
+```
+
+> Jika error `untracked working tree files would be overwritten`:
+> ```bash
+> rm file-yang-disebutkan-di-error
+> git pull origin main
+> ```
+
+### Tahap 5 — Install/Update Dependency PHP
+
+```bash
+composer update --no-dev --optimize-autoloader --ignore-platform-reqs
+```
+
+> Jika muncul `Continue as root/super user [yes]?`, ketik `yes` lalu Enter.
+
+### Tahap 6 — Jalankan Migrasi Database
+
+```bash
+php artisan migrate --force
+```
+
+### Tahap 7 — Pastikan Folder yang Dibutuhkan Ada
+
+```bash
+mkdir -p storage/framework/{views,cache,sessions,testing}
+```
+
+### Tahap 8 — Bersihkan Cache Lama & Buat Cache Baru
+
+```bash
+php artisan optimize:clear
+```
+
+```bash
+php artisan optimize
+```
+
+### Tahap 9 — Restart Queue Worker
+
+```bash
+php artisan queue:restart
+```
+
+### Tahap 10 — Verifikasi Aplikasi Jalan Normal
+
+```bash
+php artisan about
+```
+
+> Pastikan tidak ada error. Harusnya muncul info Laravel Version, PHP Version, dll.
+
+---
+
+## 2. Panduan Setup Backup (Pertama Kali)
+
+> Backup sudah otomatis aktif setelah update kode. Bagian ini hanya perlu dilakukan **sekali**.
+
+### Tahap 1 — Cek Extension PHP zip
+
+```bash
+php -m | grep zip
+```
+
+> Jika tidak muncul `zip`, install dulu:
+> ```bash
+> apt install php8.2-zip -y
+> systemctl restart php8.2-fpm
+> ```
+
+### Tahap 2 — Cek mysqldump Tersedia
+
+```bash
+which mysqldump
+```
+
+> Harusnya muncul `/usr/bin/mysqldump`. Jika tidak:
+> ```bash
+> apt install mysql-client -y
+> ```
+
+### Tahap 3 — Setup Email Notifikasi
+
+Edit file `.env`:
+
+```bash
+nano .env
+```
+
+Tambahkan/edit bagian ini:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=infojavaindonusa@gmail.com
+MAIL_PASSWORD="vgsk bnhz plot msal"
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="infojavaindonusa@gmail.com"
+MAIL_FROM_NAME="${APP_NAME}"
+
+BACKUP_NOTIFICATION_EMAIL=infojavaindonusa@gmail.com
+```
+
+> **PENTING:**
+> - Password yang ada spasi HARUS dibungkus tanda kutip `"..."`
+> - `MAIL_FROM_ADDRESS` HARUS sama dengan `MAIL_USERNAME` untuk Gmail
+> - App Password Gmail dibuat di: https://myaccount.google.com/apppasswords
+
+Simpan: `Ctrl+O` → Enter → `Ctrl+X`
+
+### Tahap 4 — Clear Cache Setelah Edit .env
+
+```bash
+php artisan optimize:clear
+```
+
+```bash
+php artisan optimize
+```
+
+### Tahap 5 — Pastikan Crontab Scheduler Aktif
+
+```bash
+crontab -e
+```
+
+Pastikan ada baris ini (jika belum, tambahkan):
+
+```
+* * * * * cd /var/www/billing && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Simpan dan keluar.
+
+### Tahap 6 — Test Backup Manual
+
+```bash
+php artisan backup:run --only-db
+```
+
+> Harusnya muncul:
+> ```
+> Starting backup...
+> Dumping database billing_javaindonusa...
+> ...
+> Backup completed!
+> ```
+
+### Tahap 7 — Verifikasi Backup Tersimpan
+
+```bash
+php artisan backup:list
+```
+
+> Harusnya muncul tabel dengan Healthy ✅ dan jumlah backup > 0.
+
+### Tahap 8 — Cek Email Notifikasi
+
+Buka inbox email (`infojavaindonusa@gmail.com`). Harusnya ada email "Successful backup".
+
+---
+
+## 3. Lokasi File Backup di Server
 
 ```
 /var/www/billing/storage/app/private/ISP Billing - Java Indonusa/
 ```
 
-File berformat `.zip`, contoh: `2026-03-16-22-06-50.zip`
+### Lihat Daftar File Backup
 
-### Jadwal Backup (Otomatis via Scheduler)
+```bash
+find storage/app -name "*.zip" -type f -exec ls -lh {} \;
+```
 
-| Jadwal | Command | Isi Backup |
-|--------|---------|------------|
-| **Setiap hari 02:00 WIB** | `backup:run --only-db` | Database saja (~185 KB compressed) |
-| **Minggu 03:00 WIB** | `backup:run` | Database + .env + config + migrations + views |
-| **Minggu 04:00 WIB** | `backup:clean` | Hapus backup lama sesuai retention policy |
-| **Setiap hari 08:00 WIB** | `backup:monitor` | Cek kesehatan backup, email jika gagal |
+### Download Backup ke PC
 
-> Scheduler harus aktif di crontab server:
-> ```
-> * * * * * cd /var/www/billing && php artisan schedule:run >> /dev/null 2>&1
-> ```
+**Dari terminal PC lokal (bukan server):**
 
-### Retention Policy (Berapa Lama Backup Disimpan)
+```bash
+scp root@IP_SERVER:"/var/www/billing/storage/app/private/ISP Billing - Java Indonusa/*.zip" ~/Downloads/
+```
 
-- 7 hari pertama: simpan semua backup
-- Setelahnya: 1 backup per hari selama 30 hari
-- Setelahnya: 1 backup per minggu selama 8 minggu
-- Setelahnya: 1 backup per bulan selama 6 bulan
-- Setelahnya: 1 backup per tahun selama 2 tahun
-- Max total storage: 5 GB
+**Atau download file tertentu:**
 
-### Command Manual
+```bash
+scp root@IP_SERVER:"/var/www/billing/storage/app/private/ISP Billing - Java Indonusa/2026-03-16-22-06-50.zip" ~/Downloads/
+```
+
+---
+
+## 4. Jadwal Backup Otomatis
+
+| Jadwal | Apa yang Dilakukan | Isi |
+|--------|-------------------|-----|
+| Setiap hari 02:00 WIB | Backup database | Semua tabel (~185 KB compressed) |
+| Minggu 03:00 WIB | Full backup | Database + .env + config + migrations + views |
+| Minggu 04:00 WIB | Cleanup | Hapus backup lama otomatis |
+| Setiap hari 08:00 WIB | Health check | Cek & email jika backup gagal |
+
+### Berapa Lama Backup Disimpan
+
+- 7 hari: simpan semua
+- 30 hari: 1 per hari
+- 8 minggu: 1 per minggu
+- 6 bulan: 1 per bulan
+- 2 tahun: 1 per tahun
+- Max total: 5 GB
+
+---
+
+## 5. Command Backup Manual
 
 ```bash
 # Backup database saja
 php artisan backup:run --only-db
 
-# Full backup (database + config files)
+# Full backup (database + config)
 php artisan backup:run
 
 # Lihat daftar backup
@@ -52,167 +256,58 @@ php artisan backup:clean
 php artisan backup:monitor
 ```
 
-### Download Backup dari Server ke PC
-
-**Cara 1 — SCP (dari terminal PC lokal, bukan server):**
-```bash
-scp root@IP_SERVER:"/var/www/billing/storage/app/private/ISP Billing - Java Indonusa/*.zip" ~/Downloads/
-```
-
-**Cara 2 — Download file tertentu:**
-```bash
-# Cek daftar file backup di server dulu
-find storage/app -name "*.zip" -type f -exec ls -lh {} \;
-
-# Dari PC lokal, download file spesifik
-scp root@IP_SERVER:"/var/www/billing/storage/app/private/ISP Billing - Java Indonusa/2026-03-16-22-06-50.zip" ~/Downloads/
-```
-
-**Cara 3 — Copy ke folder public sementara lalu download via browser:**
-```bash
-# Di server
-cp "/var/www/billing/storage/app/private/ISP Billing - Java Indonusa/2026-03-16-22-06-50.zip" /var/www/billing/public/backup-temp.zip
-
-# Download via browser: https://domain-kamu.com/backup-temp.zip
-# PENTING: Hapus setelah download!
-rm /var/www/billing/public/backup-temp.zip
-```
-
-### Notifikasi Email
-
-Backup akan mengirim email notifikasi ke alamat di `.env`:
-- **Backup gagal** → email dikirim
-- **Backup berhasil** → email dikirim
-- **Backup unhealthy** (terlalu lama tidak backup) → email dikirim
-
-Jika tidak ingin notifikasi email, kosongkan `BACKUP_NOTIFICATION_EMAIL` di `.env`.
-
-### Konfigurasi .env (di Server)
-
-```env
-# --- SMTP EMAIL (wajib untuk notifikasi) ---
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=emailkamu@gmail.com
-MAIL_PASSWORD="xxxx xxxx xxxx xxxx"
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS="emailkamu@gmail.com"
-MAIL_FROM_NAME="${APP_NAME}"
-
-# --- BACKUP ---
-# Email penerima notifikasi backup (kosongkan untuk disable)
-BACKUP_NOTIFICATION_EMAIL=emailkamu@gmail.com
-
-# Password enkripsi arsip backup (opsional, kosongkan jika tidak perlu)
-BACKUP_ARCHIVE_PASSWORD=
-
-# Slack webhook untuk notifikasi backup (opsional)
-BACKUP_SLACK_WEBHOOK=
-```
-
-> **Gmail App Password:** Buat di https://myaccount.google.com/apppasswords
-> (2-Step Verification harus aktif). Password yang ada spasi **harus dibungkus tanda kutip**.
-
-### Catatan Penting
-
-- Extension `ext-zip` harus aktif di PHP server (`php -m | grep zip`)
-- `mysqldump` harus tersedia di server (biasanya sudah ada)
-- Log backup di `storage/logs/backup.log`
-- `MAIL_FROM_ADDRESS` harus sama dengan `MAIL_USERNAME` untuk Gmail SMTP
-
 ---
 
-## 2. Perintah Update Server
-
-Setiap kali ada perubahan kode yang di-push ke GitHub, jalankan ini di server:
-
-```bash
-cd /var/www/billing && \
-git stash && \
-git pull origin main && \
-composer update --no-dev --optimize-autoloader --ignore-platform-reqs && \
-php artisan migrate --force && \
-mkdir -p storage/framework/{views,cache,sessions,testing} && \
-mkdir -p storage/app/backups && \
-php artisan optimize:clear && \
-php artisan optimize && \
-php artisan queue:restart
-```
-
-> **PENTING:** Copy-paste dalam satu kali, jangan enter di tengah command.
-> Jika ada prompt `Continue as root/super user [yes]?`, ketik `yes` lalu Enter.
-
-### Troubleshooting Deploy
+## 6. Troubleshooting
 
 | Masalah | Solusi |
 |---------|--------|
-| `git pull` gagal karena file conflict | `git stash` sudah di-handle di perintah update |
-| `untracked working tree files would be overwritten` | `rm file-yang-konflik` lalu `git pull` ulang |
-| `artisan: command not found` | Jangan enter di tengah command, paste satu baris |
-| `The environment file is invalid` | Cek `.env`, value yang ada spasi harus dibungkus `"..."` |
+| `git pull` gagal file conflict | Jalankan `git stash` dulu, lalu `git pull` ulang |
+| `untracked working tree files would be overwritten` | `rm file-yang-disebutkan` lalu `git pull` ulang |
+| `artisan: command not found` | Jangan enter di tengah command, paste utuh satu kali |
+| `The environment file is invalid` | Value di `.env` yang ada spasi harus dibungkus `"..."` |
 | `Disk [xxx] does not have a configured driver` | `php artisan optimize:clear && php artisan optimize` |
-| Backup gagal `Sending notification failed` | Cek SMTP config di `.env`, atau kosongkan `BACKUP_NOTIFICATION_EMAIL` |
+| `Sending notification failed` | Cek SMTP config di `.env`, atau kosongkan `BACKUP_NOTIFICATION_EMAIL` |
+| `Class "ZipArchive" not found` | `apt install php8.2-zip -y && systemctl restart php8.2-fpm` |
+| `mysqldump not found` | `apt install mysql-client -y` |
+| `Continue as root/super user [yes]?` | Ketik `yes` lalu Enter |
 
 ---
 
-## 3. DB Transaction Wrapping
+## 7. Perubahan Teknis (DB Transaction Wrapping)
 
-### Masalah yang Ditemukan
+### Apa yang Diperbaiki
 
-Beberapa operasi kritis melakukan **multiple writes tanpa transaction**, berisiko data inkonsisten jika terjadi error di tengah proses:
+7 method di 3 file service diperbaiki agar lebih aman untuk data:
 
-#### A. DebtService — 3 method tanpa transaction
+| File | Method | Perbaikan |
+|------|--------|-----------|
+| `DebtService.php` | `addCredit()` | Dibungkus `DB::transaction()` |
+| `DebtService.php` | `useCredit()` | Dibungkus `DB::transaction()` |
+| `DebtService.php` | `recalculateDebt()` | Dibungkus `DB::transaction()` + `lockForUpdate()` |
+| `InvoiceService.php` | `updateOverdueStatus()` | Dibungkus `DB::transaction()` |
+| `InvoiceService.php` | `generateInvoiceNumber()` | Tambah `lockForUpdate()` (cegah nomor duplikat) |
+| `DebtIsolationService.php` | `generateInvoiceNumber()` | Tambah `lockForUpdate()` (cegah nomor duplikat) |
+| `DebtIsolationService.php` | `generatePaymentNumber()` | Tambah `lockForUpdate()` (cegah nomor duplikat) |
 
-| Method | Masalah | Risiko |
-|--------|---------|--------|
-| `addCredit()` | `increment()` + `create()` terpisah | Credit balance naik tapi DebtHistory tidak tercatat |
-| `useCredit()` | `decrement()` + `update()` + `decrement()` + `create()` terpisah | Invoice ter-update tapi hutang tidak berkurang, atau sebaliknya |
-| `recalculateDebt()` | `update()` + `create()` terpisah | Total debt berubah tanpa audit trail |
+### Apakah Mengubah Data yang Sudah Ada?
 
-#### B. InvoiceService — 2 masalah
-
-| Method | Masalah | Risiko |
-|--------|---------|--------|
-| `updateOverdueStatus()` | Loop update tanpa transaction | Sebagian invoice ter-update, sebagian tidak |
-| `generateInvoiceNumber()` | Tidak pakai `lockForUpdate()` | Race condition: 2 invoice dapat nomor yang sama |
-
-#### C. DebtIsolationService — 2 masalah
-
-| Method | Masalah | Risiko |
-|--------|---------|--------|
-| `generateInvoiceNumber()` | Tidak pakai `lockForUpdate()` | Race condition pada concurrent invoice generation |
-| `generatePaymentNumber()` | Tidak pakai `lockForUpdate()` | Race condition pada concurrent payment creation |
-
-### Perbaikan yang Dilakukan
-
-#### DebtService (`app/Services/Billing/DebtService.php`)
-
-1. **`addCredit()`** — Dibungkus `DB::transaction()`
-2. **`useCredit()`** — Dibungkus `DB::transaction()`
-3. **`recalculateDebt()`** — Dibungkus `DB::transaction()` + `lockForUpdate()`
-
-#### InvoiceService (`app/Services/Billing/InvoiceService.php`)
-
-4. **`updateOverdueStatus()`** — Diganti dari loop ke single bulk update dalam `DB::transaction()`
-5. **`generateInvoiceNumber()`** — Pakai `lockForUpdate()` (prevent race condition)
-
-#### DebtIsolationService (`app/Services/Billing/DebtIsolationService.php`)
-
-6. **`generateInvoiceNumber()`** — Pakai `lockForUpdate()`
-7. **`generatePaymentNumber()`** — Pakai `lockForUpdate()`
+**TIDAK.** Semua perubahan hanya:
+- Membungkus operasi yang sudah ada dengan safety net (transaction)
+- Menambah lock untuk mencegah race condition
+- Menambah fitur backup (baca-saja, tidak menulis ke database)
 
 ---
 
-## 4. File yang Diubah
+## 8. File yang Diubah
 
 | File | Perubahan |
 |------|-----------|
 | `composer.json` | Tambah `spatie/laravel-backup:^8.0` |
-| `config/backup.php` | Baru — konfigurasi backup (Gzip, retention, notifikasi) |
-| `config/database.php` | Tambah `dump` config MySQL (useSingleTransaction) |
-| `routes/console.php` | Jadwal backup otomatis (harian + mingguan) |
+| `config/backup.php` | Baru — konfigurasi backup |
+| `config/database.php` | Tambah config MySQL dump |
+| `routes/console.php` | Jadwal backup otomatis |
 | `.env.example` | Tambah section BACKUP |
-| `app/Services/Billing/DebtService.php` | Transaction wrap: `addCredit()`, `useCredit()`, `recalculateDebt()` |
-| `app/Services/Billing/InvoiceService.php` | Transaction wrap + lock: `updateOverdueStatus()`, `generateInvoiceNumber()` |
-| `app/Services/Billing/DebtIsolationService.php` | Lock fix: `generateInvoiceNumber()`, `generatePaymentNumber()` |
+| `app/Services/Billing/DebtService.php` | Transaction wrap 3 method |
+| `app/Services/Billing/InvoiceService.php` | Transaction wrap + lock 2 method |
+| `app/Services/Billing/DebtIsolationService.php` | Lock fix 2 method |

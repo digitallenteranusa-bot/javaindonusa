@@ -2,60 +2,161 @@
 
 ## 1. Backup Otomatis (spatie/laravel-backup v8.8)
 
-### Apa yang Dipasang
-- Package `spatie/laravel-backup:^8.0` dengan Gzip compression untuk DB dump
-- Disk `backup` di `config/filesystems.php` → `storage/app/backups/`
-- Config lengkap di `config/backup.php`
-- Env variable baru di `.env.example`
+### Lokasi File Backup di Server
+
+```
+/var/www/billing/storage/app/private/ISP Billing - Java Indonusa/
+```
+
+File berformat `.zip`, contoh: `2026-03-16-22-06-50.zip`
 
 ### Jadwal Backup (Otomatis via Scheduler)
 
-| Jadwal | Command | Keterangan |
+| Jadwal | Command | Isi Backup |
 |--------|---------|------------|
-| **Setiap hari 02:00 WIB** | `backup:run --only-db` | Backup database saja (cepat, ~1-5 MB compressed) |
-| **Minggu 03:00 WIB** | `backup:run` | Full backup (DB + config + migrations + views) |
+| **Setiap hari 02:00 WIB** | `backup:run --only-db` | Database saja (~185 KB compressed) |
+| **Minggu 03:00 WIB** | `backup:run` | Database + .env + config + migrations + views |
 | **Minggu 04:00 WIB** | `backup:clean` | Hapus backup lama sesuai retention policy |
-| **Setiap hari 08:00 WIB** | `backup:monitor` | Cek kesehatan backup, kirim notifikasi jika gagal |
+| **Setiap hari 08:00 WIB** | `backup:monitor` | Cek kesehatan backup, email jika gagal |
 
-### Retention Policy
-- 7 hari: simpan semua backup
-- 30 hari: simpan 1 backup per hari
-- 8 minggu: simpan 1 backup per minggu
-- 6 bulan: simpan 1 backup per bulan
-- 2 tahun: simpan 1 backup per tahun
-- Max storage: 5 GB
+> Scheduler harus aktif di crontab server:
+> ```
+> * * * * * cd /var/www/billing && php artisan schedule:run >> /dev/null 2>&1
+> ```
+
+### Retention Policy (Berapa Lama Backup Disimpan)
+
+- 7 hari pertama: simpan semua backup
+- Setelahnya: 1 backup per hari selama 30 hari
+- Setelahnya: 1 backup per minggu selama 8 minggu
+- Setelahnya: 1 backup per bulan selama 6 bulan
+- Setelahnya: 1 backup per tahun selama 2 tahun
+- Max total storage: 5 GB
 
 ### Command Manual
+
 ```bash
-php artisan backup:run --only-db    # Backup database saja
-php artisan backup:run              # Full backup (DB + config)
-php artisan backup:list             # Lihat daftar backup
-php artisan backup:clean            # Hapus backup lama
-php artisan backup:monitor          # Cek kesehatan backup
+# Backup database saja
+php artisan backup:run --only-db
+
+# Full backup (database + config files)
+php artisan backup:run
+
+# Lihat daftar backup
+php artisan backup:list
+
+# Hapus backup lama
+php artisan backup:clean
+
+# Cek kesehatan backup
+php artisan backup:monitor
 ```
 
-### Konfigurasi .env
+### Download Backup dari Server ke PC
+
+**Cara 1 — SCP (dari terminal PC lokal, bukan server):**
+```bash
+scp root@IP_SERVER:"/var/www/billing/storage/app/private/ISP Billing - Java Indonusa/*.zip" ~/Downloads/
+```
+
+**Cara 2 — Download file tertentu:**
+```bash
+# Cek daftar file backup di server dulu
+find storage/app -name "*.zip" -type f -exec ls -lh {} \;
+
+# Dari PC lokal, download file spesifik
+scp root@IP_SERVER:"/var/www/billing/storage/app/private/ISP Billing - Java Indonusa/2026-03-16-22-06-50.zip" ~/Downloads/
+```
+
+**Cara 3 — Copy ke folder public sementara lalu download via browser:**
+```bash
+# Di server
+cp "/var/www/billing/storage/app/private/ISP Billing - Java Indonusa/2026-03-16-22-06-50.zip" /var/www/billing/public/backup-temp.zip
+
+# Download via browser: https://domain-kamu.com/backup-temp.zip
+# PENTING: Hapus setelah download!
+rm /var/www/billing/public/backup-temp.zip
+```
+
+### Notifikasi Email
+
+Backup akan mengirim email notifikasi ke alamat di `.env`:
+- **Backup gagal** → email dikirim
+- **Backup berhasil** → email dikirim
+- **Backup unhealthy** (terlalu lama tidak backup) → email dikirim
+
+Jika tidak ingin notifikasi email, kosongkan `BACKUP_NOTIFICATION_EMAIL` di `.env`.
+
+### Konfigurasi .env (di Server)
+
 ```env
-# Password enkripsi arsip (opsional, kosongkan jika tidak perlu)
+# --- SMTP EMAIL (wajib untuk notifikasi) ---
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=emailkamu@gmail.com
+MAIL_PASSWORD="xxxx xxxx xxxx xxxx"
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="emailkamu@gmail.com"
+MAIL_FROM_NAME="${APP_NAME}"
+
+# --- BACKUP ---
+# Email penerima notifikasi backup (kosongkan untuk disable)
+BACKUP_NOTIFICATION_EMAIL=emailkamu@gmail.com
+
+# Password enkripsi arsip backup (opsional, kosongkan jika tidak perlu)
 BACKUP_ARCHIVE_PASSWORD=
 
-# Email notifikasi backup gagal/berhasil
-BACKUP_NOTIFICATION_EMAIL=admin@javaindonusa.com
-
-# Slack webhook (opsional)
+# Slack webhook untuk notifikasi backup (opsional)
 BACKUP_SLACK_WEBHOOK=
 ```
 
-### Catatan Deploy
-- Extension `ext-zip` harus aktif di PHP (sudah di-enable)
-- MySQL dump menggunakan `useSingleTransaction` agar tidak lock tabel saat backup
-- Pastikan `mysqldump` binary tersedia di server (biasanya sudah ada)
-- Backup disimpan di `storage/app/backups/` — pastikan ada cukup disk space
+> **Gmail App Password:** Buat di https://myaccount.google.com/apppasswords
+> (2-Step Verification harus aktif). Password yang ada spasi **harus dibungkus tanda kutip**.
+
+### Catatan Penting
+
+- Extension `ext-zip` harus aktif di PHP server (`php -m | grep zip`)
+- `mysqldump` harus tersedia di server (biasanya sudah ada)
 - Log backup di `storage/logs/backup.log`
+- `MAIL_FROM_ADDRESS` harus sama dengan `MAIL_USERNAME` untuk Gmail SMTP
 
 ---
 
-## 2. DB Transaction Wrapping
+## 2. Perintah Update Server
+
+Setiap kali ada perubahan kode yang di-push ke GitHub, jalankan ini di server:
+
+```bash
+cd /var/www/billing && \
+git stash && \
+git pull origin main && \
+composer update --no-dev --optimize-autoloader --ignore-platform-reqs && \
+php artisan migrate --force && \
+mkdir -p storage/framework/{views,cache,sessions,testing} && \
+mkdir -p storage/app/backups && \
+php artisan optimize:clear && \
+php artisan optimize && \
+php artisan queue:restart
+```
+
+> **PENTING:** Copy-paste dalam satu kali, jangan enter di tengah command.
+> Jika ada prompt `Continue as root/super user [yes]?`, ketik `yes` lalu Enter.
+
+### Troubleshooting Deploy
+
+| Masalah | Solusi |
+|---------|--------|
+| `git pull` gagal karena file conflict | `git stash` sudah di-handle di perintah update |
+| `untracked working tree files would be overwritten` | `rm file-yang-konflik` lalu `git pull` ulang |
+| `artisan: command not found` | Jangan enter di tengah command, paste satu baris |
+| `The environment file is invalid` | Cek `.env`, value yang ada spasi harus dibungkus `"..."` |
+| `Disk [xxx] does not have a configured driver` | `php artisan optimize:clear && php artisan optimize` |
+| Backup gagal `Sending notification failed` | Cek SMTP config di `.env`, atau kosongkan `BACKUP_NOTIFICATION_EMAIL` |
+
+---
+
+## 3. DB Transaction Wrapping
 
 ### Masalah yang Ditemukan
 
@@ -88,62 +189,30 @@ Beberapa operasi kritis melakukan **multiple writes tanpa transaction**, berisik
 #### DebtService (`app/Services/Billing/DebtService.php`)
 
 1. **`addCredit()`** — Dibungkus `DB::transaction()`
-   - `increment('credit_balance')` + `DebtHistory::create()` sekarang atomic
-
 2. **`useCredit()`** — Dibungkus `DB::transaction()`
-   - `decrement('credit_balance')` + `invoice->update()` + `decrement('total_debt')` + `DebtHistory::create()` sekarang atomic
-
 3. **`recalculateDebt()`** — Dibungkus `DB::transaction()` + `lockForUpdate()`
-   - Query invoice sum pakai `lockForUpdate()` untuk prevent concurrent recalculation
-   - `update()` + `DebtHistory::create()` sekarang atomic
 
 #### InvoiceService (`app/Services/Billing/InvoiceService.php`)
 
-4. **`updateOverdueStatus()`** — Diganti dari loop ke single `DB::transaction()` + bulk update
-   - Sebelum: Loop per-invoice `$invoice->update()` (N queries, tanpa transaction)
-   - Sesudah: Single `Invoice::where()->update()` dalam transaction (1 query, atomic)
-
-5. **`generateInvoiceNumber()`** — Pakai `lockForUpdate()`
-   - Sebelum: `count()` + loop `exists()` check (race condition possible)
-   - Sesudah: `lockForUpdate()->orderBy('desc')->first()` (pessimistic lock, no race condition)
+4. **`updateOverdueStatus()`** — Diganti dari loop ke single bulk update dalam `DB::transaction()`
+5. **`generateInvoiceNumber()`** — Pakai `lockForUpdate()` (prevent race condition)
 
 #### DebtIsolationService (`app/Services/Billing/DebtIsolationService.php`)
 
 6. **`generateInvoiceNumber()`** — Pakai `lockForUpdate()`
-   - Sama seperti perbaikan di InvoiceService
-
 7. **`generatePaymentNumber()`** — Pakai `lockForUpdate()`
-   - Sebelum: `whereDate()->orderBy()->first()` tanpa lock
-   - Sesudah: `where('like')->lockForUpdate()->orderBy()->first()` (pessimistic lock)
-
-### Method yang Sudah Benar (Tidak Perlu Diubah)
-
-| Service | Method | Status |
-|---------|--------|--------|
-| PaymentService | `processPayment()` | Sudah pakai `DB::transaction()` |
-| PaymentService | `cancelPayment()` | Sudah pakai `DB::transaction()` |
-| PaymentService | `generatePaymentNumber()` | Sudah pakai `lockForUpdate()` |
-| InvoiceService | `generateInvoiceForCustomer()` | Sudah pakai `DB::transaction()` |
-| InvoiceService | `createHistoricalInvoice()` | Sudah pakai `DB::transaction()` |
-| InvoiceService | `markAsPaid()` | Sudah pakai `DB::transaction()` |
-| InvoiceService | `cancelInvoice()` | Sudah pakai `DB::transaction()` |
-| DebtService | `addDebt()` | Sudah pakai `DB::transaction()` |
-| DebtService | `reduceDebt()` | Sudah pakai `DB::transaction()` |
-| DebtIsolationService | `processPayment()` | Sudah pakai `DB::transaction()` |
-| DebtIsolationService | `addMonthlyDebtForCustomer()` | Sudah pakai `DB::transaction()` |
 
 ---
 
-## File yang Diubah
+## 4. File yang Diubah
 
 | File | Perubahan |
 |------|-----------|
 | `composer.json` | Tambah `spatie/laravel-backup:^8.0` |
 | `config/backup.php` | Baru — konfigurasi backup (Gzip, retention, notifikasi) |
-| `config/filesystems.php` | Tambah disk `backup` |
-| `config/database.php` | Tambah `dump` config untuk MySQL (useSingleTransaction) |
-| `routes/console.php` | Ganti backup manual dengan `backup:run`, `backup:clean`, `backup:monitor` |
+| `config/database.php` | Tambah `dump` config MySQL (useSingleTransaction) |
+| `routes/console.php` | Jadwal backup otomatis (harian + mingguan) |
 | `.env.example` | Tambah section BACKUP |
-| `app/Services/Billing/DebtService.php` | Transaction wrapping: `addCredit()`, `useCredit()`, `recalculateDebt()` |
-| `app/Services/Billing/InvoiceService.php` | Transaction: `updateOverdueStatus()`. Lock: `generateInvoiceNumber()` |
-| `app/Services/Billing/DebtIsolationService.php` | Lock: `generateInvoiceNumber()`, `generatePaymentNumber()` |
+| `app/Services/Billing/DebtService.php` | Transaction wrap: `addCredit()`, `useCredit()`, `recalculateDebt()` |
+| `app/Services/Billing/InvoiceService.php` | Transaction wrap + lock: `updateOverdueStatus()`, `generateInvoiceNumber()` |
+| `app/Services/Billing/DebtIsolationService.php` | Lock fix: `generateInvoiceNumber()`, `generatePaymentNumber()` |

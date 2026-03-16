@@ -5,7 +5,7 @@ use Spatie\DbDumper\Compressors\GzipCompressor;
 return [
 
     'backup' => [
-        'name' => env('APP_NAME', 'isp-billing'),
+        'name' => 'isp-billing-backup',
 
         'source' => [
             'files' => [
@@ -93,7 +93,7 @@ return [
 
     'monitor_backups' => [
         [
-            'name' => env('APP_NAME', 'isp-billing'),
+            'name' => 'isp-billing-backup',
             'disks' => ['local'],
             'health_checks' => [
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays::class => 1,

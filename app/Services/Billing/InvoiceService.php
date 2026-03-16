@@ -252,13 +252,19 @@ class InvoiceService
         $today = now()->startOfDay();
         $graceDays = config('billing.grace_days', 7);
 
-        $updated = DB::transaction(function () use ($today, $graceDays) {
-            return Invoice::whereIn('status', ['pending', 'partial'])
+        return DB::transaction(function () use ($today, $graceDays) {
+            $invoices = Invoice::whereIn('status', ['pending', 'partial'])
                 ->where('due_date', '<', $today->subDays($graceDays))
-                ->update(['status' => 'overdue']);
-        });
+                ->get();
 
-        return ['updated' => $updated];
+            $updated = 0;
+            foreach ($invoices as $invoice) {
+                $invoice->update(['status' => 'overdue']);
+                $updated++;
+            }
+
+            return ['updated' => $updated];
+        });
     }
 
     /**

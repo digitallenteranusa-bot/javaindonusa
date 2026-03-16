@@ -219,21 +219,22 @@ class DebtService
         ?string $referenceType = null,
         ?int $referenceId = null
     ): DebtHistory {
-        $creditBefore = $customer->credit_balance;
-        $customer->increment('credit_balance', $amount);
+        return DB::transaction(function () use ($customer, $amount, $referenceType, $referenceId) {
+            $customer->increment('credit_balance', $amount);
 
-        return DebtHistory::create([
-            'customer_id' => $customer->id,
-            'invoice_id' => $referenceType === 'invoice' ? $referenceId : null,
-            'payment_id' => $referenceType === 'payment' ? $referenceId : null,
-            'type' => DebtHistory::TYPE_CREDIT_ADDED,
-            'amount' => $amount,
-            'balance_before' => $customer->total_debt,
-            'balance_after' => $customer->total_debt,
-            'description' => "Kelebihan bayar Rp " . number_format($amount, 0, ',', '.') . " disimpan sebagai kredit",
-            'reference_number' => $this->getReferenceNumber($referenceType, $referenceId),
-            'created_by' => auth()->id(),
-        ]);
+            return DebtHistory::create([
+                'customer_id' => $customer->id,
+                'invoice_id' => $referenceType === 'invoice' ? $referenceId : null,
+                'payment_id' => $referenceType === 'payment' ? $referenceId : null,
+                'type' => DebtHistory::TYPE_CREDIT_ADDED,
+                'amount' => $amount,
+                'balance_before' => $customer->total_debt,
+                'balance_after' => $customer->total_debt,
+                'description' => "Kelebihan bayar Rp " . number_format($amount, 0, ',', '.') . " disimpan sebagai kredit",
+                'reference_number' => $this->getReferenceNumber($referenceType, $referenceId),
+                'created_by' => auth()->id(),
+            ]);
+        });
     }
 
     /**
@@ -250,36 +251,38 @@ class DebtService
             return new DebtHistory();
         }
 
-        $balanceBefore = $customer->total_debt;
+        return DB::transaction(function () use ($customer, $invoice, $creditToUse) {
+            $balanceBefore = $customer->total_debt;
 
-        // Kurangi kredit
-        $customer->decrement('credit_balance', $creditToUse);
+            // Kurangi kredit
+            $customer->decrement('credit_balance', $creditToUse);
 
-        // Apply ke invoice
-        $newPaidAmount = $invoice->paid_amount + $creditToUse;
-        $newRemaining = $invoice->total_amount - $newPaidAmount;
+            // Apply ke invoice
+            $newPaidAmount = $invoice->paid_amount + $creditToUse;
+            $newRemaining = $invoice->total_amount - $newPaidAmount;
 
-        $invoice->update([
-            'paid_amount' => $newPaidAmount,
-            'remaining_amount' => max(0, $newRemaining),
-            'status' => $newRemaining <= 0 ? 'paid' : 'partial',
-            'paid_at' => $newRemaining <= 0 ? now() : null,
-        ]);
+            $invoice->update([
+                'paid_amount' => $newPaidAmount,
+                'remaining_amount' => max(0, $newRemaining),
+                'status' => $newRemaining <= 0 ? 'paid' : 'partial',
+                'paid_at' => $newRemaining <= 0 ? now() : null,
+            ]);
 
-        // Kurangi total hutang
-        $customer->decrement('total_debt', $creditToUse);
-        $balanceAfter = max(0, $balanceBefore - $creditToUse);
+            // Kurangi total hutang
+            $customer->decrement('total_debt', $creditToUse);
+            $balanceAfter = max(0, $balanceBefore - $creditToUse);
 
-        return DebtHistory::create([
-            'customer_id' => $customer->id,
-            'invoice_id' => $invoice->id,
-            'type' => DebtHistory::TYPE_CREDIT_USED,
-            'amount' => $creditToUse,
-            'balance_before' => $balanceBefore,
-            'balance_after' => $balanceAfter,
-            'description' => "Kredit Rp " . number_format($creditToUse, 0, ',', '.') . " digunakan untuk {$invoice->invoice_number}",
-            'created_by' => auth()->id(),
-        ]);
+            return DebtHistory::create([
+                'customer_id' => $customer->id,
+                'invoice_id' => $invoice->id,
+                'type' => DebtHistory::TYPE_CREDIT_USED,
+                'amount' => $creditToUse,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'description' => "Kredit Rp " . number_format($creditToUse, 0, ',', '.') . " digunakan untuk {$invoice->invoice_number}",
+                'created_by' => auth()->id(),
+            ]);
+        });
     }
 
     // ================================================================
@@ -350,43 +353,45 @@ class DebtService
      */
     public function recalculateDebt(Customer $customer, bool $createAdjustment = true): array
     {
-        $calculatedDebt = $customer->invoices()
-            ->whereIn('status', ['pending', 'partial', 'overdue'])
-            ->sum('remaining_amount');
+        return DB::transaction(function () use ($customer, $createAdjustment) {
+            $calculatedDebt = $customer->invoices()
+                ->whereIn('status', ['pending', 'partial', 'overdue'])
+                ->lockForUpdate()
+                ->sum('remaining_amount');
 
-        $currentDebt = $customer->total_debt;
-        $difference = $calculatedDebt - $currentDebt;
+            $currentDebt = $customer->total_debt;
+            $difference = $calculatedDebt - $currentDebt;
 
-        if (abs($difference) > 0.01) {
-            // Ada perbedaan, update dan catat adjustment jika diminta
-            $customer->update(['total_debt' => $calculatedDebt]);
+            if (abs($difference) > 0.01) {
+                $customer->update(['total_debt' => $calculatedDebt]);
 
-            if ($createAdjustment) {
-                DebtHistory::create([
-                    'customer_id' => $customer->id,
-                    'type' => $difference > 0
-                        ? DebtHistory::TYPE_ADJUSTMENT_ADD
-                        : DebtHistory::TYPE_ADJUSTMENT_SUBTRACT,
-                    'amount' => abs($difference),
-                    'balance_before' => $currentDebt,
-                    'balance_after' => $calculatedDebt,
-                    'description' => 'Penyesuaian otomatis sinkronisasi hutang',
-                    'created_by' => auth()->id(),
-                ]);
+                if ($createAdjustment) {
+                    DebtHistory::create([
+                        'customer_id' => $customer->id,
+                        'type' => $difference > 0
+                            ? DebtHistory::TYPE_ADJUSTMENT_ADD
+                            : DebtHistory::TYPE_ADJUSTMENT_SUBTRACT,
+                        'amount' => abs($difference),
+                        'balance_before' => $currentDebt,
+                        'balance_after' => $calculatedDebt,
+                        'description' => 'Penyesuaian otomatis sinkronisasi hutang',
+                        'created_by' => auth()->id(),
+                    ]);
+                }
+
+                return [
+                    'adjusted' => true,
+                    'previous_debt' => $currentDebt,
+                    'new_debt' => $calculatedDebt,
+                    'difference' => $difference,
+                ];
             }
 
             return [
-                'adjusted' => true,
-                'previous_debt' => $currentDebt,
-                'new_debt' => $calculatedDebt,
-                'difference' => $difference,
+                'adjusted' => false,
+                'current_debt' => $currentDebt,
             ];
-        }
-
-        return [
-            'adjusted' => false,
-            'current_debt' => $currentDebt,
-        ];
+        });
     }
 
     /**

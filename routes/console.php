@@ -95,17 +95,27 @@ Schedule::command('log:clear')
     ->weeklyOn(0, '01:00')
     ->timezone('Asia/Jakarta');
 
-// Clean old backup files weekly
-Schedule::call(function () {
-    $backupPath = storage_path('backups');
-    if (is_dir($backupPath)) {
-        $files = glob($backupPath . '/*.zip');
-        $now = time();
-        foreach ($files as $file) {
-            // Delete backups older than 30 days
-            if ($now - filemtime($file) > 30 * 24 * 60 * 60) {
-                unlink($file);
-            }
-        }
-    }
-})->weeklyOn(0, '02:00')->timezone('Asia/Jakarta');
+// Database backup daily at 02:00 (only DB, no files)
+Schedule::command('backup:run --only-db')
+    ->dailyAt('02:00')
+    ->timezone('Asia/Jakarta')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/backup.log'));
+
+// Full backup (DB + config files) weekly on Sunday at 03:00
+Schedule::command('backup:run')
+    ->weeklyOn(0, '03:00')
+    ->timezone('Asia/Jakarta')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/backup.log'));
+
+// Cleanup old backups weekly on Sunday at 04:00
+Schedule::command('backup:clean')
+    ->weeklyOn(0, '04:00')
+    ->timezone('Asia/Jakarta')
+    ->appendOutputTo(storage_path('logs/backup.log'));
+
+// Monitor backup health daily at 08:00
+Schedule::command('backup:monitor')
+    ->dailyAt('08:00')
+    ->timezone('Asia/Jakarta');

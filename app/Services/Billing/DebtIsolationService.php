@@ -685,23 +685,20 @@ class DebtIsolationService
         $prefix = Setting::getValue('billing', 'invoice_prefix', 'INV');
         $periodCode = sprintf('%04d%02d', $year, $month);
 
-        // Count existing invoices for this period to determine next sequence
-        $count = Invoice::where('period_year', $year)
-            ->where('period_month', $month)
-            ->count();
+        // Use lockForUpdate to prevent race condition on concurrent invoice generation
+        $lastInvoice = Invoice::where('invoice_number', 'like', "{$prefix}-{$periodCode}-%")
+            ->lockForUpdate()
+            ->orderBy('invoice_number', 'desc')
+            ->first();
 
-        $sequence = $count + 1;
+        if ($lastInvoice) {
+            $lastNumber = (int) substr($lastInvoice->invoice_number, -5);
+            $sequence = $lastNumber + 1;
+        } else {
+            $sequence = 1;
+        }
 
-        // Ensure uniqueness by checking if generated number already exists
-        do {
-            $invoiceNumber = sprintf('%s-%s-%05d', $prefix, $periodCode, $sequence);
-            $exists = Invoice::where('invoice_number', $invoiceNumber)->exists();
-            if ($exists) {
-                $sequence++;
-            }
-        } while ($exists);
-
-        return $invoiceNumber;
+        return sprintf('%s-%s-%05d', $prefix, $periodCode, $sequence);
     }
 
     protected function generatePaymentNumber(): string
@@ -709,14 +706,17 @@ class DebtIsolationService
         $prefix = Setting::getValue('billing', 'payment_prefix', 'PAY');
         $dateCode = now()->format('Ymd');
 
-        $lastPayment = \App\Models\Payment::whereDate('created_at', today())
-            ->orderBy('id', 'desc')
+        // Use lockForUpdate to prevent race condition on concurrent payment creation
+        $lastPayment = \App\Models\Payment::where('payment_number', 'like', "{$prefix}-{$dateCode}-%")
+            ->lockForUpdate()
+            ->orderBy('payment_number', 'desc')
             ->first();
 
-        $sequence = 1;
         if ($lastPayment) {
-            preg_match('/(\d+)$/', $lastPayment->payment_number, $matches);
-            $sequence = intval($matches[1] ?? 0) + 1;
+            $lastNumber = (int) substr($lastPayment->payment_number, -5);
+            $sequence = $lastNumber + 1;
+        } else {
+            $sequence = 1;
         }
 
         return sprintf('%s-%s-%05d', $prefix, $dateCode, $sequence);

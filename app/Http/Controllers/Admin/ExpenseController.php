@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\User;
 use App\Exports\ExpenseExport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -120,6 +121,8 @@ class ExpenseController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
+        $this->clearPerformanceCache($expense);
+
         return back()->with('success', 'Pengeluaran berhasil disetujui');
     }
 
@@ -143,6 +146,8 @@ class ExpenseController extends Controller
             'rejection_reason' => $validated['reason'],
         ]);
 
+        $this->clearPerformanceCache($expense);
+
         return back()->with('success', 'Pengeluaran berhasil ditolak');
     }
 
@@ -156,13 +161,26 @@ class ExpenseController extends Controller
             'expense_ids.*' => 'exists:expenses,id',
         ]);
 
-        $updated = Expense::whereIn('id', $validated['expense_ids'])
+        $expenses = Expense::whereIn('id', $validated['expense_ids'])
             ->where('status', 'pending')
-            ->update([
+            ->get();
+
+        $updated = 0;
+        foreach ($expenses as $expense) {
+            $expense->update([
                 'status' => 'approved',
                 'verified_by' => auth()->id(),
                 'verified_at' => now(),
             ]);
+            $updated++;
+        }
+
+        // Clear cache for all affected months
+        $expenses->pluck('expense_date')->unique()->each(function ($date) {
+            $month = $date->month;
+            $year = $date->year;
+            Cache::forget("collector_performance:{$year}:{$month}");
+        });
 
         return back()->with('success', "{$updated} pengeluaran berhasil disetujui");
     }
@@ -192,6 +210,17 @@ class ExpenseController extends Controller
             'summary' => $summary,
             'grand_total' => $summary->sum('total_amount'),
         ]);
+    }
+
+    /**
+     * Clear collector performance cache for the expense's month.
+     */
+    protected function clearPerformanceCache(Expense $expense): void
+    {
+        $date = $expense->expense_date;
+        if ($date) {
+            Cache::forget("collector_performance:{$date->year}:{$date->month}");
+        }
     }
 
     /**

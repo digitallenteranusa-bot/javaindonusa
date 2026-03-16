@@ -235,9 +235,84 @@ scp root@IP_SERVER:"/var/www/billing/storage/app/private/ISP Billing - Java Indo
 - 2 tahun: 1 per tahun
 - Max total: 5 GB
 
+### Lokasi Penyimpanan
+
+| Lokasi | Keterangan |
+|--------|------------|
+| Server lokal | `storage/app/private/ISP Billing - Java Indonusa/` |
+| Google Drive | Folder "ISP Billing Backup" (otomatis jika `GOOGLE_DRIVE_FOLDER_ID` diisi) |
+
 ---
 
-## 5. Command Backup Manual
+## 5. Setup Google Drive Backup (Opsional)
+
+> Backup tambahan ke Google Drive agar aman jika server rusak. **Gratis 15 GB**.
+
+### Tahap 1 — Buat Project di Google Cloud Console
+
+1. Buka https://console.cloud.google.com
+2. Login pakai akun Gmail
+3. Klik **Select a project** → **New Project**
+4. Nama: `isp-billing-backup` → **Create**
+
+### Tahap 2 — Aktifkan Google Drive API
+
+1. Menu kiri → **APIs & Services** → **Library**
+2. Cari **"Google Drive API"** → klik → **Enable**
+
+### Tahap 3 — Buat Service Account
+
+1. **APIs & Services** → **Credentials** → **+ Create Credentials** → **Service Account**
+2. Nama: `backup-uploader` → **Create and Continue** → skip role → **Done**
+3. Klik service account yang baru dibuat
+4. Tab **Keys** → **Add Key** → **Create new key** → **JSON** → **Create**
+5. File JSON ter-download — simpan
+
+### Tahap 4 — Buat Folder di Google Drive & Share
+
+1. Buka https://drive.google.com → buat folder **"ISP Billing Backup"**
+2. Klik kanan folder → **Share**
+3. Paste email service account (dari file JSON, field `client_email`)
+4. Set **Editor** → **Send**
+5. Copy **Folder ID** dari URL: `https://drive.google.com/drive/folders/FOLDER_ID_DISINI`
+
+### Tahap 5 — Upload Credentials ke Server
+
+```bash
+nano /var/www/billing/storage/app/google-drive-credentials.json
+```
+
+Paste isi file JSON → simpan (`Ctrl+O` → Enter → `Ctrl+X`)
+
+### Tahap 6 — Edit .env di Server
+
+```bash
+nano /var/www/billing/.env
+```
+
+Tambahkan:
+
+```env
+GOOGLE_DRIVE_FOLDER_ID=folder_id_dari_tahap_4
+```
+
+### Tahap 7 — Clear Cache
+
+```bash
+cd /var/www/billing && php artisan optimize:clear && php artisan optimize
+```
+
+### Tahap 8 — Test Backup ke Google Drive
+
+```bash
+php artisan backup:run --only-db
+```
+
+Cek Google Drive — seharusnya muncul file backup baru di folder "ISP Billing Backup".
+
+---
+
+## 6. Command Backup Manual
 
 ```bash
 # Backup database saja

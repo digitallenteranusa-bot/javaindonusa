@@ -41,9 +41,10 @@ return [
             'compression_level' => 9,
             'filename_prefix' => 'backup-',
 
-            'disks' => [
+            'disks' => array_filter([
                 'local',
-            ],
+                env('GOOGLE_DRIVE_FOLDER_ID') ? 'google' : null,
+            ]),
         ],
 
         'temporary_directory' => storage_path('app/backup-temp'),

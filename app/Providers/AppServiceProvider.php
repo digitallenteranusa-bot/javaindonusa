@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -65,6 +66,38 @@ class AppServiceProvider extends ServiceProvider
             }
             return $user?->role === 'admin';
         });
+
+        // Register Google Drive filesystem driver
+        try {
+            Storage::extend('google', function ($app, $config) {
+                $options = [];
+
+                if (!empty($config['teamDriveId'])) {
+                    $options['teamDriveId'] = $config['teamDriveId'];
+                }
+
+                $client = new \Google\Client();
+                $client->setClientId($config['clientId'] ?? '');
+                $client->setClientSecret($config['clientSecret'] ?? '');
+                $client->refreshToken($config['refreshToken'] ?? '');
+
+                if (!empty($config['serviceAccountKey'])) {
+                    $client->setAuthConfig($config['serviceAccountKey']);
+                    $client->setScopes([\Google\Service\Drive::DRIVE]);
+                }
+
+                $service = new \Google\Service\Drive($client);
+                $adapter = new \Masbug\Flysystem\GoogleDriveAdapter($service, $config['folder'] ?? '/', $options);
+
+                return new \Illuminate\Filesystem\FilesystemAdapter(
+                    new \League\Flysystem\Filesystem($adapter),
+                    $adapter,
+                    $config
+                );
+            });
+        } catch (\Exception $e) {
+            // Silently fail if Google Drive is not configured
+        }
 
         // Register observers
         Customer::observe(CustomerObserver::class);

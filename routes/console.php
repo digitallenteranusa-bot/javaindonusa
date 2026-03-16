@@ -119,3 +119,10 @@ Schedule::command('backup:clean')
 Schedule::command('backup:monitor')
     ->dailyAt('08:00')
     ->timezone('Asia/Jakarta');
+
+// Sync latest backup to Google Drive daily at 02:30 (after DB backup)
+Schedule::command('backup:google-drive')
+    ->dailyAt('02:30')
+    ->timezone('Asia/Jakarta')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/backup.log'));

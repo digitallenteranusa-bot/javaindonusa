@@ -239,14 +239,17 @@ scp root@IP_SERVER:"/var/www/billing/storage/app/private/ISP Billing - Java Indo
 
 | Lokasi | Keterangan |
 |--------|------------|
-| Server lokal | `storage/app/private/ISP Billing - Java Indonusa/` |
-| Google Drive | Folder "ISP Billing Backup" (otomatis jika `GOOGLE_DRIVE_FOLDER_ID` diisi) |
+| Server lokal | `storage/app/private/isp-billing-backup/` |
+| Google Drive | Folder "ISP Billing Backup" (otomatis jika Google Drive dikonfigurasi) |
 
 ---
 
 ## 5. Setup Google Drive Backup (Opsional)
 
 > Backup tambahan ke Google Drive agar aman jika server rusak. **Gratis 15 GB**.
+>
+> **PENTING:** Gunakan OAuth2 Desktop App, bukan Service Account.
+> Service Account tidak punya storage quota (diblokir Google).
 
 ### Tahap 1 — Buat Project di Google Cloud Console
 
@@ -260,31 +263,74 @@ scp root@IP_SERVER:"/var/www/billing/storage/app/private/ISP Billing - Java Indo
 1. Menu kiri → **APIs & Services** → **Library**
 2. Cari **"Google Drive API"** → klik → **Enable**
 
-### Tahap 3 — Buat Service Account
+### Tahap 3 — Konfigurasi Consent Screen
 
-1. **APIs & Services** → **Credentials** → **+ Create Credentials** → **Service Account**
-2. Nama: `backup-uploader` → **Create and Continue** → skip role → **Done**
-3. Klik service account yang baru dibuat
-4. Tab **Keys** → **Add Key** → **Create new key** → **JSON** → **Create**
-5. File JSON ter-download — simpan
+1. Buka **APIs & Services** → **OAuth consent screen**
+2. Isi **App name:** `ISP Billing Backup`
+3. Isi **User support email** dan **Developer contact email**
+4. Klik **Next** / **Save and Continue** sampai selesai
+5. Di bagian **Audience** / **Test users** → **+ Add users**
+6. Tambahkan email Gmail yang foldernya akan dipakai backup
+7. Simpan
 
-### Tahap 4 — Buat Folder di Google Drive & Share
+### Tahap 4 — Buat OAuth2 Client ID
 
-1. Buka https://drive.google.com → buat folder **"ISP Billing Backup"**
-2. Klik kanan folder → **Share**
-3. Paste email service account (dari file JSON, field `client_email`)
-4. Set **Editor** → **Send**
-5. Copy **Folder ID** dari URL: `https://drive.google.com/drive/folders/FOLDER_ID_DISINI`
+1. Buka **APIs & Services** → **Credentials**
+2. Klik **+ Create Credentials** → **OAuth client ID**
+3. Application type: **Desktop app**
+4. Name: `Backup CLI`
+5. Klik **Create**
+6. Catat **Client ID** dan **Client Secret**
 
-### Tahap 5 — Upload Credentials ke Server
+### Tahap 5 — Dapatkan Refresh Token
+
+Jalankan di server untuk generate URL otorisasi:
 
 ```bash
-nano /var/www/billing/storage/app/google-drive-credentials.json
+php artisan tinker --execute="
+\$url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
+    'client_id' => 'CLIENT_ID_DARI_TAHAP_4',
+    'redirect_uri' => 'http://localhost',
+    'response_type' => 'code',
+    'scope' => 'https://www.googleapis.com/auth/drive.file',
+    'access_type' => 'offline',
+    'prompt' => 'consent',
+]);
+echo \$url;
+"
 ```
 
-Paste isi file JSON → simpan (`Ctrl+O` → Enter → `Ctrl+X`)
+1. Buka URL tersebut di **browser PC** (bukan di server)
+2. Login pakai akun Gmail yang sudah ditambahkan di Test Users
+3. Klik **Advanced** → **Go to ISP Billing Backup (unsafe)** → **Allow**
+4. Browser redirect ke `http://localhost/?code=XXXX...` (halaman tidak load, **itu normal**)
+5. Copy **code** dari URL di address bar (setelah `?code=` sampai sebelum `&scope=`)
 
-### Tahap 6 — Edit .env di Server
+Tukarkan code menjadi refresh token:
+
+```bash
+php artisan tinker --execute="
+\$response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+    'code' => 'CODE_DARI_BROWSER',
+    'client_id' => 'CLIENT_ID_DARI_TAHAP_4',
+    'client_secret' => 'CLIENT_SECRET_DARI_TAHAP_4',
+    'redirect_uri' => 'http://localhost',
+    'grant_type' => 'authorization_code',
+]);
+echo json_encode(\$response->json(), JSON_PRETTY_PRINT);
+"
+```
+
+Catat **refresh_token** dari output.
+
+### Tahap 6 — Buat Folder di Google Drive
+
+1. Buka https://drive.google.com
+2. Buat folder baru: **"ISP Billing Backup"**
+3. Buka folder tersebut
+4. Copy **Folder ID** dari URL: `https://drive.google.com/drive/folders/FOLDER_ID_DISINI`
+
+### Tahap 7 — Edit .env di Server
 
 ```bash
 nano /var/www/billing/.env
@@ -293,22 +339,59 @@ nano /var/www/billing/.env
 Tambahkan:
 
 ```env
-GOOGLE_DRIVE_FOLDER_ID=folder_id_dari_tahap_4
+GOOGLE_DRIVE_CLIENT_ID=client_id_dari_tahap_4
+GOOGLE_DRIVE_CLIENT_SECRET=client_secret_dari_tahap_4
+GOOGLE_DRIVE_REFRESH_TOKEN=refresh_token_dari_tahap_5
+GOOGLE_DRIVE_FOLDER_ID=folder_id_dari_tahap_6
 ```
 
-### Tahap 7 — Clear Cache
+Simpan (`Ctrl+O` → Enter → `Ctrl+X`)
+
+### Tahap 8 — Clear Cache
 
 ```bash
 cd /var/www/billing && php artisan optimize:clear && php artisan optimize
 ```
 
-### Tahap 8 — Test Backup ke Google Drive
+### Tahap 9 — Test Backup ke Google Drive
 
 ```bash
-php artisan backup:run --only-db
+php artisan backup:google-drive
 ```
 
-Cek Google Drive — seharusnya muncul file backup baru di folder "ISP Billing Backup".
+Buka Google Drive → folder **"ISP Billing Backup"** — seharusnya muncul file backup `.zip`.
+
+### Jadwal Otomatis
+
+| Jam (WIB) | Apa yang Terjadi |
+|-----------|-----------------|
+| 02:00 | Backup database ke server lokal (spatie/laravel-backup) |
+| **02:30** | **Upload backup terbaru ke Google Drive** (`backup:google-drive`) |
+| 03:00 Minggu | Full backup ke server lokal (DB + config) |
+| 04:00 Minggu | Cleanup backup lama di server lokal |
+| 08:00 | Health check + email jika backup gagal |
+
+Google Drive menyimpan **7 backup terakhir**, yang lebih lama otomatis dihapus.
+
+### Command Manual
+
+```bash
+# Upload backup terbaru ke Google Drive
+php artisan backup:google-drive
+
+# Test koneksi Google Drive
+php artisan tinker --execute="\$disk = Storage::disk('google'); \$disk->put('test.txt', 'ok'); echo json_encode(\$disk->allFiles('/'));"
+```
+
+### Troubleshooting Google Drive
+
+| Masalah | Solusi |
+|---------|--------|
+| `Access blocked: app not verified` | Tambahkan email di **Test Users** pada Consent Screen |
+| `Service Accounts do not have storage quota` | Jangan pakai Service Account, pakai OAuth2 Desktop App |
+| `refresh_token` expired | Ulangi Tahap 5 untuk mendapatkan refresh token baru |
+| File tidak muncul di folder | Cek `GOOGLE_DRIVE_FOLDER_ID` sudah benar di `.env` |
+| `Unable to read file` / `File not found` | Pastikan `GOOGLE_DRIVE_CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN` terisi di `.env` |
 
 ---
 

@@ -50,19 +50,21 @@ Schedule::command('billing:process-isolation')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler.log'));
 
-// Send payment reminders daily at 09:00
-Schedule::command('billing:send-reminders')
-    ->dailyAt('09:00')
-    ->timezone('Asia/Jakarta')
-    ->withoutOverlapping()
-    ->appendOutputTo(storage_path('logs/scheduler.log'));
+// Send payment reminders - DISABLED (risiko blokir nomor WA jika kirim massal tiap hari)
+// Notifikasi tetap terkirim otomatis saat: isolasi, konfirmasi bayar, akses dibuka
+// Aktifkan kembali jika sudah pakai Meta WABA (official API)
+// Schedule::command('billing:send-reminders')
+//     ->dailyAt('09:00')
+//     ->timezone('Asia/Jakarta')
+//     ->withoutOverlapping()
+//     ->appendOutputTo(storage_path('logs/scheduler.log'));
 
-// Send overdue notices daily at 10:00
-Schedule::command('billing:send-overdue')
-    ->dailyAt('10:00')
-    ->timezone('Asia/Jakarta')
-    ->withoutOverlapping()
-    ->appendOutputTo(storage_path('logs/scheduler.log'));
+// Send overdue notices - DISABLED (sama, risiko blokir WA)
+// Schedule::command('billing:send-overdue')
+//     ->dailyAt('10:00')
+//     ->timezone('Asia/Jakarta')
+//     ->withoutOverlapping()
+//     ->appendOutputTo(storage_path('logs/scheduler.log'));
 
 // ==========================================================================
 // MIKROTIK TASKS

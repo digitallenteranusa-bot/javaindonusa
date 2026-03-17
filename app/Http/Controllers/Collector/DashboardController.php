@@ -164,6 +164,14 @@ class DashboardController extends Controller
 
         $collector = auth()->user();
 
+        // Prevent double-submit: acquire lock for 10 seconds
+        $lockKey = "payment:{$collector->id}:{$customer->id}";
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 10);
+
+        if (! $lock->get()) {
+            return back()->with('error', 'Pembayaran sedang diproses, mohon tunggu.');
+        }
+
         try {
             $result = $this->collectorService->processCashPayment(
                 $collector,
@@ -181,6 +189,8 @@ class DashboardController extends Controller
 
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
+        } finally {
+            $lock->release();
         }
     }
 
@@ -196,6 +206,14 @@ class DashboardController extends Controller
         ]);
 
         $collector = auth()->user();
+
+        // Prevent double-submit: acquire lock for 10 seconds
+        $lockKey = "payment:{$collector->id}:{$customer->id}";
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 10);
+
+        if (! $lock->get()) {
+            return back()->with('error', 'Pembayaran sedang diproses, mohon tunggu.');
+        }
 
         try {
             // Upload bukti transfer
@@ -221,6 +239,8 @@ class DashboardController extends Controller
 
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
+        } finally {
+            $lock->release();
         }
     }
 

@@ -78,15 +78,20 @@ const paymentType = ref('cash')
 const paymentAmount = ref('')
 const paymentNotes = ref('')
 const transferProof = ref(null)
+const isSubmitting = ref(false)
 
 const openPaymentModal = () => {
     paymentAmount.value = props.customer.total_debt
     paymentNotes.value = ''
     transferProof.value = null
+    isSubmitting.value = false
     showPaymentModal.value = true
 }
 
 const processPayment = () => {
+    if (isSubmitting.value) return
+    isSubmitting.value = true
+
     const formData = new FormData()
     formData.append('amount', paymentAmount.value)
     formData.append('notes', paymentNotes.value)
@@ -102,6 +107,15 @@ const processPayment = () => {
     router.post(url, formData, {
         onSuccess: () => {
             showPaymentModal.value = false
+        },
+        onError: () => {
+            isSubmitting.value = false
+        },
+        onFinish: () => {
+            // Reset jika tidak redirect (misal validation error)
+            if (showPaymentModal.value) {
+                isSubmitting.value = false
+            }
         },
     })
 }
@@ -509,9 +523,11 @@ const activeTab = ref('invoices')
                         <!-- Submit -->
                         <button
                             @click="processPayment"
-                            class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold"
+                            :disabled="isSubmitting"
+                            class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Proses Pembayaran
+                            <span v-if="isSubmitting">Memproses...</span>
+                            <span v-else>Proses Pembayaran</span>
                         </button>
                     </div>
                 </div>

@@ -28,6 +28,7 @@ const paymentType = ref('cash')
 const paymentAmount = ref('')
 const paymentNotes = ref('')
 const transferProof = ref(null)
+const isSubmitting = ref(false)
 
 // GPS/Location state
 const currentLocation = ref(null)
@@ -223,11 +224,15 @@ const openPaymentModal = (customer) => {
     paymentAmount.value = customer.total_debt
     paymentNotes.value = ''
     transferProof.value = null
+    isSubmitting.value = false
     showPaymentModal.value = true
 }
 
 // Process payment
 const processPayment = () => {
+    if (isSubmitting.value) return
+    isSubmitting.value = true
+
     const formData = new FormData()
     formData.append('amount', paymentAmount.value)
     formData.append('notes', paymentNotes.value)
@@ -244,6 +249,14 @@ const processPayment = () => {
         onSuccess: () => {
             showPaymentModal.value = false
             selectedCustomer.value = null
+        },
+        onError: () => {
+            isSubmitting.value = false
+        },
+        onFinish: () => {
+            if (showPaymentModal.value) {
+                isSubmitting.value = false
+            }
         },
     })
 }
@@ -646,9 +659,11 @@ const handleFileUpload = (event) => {
                         <!-- Submit Button -->
                         <button
                             @click="processPayment"
-                            class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700"
+                            :disabled="isSubmitting"
+                            class="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Proses Pembayaran
+                            <span v-if="isSubmitting">Memproses...</span>
+                            <span v-else>Proses Pembayaran</span>
                         </button>
                     </div>
                 </div>

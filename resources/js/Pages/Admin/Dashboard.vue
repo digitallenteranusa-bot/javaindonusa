@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import SkeletonLoader from '@/Components/SkeletonLoader.vue'
@@ -34,6 +34,28 @@ const props = defineProps({
 })
 
 const selectedPeriod = ref(props.period)
+
+// Live clock
+const currentTime = ref(new Date())
+let clockInterval = null
+
+const formatDateTime = (date) => {
+    return date.toLocaleDateString('id-ID', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    }) + ' - ' + date.toLocaleTimeString('id-ID', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    })
+}
+
+onMounted(() => {
+    clockInterval = setInterval(() => {
+        currentTime.value = new Date()
+    }, 1000)
+})
+
+onUnmounted(() => {
+    clearInterval(clockInterval)
+})
 
 // Format currency
 const formatCurrency = (value) => {
@@ -155,6 +177,17 @@ const overviewCards = computed(() => [
         <template #header>
             <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
         </template>
+
+        <!-- Server Time + Welcome -->
+        <div class="mb-4 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-4 text-white flex items-center justify-between">
+            <div>
+                <p class="text-blue-100 text-sm">Waktu Server</p>
+                <p class="text-lg font-bold font-mono">{{ formatDateTime(currentTime) }}</p>
+            </div>
+            <svg class="w-8 h-8 text-blue-200 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
 
         <!-- Period Filter -->
         <div class="mb-6 flex items-center justify-between">

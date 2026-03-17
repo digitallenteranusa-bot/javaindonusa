@@ -71,11 +71,11 @@ return [
             'number_key' => env('WATZAP_NUMBER_KEY', ''),  // Number Key dari dashboard WatZap
         ],
 
-        // Rate limiting
+        // Rate limiting (aman untuk unofficial WA API: Fonnte, WatZap, dll)
         'rate_limit' => [
-            'per_minute' => env('WHATSAPP_RATE_LIMIT', 30),
-            'delay_ms' => env('WHATSAPP_DELAY_MS', 100),
-            'bulk_delay_seconds' => env('WHATSAPP_BULK_DELAY_SECONDS', 15),
+            'per_minute' => env('WHATSAPP_RATE_LIMIT', 5),
+            'delay_ms' => env('WHATSAPP_DELAY_MS', 3000),
+            'bulk_delay_seconds' => env('WHATSAPP_BULK_DELAY_SECONDS', 60),
         ],
     ],
 

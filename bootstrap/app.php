@@ -27,8 +27,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // Web middleware group
         $middleware->web(append: [
+            \App\Http\Middleware\WebApplicationFirewall::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\SecurityHeaders::class,
+        ]);
+
+        // API middleware group
+        $middleware->api(append: [
+            \App\Http\Middleware\WebApplicationFirewall::class,
         ]);
 
         // Redirect authenticated users yang akses halaman guest (login)

@@ -6,6 +6,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue'
 const props = defineProps({
     customer: Object,
     debtSummary: Object,
+    radiusData: Object,
 })
 
 const showAdjustModal = ref(false)
@@ -120,6 +121,27 @@ const unsuspendCustomer = () => {
     if (confirm('Yakin ingin mengaktifkan kembali pelanggan ini?')) {
         router.post(`/admin/customers/${props.customer.id}/unsuspend`)
     }
+}
+
+// Format bytes
+const formatBytes = (bytes) => {
+    if (!bytes || bytes === 0) return '0 B'
+    bytes = parseInt(bytes)
+    const units = ['B', 'KB', 'MB', 'GB', 'TB']
+    const i = Math.floor(Math.log(bytes) / Math.log(1024))
+    return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i]
+}
+
+// Format session time (seconds to human readable)
+const formatSessionTime = (seconds) => {
+    if (!seconds) return '-'
+    seconds = parseInt(seconds)
+    const d = Math.floor(seconds / 86400)
+    const h = Math.floor((seconds % 86400) / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    if (d > 0) return `${d}h ${h}j ${m}m`
+    if (h > 0) return `${h}j ${m}m`
+    return `${m}m`
 }
 
 // Recalculate debt
@@ -429,6 +451,70 @@ const recalculateDebt = () => {
                     >
                         Aktifkan Kembali
                     </button>
+                </div>
+
+                <!-- RADIUS Session -->
+                <div v-if="radiusData" class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-semibold mb-4">RADIUS Session</h2>
+
+                    <div class="flex items-center gap-2 mb-4">
+                        <span
+                            :class="[
+                                'inline-block w-3 h-3 rounded-full',
+                                radiusData.is_online ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                            ]"
+                        ></span>
+                        <span :class="radiusData.is_online ? 'text-green-700 font-medium' : 'text-gray-500'">
+                            {{ radiusData.is_online ? 'Online' : 'Offline' }}
+                        </span>
+                    </div>
+
+                    <div v-if="radiusData.active_session" class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">IP Address</span>
+                            <span class="font-mono text-xs">{{ radiusData.active_session.framed_ip || '-' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">NAS IP</span>
+                            <span class="font-mono text-xs">{{ radiusData.active_session.nas_ip || '-' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Durasi</span>
+                            <span class="font-medium">{{ formatSessionTime(radiusData.active_session.session_time) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Upload</span>
+                            <span class="font-mono text-xs text-blue-600">{{ formatBytes(radiusData.active_session.input_octets) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Download</span>
+                            <span class="font-mono text-xs text-green-600">{{ formatBytes(radiusData.active_session.output_octets) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Mulai</span>
+                            <span class="text-xs">{{ radiusData.active_session.start_time || '-' }}</span>
+                        </div>
+                    </div>
+
+                    <div v-else-if="radiusData.last_session" class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Terakhir online</span>
+                            <span class="text-xs">{{ radiusData.last_session.stop_time || '-' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Alasan disconnect</span>
+                            <span class="text-xs">{{ radiusData.last_session.terminate_cause || '-' }}</span>
+                        </div>
+                    </div>
+
+                    <div v-else class="text-sm text-gray-400">
+                        Belum ada data session
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t text-xs text-gray-400 flex justify-between">
+                        <span>Total session</span>
+                        <span>{{ radiusData.total_sessions || 0 }}</span>
+                    </div>
                 </div>
 
                 <!-- Quick Actions -->

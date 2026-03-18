@@ -91,7 +91,12 @@ return [
             'sslmode' => 'prefer',
         ],
 
-        'radius' => [
+        'radius' => env('RADIUS_DB_DRIVER', 'mysql') === 'sqlite' ? [
+            'driver' => 'sqlite',
+            'database' => env('RADIUS_DB_DATABASE', ':memory:'),
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ] : [
             'driver' => 'mysql',
             'host' => env('RADIUS_DB_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('RADIUS_DB_PORT', env('DB_PORT', '3306')),

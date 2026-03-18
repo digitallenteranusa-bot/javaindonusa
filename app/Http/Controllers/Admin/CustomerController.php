@@ -186,9 +186,21 @@ class CustomerController extends Controller
 
         $debtSummary = $this->debtService->getDebtSummary($customer);
 
+        // RADIUS accounting data (if enabled)
+        $radiusData = null;
+        try {
+            $radiusService = app(\App\Services\Radius\RadiusService::class);
+            if ($radiusService->isEnabled() && $customer->pppoe_username) {
+                $radiusData = $radiusService->getAccountingData($customer);
+            }
+        } catch (\Exception $e) {
+            // Silently fail - RADIUS is optional
+        }
+
         return Inertia::render('Admin/Customer/Show', [
             'customer' => $customer,
             'debtSummary' => $debtSummary,
+            'radiusData' => $radiusData,
         ]);
     }
 

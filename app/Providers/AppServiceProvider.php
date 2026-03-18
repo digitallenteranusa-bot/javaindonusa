@@ -13,10 +13,12 @@ use App\Listeners\SendReopenNotification;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Router;
 use App\Models\User;
 use App\Observers\CustomerObserver;
 use App\Observers\InvoiceObserver;
 use App\Observers\PaymentObserver;
+use App\Observers\RouterObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -92,6 +94,7 @@ class AppServiceProvider extends ServiceProvider
         Customer::observe(CustomerObserver::class);
         Invoice::observe(InvoiceObserver::class);
         Payment::observe(PaymentObserver::class);
+        Router::observe(RouterObserver::class);
 
         // Register event listeners
         Event::listen(PaymentReceived::class, CheckAndReopenCustomer::class);

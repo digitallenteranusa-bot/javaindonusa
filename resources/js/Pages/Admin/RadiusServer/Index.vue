@@ -126,7 +126,11 @@ const getStatusColor = (status) => {
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     <tr v-for="server in radiusServers.data" :key="server.id" class="hover:bg-gray-50">
-                        <td class="px-4 py-3 font-medium">{{ server.name }}</td>
+                        <td class="px-4 py-3 font-medium">
+                            <Link :href="`/admin/radius-servers/${server.id}`" class="text-blue-600 hover:text-blue-800 hover:underline">
+                                {{ server.name }}
+                            </Link>
+                        </td>
                         <td class="px-4 py-3 font-mono text-sm">{{ server.ip_address }}</td>
                         <td class="px-4 py-3 text-sm">{{ server.auth_port }}</td>
                         <td class="px-4 py-3 text-sm">{{ server.acct_port }}</td>

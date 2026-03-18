@@ -111,6 +111,7 @@ const masterNavigation = [
     { name: 'Area', href: '/admin/areas', icon: 'map' },
     { name: 'Router', href: '/admin/routers', icon: 'server' },
     { name: 'Merk Router', href: '/admin/router-brands', icon: 'wifi' },
+    { name: 'Radius Server', href: '/admin/radius-servers', icon: 'shield' },
     { name: 'ODP', href: '/admin/odps', icon: 'odp' },
     { name: 'OLT', href: '/admin/olts', icon: 'olt' },
 ]

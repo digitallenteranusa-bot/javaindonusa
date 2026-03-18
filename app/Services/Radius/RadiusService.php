@@ -123,7 +123,7 @@ class RadiusService
     }
 
     /**
-     * Isolate customer — change rate limit to isolation value.
+     * Isolate customer — switch to isolation pool + address list for NAT redirect.
      */
     public function isolateCustomer(Customer $customer): bool
     {
@@ -137,7 +137,7 @@ class RadiusService
         }
 
         try {
-            $method = config('radius.isolation_method', 'rate_limit');
+            $method = config('radius.isolation_method', 'pool');
 
             DB::connection('radius')->transaction(function () use ($username, $method) {
                 if ($method === 'delete') {
@@ -156,9 +156,32 @@ class RadiusService
                     ]);
                 }
 
-                // Always update rate limit for rate_limit method (also as extra measure for group method)
-                if ($method === 'rate_limit' || $method === 'group') {
-                    $rateLimitAttr = config('radius.attributes.rate_limit', 'Mikrotik-Rate-Limit');
+                $rateLimitAttr = config('radius.attributes.rate_limit', 'Mikrotik-Rate-Limit');
+                $addressListAttr = config('radius.attributes.address_list', 'Mikrotik-Address-List');
+
+                if ($method === 'pool') {
+                    // Pool-based isolation: Framed-Pool → pool-isolir, Address-List → ISOLIR, remove rate limit
+                    RadReply::forUser($username)->where('attribute', 'Framed-Pool')->delete();
+                    RadReply::create([
+                        'username' => $username,
+                        'attribute' => 'Framed-Pool',
+                        'op' => ':=',
+                        'value' => config('radius.isolation_pool', 'pool-isolir'),
+                    ]);
+
+                    RadReply::forUser($username)->where('attribute', $addressListAttr)->delete();
+                    RadReply::create([
+                        'username' => $username,
+                        'attribute' => $addressListAttr,
+                        'op' => ':=',
+                        'value' => config('radius.isolation_address_list', 'ISOLIR'),
+                    ]);
+
+                    // Remove rate limit so customer can load isolation notification page
+                    RadReply::forUser($username)->where('attribute', $rateLimitAttr)->delete();
+                }
+
+                if ($method === 'rate_limit') {
                     RadReply::forUser($username)->where('attribute', $rateLimitAttr)->delete();
                     RadReply::create([
                         'username' => $username,
@@ -181,7 +204,7 @@ class RadiusService
     }
 
     /**
-     * Reopen customer — restore rate limit from package.
+     * Reopen customer — restore pool, rate limit, and remove address list.
      */
     public function reopenCustomer(Customer $customer): bool
     {
@@ -197,10 +220,22 @@ class RadiusService
         try {
             DB::connection('radius')->transaction(function () use ($customer, $username) {
                 $rateLimitAttr = config('radius.attributes.rate_limit', 'Mikrotik-Rate-Limit');
+                $addressListAttr = config('radius.attributes.address_list', 'Mikrotik-Address-List');
+
+                // Restore Framed-Pool from package
+                RadReply::forUser($username)->where('attribute', 'Framed-Pool')->delete();
+                $pool = $customer->package?->pppoe_pool;
+                if ($pool) {
+                    RadReply::create([
+                        'username' => $username,
+                        'attribute' => 'Framed-Pool',
+                        'op' => ':=',
+                        'value' => $pool,
+                    ]);
+                }
 
                 // Restore rate limit from package
                 RadReply::forUser($username)->where('attribute', $rateLimitAttr)->delete();
-
                 $rateLimit = $customer->package?->mikrotik_rate_limit;
                 if ($rateLimit) {
                     RadReply::create([
@@ -210,6 +245,9 @@ class RadiusService
                         'value' => $rateLimit,
                     ]);
                 }
+
+                // Remove isolation address list
+                RadReply::forUser($username)->where('attribute', $addressListAttr)->delete();
 
                 // Restore default group
                 RadUserGroup::forUser($username)->delete();

@@ -30,10 +30,13 @@ class RadiusServiceTest extends TestCase
         // Enable RADIUS for tests
         config([
             'radius.enabled' => true,
-            'radius.isolation_method' => 'rate_limit',
+            'radius.isolation_method' => 'pool',
+            'radius.isolation_pool' => 'pool-isolir',
+            'radius.isolation_address_list' => 'ISOLIR',
             'radius.isolation_rate_limit' => '1k/1k',
             'radius.default_group' => 'default',
             'radius.attributes.rate_limit' => 'Mikrotik-Rate-Limit',
+            'radius.attributes.address_list' => 'Mikrotik-Address-List',
         ]);
 
         // Create FreeRADIUS tables in the radius connection (SQLite via phpunit.xml)
@@ -248,8 +251,46 @@ class RadiusServiceTest extends TestCase
     // ISOLATE CUSTOMER
     // ================================================================
 
-    public function test_isolate_customer_changes_rate_limit(): void
+    public function test_isolate_customer_switches_to_isolation_pool(): void
     {
+        $package = Package::factory()->create([
+            'speed_download' => 10240,
+            'speed_upload' => 5120,
+            'pppoe_pool' => 'broadband',
+        ]);
+        $customer = Customer::factory()->create([
+            'pppoe_username' => 'john@isp.net',
+            'package_id' => $package->id,
+        ]);
+
+        $this->service->syncCustomer($customer);
+        $this->service->isolateCustomer($customer);
+
+        // Should have isolation pool
+        $pool = RadReply::forUser('john@isp.net')
+            ->where('attribute', 'Framed-Pool')
+            ->first();
+        $this->assertNotNull($pool);
+        $this->assertEquals('pool-isolir', $pool->value);
+
+        // Should have address list for NAT redirect
+        $addrList = RadReply::forUser('john@isp.net')
+            ->where('attribute', 'Mikrotik-Address-List')
+            ->first();
+        $this->assertNotNull($addrList);
+        $this->assertEquals('ISOLIR', $addrList->value);
+
+        // Rate limit should be removed (so isolation page can load)
+        $rateLimit = RadReply::forUser('john@isp.net')
+            ->where('attribute', 'Mikrotik-Rate-Limit')
+            ->first();
+        $this->assertNull($rateLimit);
+    }
+
+    public function test_isolate_with_rate_limit_method(): void
+    {
+        Config::set('radius.isolation_method', 'rate_limit');
+
         $customer = Customer::factory()->create([
             'pppoe_username' => 'john@isp.net',
         ]);
@@ -284,11 +325,12 @@ class RadiusServiceTest extends TestCase
     // REOPEN CUSTOMER
     // ================================================================
 
-    public function test_reopen_customer_restores_rate_limit(): void
+    public function test_reopen_customer_restores_pool_and_rate_limit(): void
     {
         $package = Package::factory()->create([
             'speed_download' => 20480,
             'speed_upload' => 10240,
+            'pppoe_pool' => 'broadband',
         ]);
         $customer = Customer::factory()->create([
             'pppoe_username' => 'john@isp.net',
@@ -299,12 +341,25 @@ class RadiusServiceTest extends TestCase
         $this->service->isolateCustomer($customer);
         $this->service->reopenCustomer($customer);
 
+        // Rate limit restored
         $rateLimitEntry = RadReply::forUser('john@isp.net')
             ->where('attribute', 'Mikrotik-Rate-Limit')
             ->first();
-
         $this->assertNotNull($rateLimitEntry);
         $this->assertEquals('10240k/20480k', $rateLimitEntry->value);
+
+        // Pool restored to broadband
+        $pool = RadReply::forUser('john@isp.net')
+            ->where('attribute', 'Framed-Pool')
+            ->first();
+        $this->assertNotNull($pool);
+        $this->assertEquals('broadband', $pool->value);
+
+        // Address list removed
+        $addrList = RadReply::forUser('john@isp.net')
+            ->where('attribute', 'Mikrotik-Address-List')
+            ->first();
+        $this->assertNull($addrList);
     }
 
     public function test_reopen_restores_default_group(): void
@@ -420,11 +475,17 @@ class RadiusServiceTest extends TestCase
 
         $this->assertEquals(1, $stats['synced']);
 
-        // Should have isolation rate limit
-        $rateLimit = RadReply::forUser('isolated@isp.net')
-            ->where('attribute', 'Mikrotik-Rate-Limit')
+        // Should have isolation pool
+        $pool = RadReply::forUser('isolated@isp.net')
+            ->where('attribute', 'Framed-Pool')
             ->first();
-        $this->assertEquals('1k/1k', $rateLimit->value);
+        $this->assertEquals('pool-isolir', $pool->value);
+
+        // Should have address list
+        $addrList = RadReply::forUser('isolated@isp.net')
+            ->where('attribute', 'Mikrotik-Address-List')
+            ->first();
+        $this->assertEquals('ISOLIR', $addrList->value);
     }
 
     // ================================================================

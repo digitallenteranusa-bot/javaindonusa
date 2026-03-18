@@ -122,6 +122,13 @@ Schedule::command('backup:monitor')
     ->dailyAt('08:00')
     ->timezone('Asia/Jakarta');
 
+// Cleanup RADIUS accounting data older than 3 months (every Sunday 04:30)
+Schedule::command('radius:cleanup')
+    ->weeklyOn(0, '04:30')
+    ->timezone('Asia/Jakarta')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler.log'));
+
 // Sync latest backup to Google Drive every 2 days at 02:30 (after DB backup)
 Schedule::command('backup:google-drive')
     ->cron('30 2 */2 * *')

@@ -57,7 +57,7 @@ class RouterController extends Controller
     {
         return Inertia::render('Admin/Router/Form', [
             'router' => null,
-            'radiusServers' => RadiusServer::where('is_active', true)->get(['id', 'name']),
+            'radiusServers' => RadiusServer::active()->get(['id', 'name']),
         ]);
     }
 
@@ -176,7 +176,7 @@ class RouterController extends Controller
     {
         return Inertia::render('Admin/Router/Form', [
             'router' => $router,
-            'radiusServers' => RadiusServer::where('is_active', true)->get(['id', 'name']),
+            'radiusServers' => RadiusServer::active()->get(['id', 'name']),
         ]);
     }
 

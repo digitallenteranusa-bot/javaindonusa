@@ -97,9 +97,9 @@ Schedule::command('log:clear')
     ->weeklyOn(0, '01:00')
     ->timezone('Asia/Jakarta');
 
-// Database backup daily at 02:00 (only DB, no files)
+// Database backup every 2 days at 02:00
 Schedule::command('backup:run --only-db')
-    ->dailyAt('02:00')
+    ->cron('0 2 */2 * *')
     ->timezone('Asia/Jakarta')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/backup.log'));
@@ -122,9 +122,9 @@ Schedule::command('backup:monitor')
     ->dailyAt('08:00')
     ->timezone('Asia/Jakarta');
 
-// Sync latest backup to Google Drive daily at 02:30 (after DB backup)
+// Sync latest backup to Google Drive every 2 days at 02:30 (after DB backup)
 Schedule::command('backup:google-drive')
-    ->dailyAt('02:30')
+    ->cron('30 2 */2 * *')
     ->timezone('Asia/Jakarta')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/backup.log'));

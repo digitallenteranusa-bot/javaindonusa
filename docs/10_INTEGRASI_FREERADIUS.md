@@ -3,6 +3,8 @@
 
 Dokumen ini menjelaskan cara menginstall, mengkonfigurasi, dan mengoperasikan integrasi FreeRADIUS dengan sistem billing. Integrasi ini menambahkan **dual sync** — kredensial pelanggan disinkronkan ke **Mikrotik** (seperti sebelumnya) **DAN** ke **FreeRADIUS database** secara bersamaan.
 
+**Status:** Production-ready, terverifikasi di VPS billing dengan FreeRADIUS 3.0.26 + Mikrotik.
+
 ---
 
 ## Daftar Isi
@@ -23,6 +25,7 @@ Dokumen ini menjelaskan cara menginstall, mengkonfigurasi, dan mengoperasikan in
 14. [Testing & Verifikasi](#14-testing--verifikasi)
 15. [Troubleshooting](#15-troubleshooting)
 16. [FAQ](#16-faq)
+17. [Catatan Penting dari Production](#17-catatan-penting-dari-production)
 
 ---
 
@@ -232,11 +235,17 @@ RADIUS_DB_DATABASE=radius
 RADIUS_DB_USERNAME=radius
 RADIUS_DB_PASSWORD=password_radius_yang_kuat
 
-# Metode isolasi: rate_limit | group | delete
-RADIUS_ISOLATION_METHOD=rate_limit
+# Metode isolasi: pool (recommended) | rate_limit | group | delete
+RADIUS_ISOLATION_METHOD=pool
 
-# Rate limit saat isolasi (format Mikrotik: upload/download)
-RADIUS_ISOLATION_RATE_LIMIT=1k/1k
+# Pool isolasi — customer dapat IP dari pool ini saat diisolir
+RADIUS_ISOLATION_POOL=pool-isolir
+
+# Address list untuk NAT redirect ke halaman isolir
+RADIUS_ISOLATION_ADDRESS_LIST=ISOLIR
+
+# Rate limit saat isolasi (hanya jika RADIUS_ISOLATION_METHOD=rate_limit)
+# RADIUS_ISOLATION_RATE_LIMIT=1k/1k
 ```
 
 ### 5.2 Penjelasan Konfigurasi
@@ -249,8 +258,10 @@ RADIUS_ISOLATION_RATE_LIMIT=1k/1k
 | `RADIUS_DB_DATABASE` | `radius` | Nama database RADIUS |
 | `RADIUS_DB_USERNAME` | (dari `DB_USERNAME`) | Username MySQL RADIUS |
 | `RADIUS_DB_PASSWORD` | (dari `DB_PASSWORD`) | Password MySQL RADIUS |
-| `RADIUS_ISOLATION_METHOD` | `rate_limit` | Metode isolasi (lihat [Section 12](#12-metode-isolasi-radius)) |
-| `RADIUS_ISOLATION_RATE_LIMIT` | `1k/1k` | Rate limit saat isolasi |
+| `RADIUS_ISOLATION_METHOD` | `pool` | Metode isolasi (lihat [Section 12](#12-metode-isolasi-radius)) |
+| `RADIUS_ISOLATION_POOL` | `pool-isolir` | Nama pool Mikrotik untuk IP isolasi |
+| `RADIUS_ISOLATION_ADDRESS_LIST` | `ISOLIR` | Address list untuk NAT redirect |
+| `RADIUS_ISOLATION_RATE_LIMIT` | `1k/1k` | Rate limit (hanya untuk method `rate_limit`) |
 
 ### 5.3 File Konfigurasi `config/radius.php`
 
@@ -261,7 +272,9 @@ return [
     'enabled' => env('RADIUS_ENABLED', false),
     'connection' => 'radius',
     'default_group' => 'default',
-    'isolation_method' => env('RADIUS_ISOLATION_METHOD', 'rate_limit'),
+    'isolation_method' => env('RADIUS_ISOLATION_METHOD', 'pool'),
+    'isolation_pool' => env('RADIUS_ISOLATION_POOL', 'pool-isolir'),
+    'isolation_address_list' => env('RADIUS_ISOLATION_ADDRESS_LIST', 'ISOLIR'),
     'isolation_rate_limit' => env('RADIUS_ISOLATION_RATE_LIMIT', '1k/1k'),
     'isolation_group' => 'isolated',
     'auto_sync_nas' => true,
@@ -435,7 +448,19 @@ post-auth {
 }
 ```
 
-### 7.5 Set Permission dan Restart
+### 7.5 Include Dictionary Mikrotik
+
+FreeRADIUS harus mengenali vendor-specific attributes Mikrotik (`Mikrotik-Rate-Limit`, `Mikrotik-Address-List`, dll).
+
+Edit `/etc/freeradius/3.0/dictionary` dan tambahkan di baris terakhir:
+
+```
+$INCLUDE /usr/share/freeradius/dictionary.mikrotik
+```
+
+> **PENTING:** Attribute `Mikrotik-Local-Address` **TIDAK ADA** di dictionary FreeRADIUS. Jangan pernah insert attribute ini ke radreply — akan menyebabkan `Access-Reject`. Gunakan `local-address` di default PPP profile Mikrotik.
+
+### 7.6 Set Permission dan Restart
 
 ```bash
 # Set ownership
@@ -448,7 +473,7 @@ sudo freeradius -X
 sudo systemctl restart freeradius
 ```
 
-### 7.6 Verifikasi FreeRADIUS Membaca dari Database
+### 7.7 Verifikasi FreeRADIUS Membaca dari Database
 
 ```bash
 # Insert test user langsung ke database
@@ -474,22 +499,44 @@ mysql -u radius -p radius -e "DELETE FROM radcheck WHERE username='testuser';"
 Login ke Mikrotik via Winbox atau terminal:
 
 ```
-# Tambah RADIUS server
-/radius add service=ppp address=IP_FREERADIUS_SERVER secret=SECRET_RADIUS \
+# Tambah RADIUS server (gunakan IP PUBLIK VPS, bukan 127.0.0.1)
+/radius add service=ppp address=<IP_PUBLIK_VPS> secret=SECRET_RADIUS \
     authentication-port=1812 accounting-port=1813 timeout=3000
 
 # Aktifkan RADIUS untuk PPP
 /ppp aaa set use-radius=yes accounting=yes interim-update=5m
+
+# PENTING: Set default PPP profile dengan local-address
+# Tanpa ini, RADIUS user tidak akan mendapat IP
+/ppp profile set default local-address=10.170.1.1 remote-address=broadband
 ```
 
 | Parameter | Nilai | Keterangan |
 |-----------|-------|------------|
-| `address` | IP server FreeRADIUS | Misalnya `192.168.88.10` |
+| `address` | IP **publik** server VPS | **BUKAN** 127.0.0.1 — harus reachable dari Mikrotik |
 | `secret` | Secret RADIUS | Harus sama dengan di tabel `nas` dan di RADIUS Server config billing |
 | `timeout` | `3000` (ms) | Timeout koneksi |
 | `interim-update` | `5m` | Interval update accounting |
+| `local-address` | IP gateway (misal `10.170.1.1`) | **WAJIB** di default PPP profile |
+| `remote-address` | Pool normal (misal `broadband`) | Pool IP untuk pelanggan aktif |
 
-### 8.2 Daftarkan Mikrotik sebagai NAS
+> **PENTING:** `local-address` di default PPP profile **WAJIB** ada. Jika tidak diset, RADIUS user akan gagal mendapat IP dan muncul error *"could not determine remote IP address"*.
+
+### 8.2 Konfigurasi Pool Isolasi di Mikrotik
+
+Pastikan pool isolasi dan NAT redirect sudah dikonfigurasi:
+
+```
+# Pool untuk customer yang diisolir (jika belum ada)
+/ip pool add name=pool-isolir ranges=10.170.100.1-10.170.100.254
+
+# NAT redirect — arahkan traffic HTTP customer isolir ke halaman notifikasi
+/ip firewall nat add chain=dstnat src-address-list=ISOLIR dst-port=80 \
+    protocol=tcp action=dst-nat to-addresses=<IP_WEB_ISOLIR> to-ports=80 \
+    comment="Redirect isolir ke halaman notifikasi"
+```
+
+### 8.3 Daftarkan Mikrotik sebagai NAS
 
 Di aplikasi billing:
 
@@ -504,7 +551,7 @@ Atau via artisan command:
 php artisan radius:sync --nas
 ```
 
-### 8.3 Verifikasi NAS di Database
+### 8.4 Verifikasi NAS di Database
 
 ```bash
 mysql -u radius -p radius -e "SELECT * FROM nas;"
@@ -520,7 +567,7 @@ Output:
 +----+----------------+-----------+-------+-------+--------+--------+-----------+--------------------+
 ```
 
-### 8.4 Konfigurasi FreeRADIUS untuk Membaca NAS dari Database
+### 8.5 Konfigurasi FreeRADIUS untuk Membaca NAS dari Database
 
 Pastikan `read_clients = yes` dan `client_table = "nas"` sudah diset di `/etc/freeradius/3.0/mods-available/sql` (sudah dibahas di [Section 7.2](#72-konfigurasi-koneksi-sql)).
 
@@ -614,6 +661,27 @@ php artisan radius:sync --all
 php artisan radius:status
 ```
 
+#### `radius:cleanup` — Bersihkan Data Lama
+
+```bash
+# Preview data yang akan dihapus (dry run)
+php artisan radius:cleanup --dry-run
+
+# Hapus data lebih lama dari 3 bulan (default)
+php artisan radius:cleanup
+
+# Hapus data lebih lama dari 6 bulan
+php artisan radius:cleanup --months=6
+```
+
+Data yang dihapus:
+- `radacct`: Hanya session yang sudah **selesai** (`acctstoptime IS NOT NULL`)
+- `radpostauth`: Log autentikasi lama
+
+> **Catatan:** Session aktif (`acctstoptime IS NULL`) **tidak akan dihapus**.
+
+Cleanup otomatis dijadwalkan setiap **Minggu 04:30** di `routes/console.php`.
+
 ### 9.3 Kapan Harus Menjalankan `radius:sync`
 
 | Situasi | Command |
@@ -641,6 +709,7 @@ Admin membuat customer baru (dengan PPPoE username/password)
     │               │
     │               ├──▶ radcheck  : INSERT Cleartext-Password
     │               ├──▶ radreply  : INSERT Mikrotik-Rate-Limit
+    │               ├──▶ radreply  : INSERT Framed-Pool (dari paket)
     │               └──▶ radusergroup : INSERT group 'default'
     │
     └──▶ Pelanggan bisa login PPPoE via RADIUS
@@ -664,7 +733,7 @@ Admin mengubah password/paket/username pelanggan
     └──▶ Pelanggan login dengan credential baru
 ```
 
-### 10.3 Customer Diisolir (Isolate)
+### 10.3 Customer Diisolir (Isolate) — Pool Method
 
 ```
 Scheduler / Admin mengisolir pelanggan
@@ -676,11 +745,13 @@ Scheduler / Admin mengisolir pelanggan
     │       │
     │       └──▶ RadiusService::isolateCustomer()
     │               │
-    │               └──▶ (rate_limit method):
-    │                       DELETE Mikrotik-Rate-Limit dari radreply
-    │                       INSERT Mikrotik-Rate-Limit = '1k/1k'
+    │               ├──▶ radreply: Framed-Pool = 'pool-isolir'
+    │               ├──▶ radreply: Mikrotik-Address-List = 'ISOLIR'
+    │               └──▶ radreply: DELETE Mikrotik-Rate-Limit
     │
-    └──▶ Pelanggan tetap bisa login PPPoE tapi bandwidth 1kbps
+    └──▶ Pelanggan reconnect PPPoE → dapat IP dari pool-isolir
+         → masuk address list ISOLIR → NAT redirect ke halaman isolir
+         → bandwidth TIDAK dibatasi (agar halaman isolir bisa dimuat)
 ```
 
 ### 10.4 Customer Direopen (Reopen)
@@ -695,11 +766,12 @@ Payment diterima → Customer direopen
     │       │
     │       └──▶ RadiusService::reopenCustomer()
     │               │
-    │               ├──▶ DELETE Mikrotik-Rate-Limit dari radreply
-    │               ├──▶ INSERT Mikrotik-Rate-Limit = rate dari paket
-    │               └──▶ Restore group ke 'default'
+    │               ├──▶ radreply: Framed-Pool = pool dari paket (broadband)
+    │               ├──▶ radreply: Mikrotik-Rate-Limit = rate dari paket
+    │               ├──▶ radreply: DELETE Mikrotik-Address-List
+    │               └──▶ radusergroup: Restore group ke 'default'
     │
-    └──▶ Pelanggan kembali mendapat bandwidth normal
+    └──▶ Pelanggan reconnect → dapat IP normal + bandwidth normal
 ```
 
 ### 10.5 Customer Dihapus (Delete)
@@ -749,9 +821,36 @@ Fitur yang tersedia:
 
 ## 12. Metode Isolasi RADIUS
 
-Tiga metode isolasi tersedia, dikonfigurasi via `RADIUS_ISOLATION_METHOD`:
+Empat metode isolasi tersedia, dikonfigurasi via `RADIUS_ISOLATION_METHOD`:
 
-### 12.1 `rate_limit` (Default & Rekomendasi)
+### 12.1 `pool` (Default & Rekomendasi)
+
+```env
+RADIUS_ISOLATION_METHOD=pool
+RADIUS_ISOLATION_POOL=pool-isolir
+RADIUS_ISOLATION_ADDRESS_LIST=ISOLIR
+```
+
+**Cara kerja:**
+- Saat isolasi:
+  - `Framed-Pool` diubah ke `pool-isolir` (customer dapat IP dari pool isolasi)
+  - `Mikrotik-Address-List` diset ke `ISOLIR` (untuk NAT redirect)
+  - `Mikrotik-Rate-Limit` **dihapus** (bandwidth tidak dibatasi)
+- Saat reopen:
+  - `Framed-Pool` dikembalikan ke pool paket (misal `broadband`)
+  - `Mikrotik-Rate-Limit` dikembalikan ke rate dari paket
+  - `Mikrotik-Address-List` dihapus
+
+**Kelebihan:**
+- Pelanggan tetap terhubung dan **bisa membuka halaman isolir** (bandwidth tidak dibatasi)
+- NAT redirect otomatis ke halaman pemberitahuan pembayaran
+- Pemisahan IP yang jelas antara pelanggan aktif dan isolir
+
+**Prasyarat Mikrotik:**
+- Pool `pool-isolir` harus sudah dibuat
+- NAT rule dst-nat untuk `src-address-list=ISOLIR` ke web server halaman isolir
+
+### 12.2 `rate_limit`
 
 ```env
 RADIUS_ISOLATION_METHOD=rate_limit
@@ -761,14 +860,10 @@ RADIUS_ISOLATION_RATE_LIMIT=1k/1k
 **Cara kerja:**
 - Saat isolasi: Rate limit di `radreply` diubah menjadi `1k/1k` (1 Kbps upload/download)
 - Saat reopen: Rate limit dikembalikan ke nilai dari paket pelanggan
-- Pelanggan tetap bisa login PPPoE, tapi bandwidth sangat terbatas
 
-**Kelebihan:**
-- Pelanggan tetap terhubung — bisa diarahkan ke halaman pembayaran
-- Cocok untuk captive portal / walled garden
-- Tidak perlu disconnect session aktif
+> **Perhatian:** Dengan bandwidth 1k/1k, pelanggan **tidak akan bisa memuat halaman apapun** termasuk halaman isolir. Gunakan method `pool` jika ingin menampilkan halaman pemberitahuan.
 
-### 12.2 `group`
+### 12.3 `group`
 
 ```env
 RADIUS_ISOLATION_METHOD=group
@@ -779,11 +874,7 @@ RADIUS_ISOLATION_METHOD=group
 - Saat reopen: User dikembalikan ke group `default` + rate limit normal
 - Bisa dikombinasikan dengan group-based policy di FreeRADIUS
 
-**Kelebihan:**
-- Lebih fleksibel untuk policy berbasis group
-- Bisa menambahkan attribute tambahan per group (misalnya redirect URL)
-
-### 12.3 `delete`
+### 12.4 `delete`
 
 ```env
 RADIUS_ISOLATION_METHOD=delete
@@ -793,10 +884,6 @@ RADIUS_ISOLATION_METHOD=delete
 - Saat isolasi: Semua entry dihapus dari `radcheck`, `radreply`, `radusergroup`
 - Saat reopen: Entry dibuat ulang via `syncCustomer()`
 - Pelanggan **tidak bisa login PPPoE** saat diisolir
-
-**Kelebihan:**
-- Paling ketat — pelanggan benar-benar terputus
-- Tidak ada resource yang terpakai untuk pelanggan terisolir
 
 ---
 
@@ -808,13 +895,18 @@ RADIUS_ISOLATION_METHOD=delete
 app/
 ├── Console/Commands/
 │   ├── RadiusSync.php              # Artisan: radius:sync
-│   └── RadiusStatus.php            # Artisan: radius:status
-├── Models/Radius/
-│   ├── RadCheck.php                # Model tabel radcheck
-│   ├── RadReply.php                # Model tabel radreply
-│   ├── RadUserGroup.php            # Model tabel radusergroup
-│   ├── RadAcct.php                 # Model tabel radacct (read-only)
-│   └── Nas.php                     # Model tabel nas
+│   ├── RadiusStatus.php            # Artisan: radius:status
+│   └── RadiusCleanup.php           # Artisan: radius:cleanup (bersihkan data lama)
+├── Models/
+│   ├── Radius/
+│   │   ├── RadCheck.php            # Model tabel radcheck
+│   │   ├── RadReply.php            # Model tabel radreply
+│   │   ├── RadUserGroup.php        # Model tabel radusergroup
+│   │   ├── RadAcct.php             # Model tabel radacct (read-only)
+│   │   └── Nas.php                 # Model tabel nas
+│   └── RadiusServer.php            # Model RADIUS server (billing DB)
+├── Observers/
+│   └── RouterObserver.php          # Auto sync NAS saat router berubah
 └── Services/Radius/
     └── RadiusService.php           # Service utama RADIUS
 
@@ -822,22 +914,29 @@ config/
 └── radius.php                      # Konfigurasi RADIUS
 
 database/migrations/
-└── 2026_03_01_000001_create_freeradius_tables.php
+├── 2026_03_01_000001_create_freeradius_tables.php
+└── 2026_03_19_053846_add_pppoe_pool_to_packages_table.php
 ```
 
 ### 13.2 File yang Dimodifikasi
 
 ```
-config/database.php                 # + connection 'radius'
+config/database.php                 # + connection 'radius' (support SQLite untuk testing)
 .env.example                        # + RADIUS_* variables
+app/Models/Package.php              # + pppoe_pool field (pool PPPoE per paket)
 app/Observers/CustomerObserver.php  # + RADIUS sync on CRUD
 app/Jobs/IsolateCustomerJob.php     # + RadiusService::isolateCustomer()
 app/Jobs/ReopenCustomerJob.php      # + RadiusService::reopenCustomer()
 app/Http/Controllers/Admin/
-    RadiusServerController.php      # + syncNas() method
+    RadiusServerController.php      # + testConnection via DB, syncNas()
+    CustomerController.php          # + radiusData di show()
 resources/js/Pages/Admin/
-    RadiusServer/Index.vue          # + Sync NAS button, hapus placeholder
+    RadiusServer/Index.vue          # + Sync NAS button
+    RadiusServer/Show.vue           # Detail server + panduan Mikrotik
+    Customer/Show.vue               # + RADIUS session card
+    Package/Form.vue                # + PPPoE Pool field
 routes/admin.php                    # + POST radius-servers/sync-nas
+routes/console.php                  # + radius:cleanup schedule
 ```
 
 ### 13.3 RadiusService Methods
@@ -890,24 +989,30 @@ radtest USERNAME_PELANGGAN PASSWORD_PELANGGAN localhost 0 SECRET_RADIUS
 /log print where topics~"radius"
 ```
 
-### 14.2 Test Isolasi
+### 14.2 Test Isolasi (Pool Method)
 
 ```bash
 # 1. Isolir pelanggan via billing (admin panel atau command)
 # 2. Cek radreply berubah:
-mysql -u radius -p radius -e "
+mysql -u root -p radius -e "
 SELECT username, attribute, value FROM radreply
 WHERE username='USERNAME_PELANGGAN';
 "
-# Expected: Mikrotik-Rate-Limit = 1k/1k
+# Expected:
+#   Framed-Pool = pool-isolir
+#   Mikrotik-Address-List = ISOLIR
+#   (TIDAK ada Mikrotik-Rate-Limit)
 
 # 3. Reopen pelanggan
 # 4. Cek radreply kembali normal:
-mysql -u radius -p radius -e "
+mysql -u root -p radius -e "
 SELECT username, attribute, value FROM radreply
 WHERE username='USERNAME_PELANGGAN';
 "
-# Expected: Mikrotik-Rate-Limit = rate dari paket (misal: 10000k/30000k)
+# Expected:
+#   Framed-Pool = broadband
+#   Mikrotik-Rate-Limit = rate dari paket (misal: 10240k/10240k)
+#   (TIDAK ada Mikrotik-Address-List)
 ```
 
 ### 14.3 Test Graceful Degradation
@@ -1054,5 +1159,97 @@ Command `radius:sync` hanya perlu dijalankan untuk:
 
 ---
 
+---
+
+## 17. Catatan Penting dari Production
+
+Catatan dari pengalaman setup FreeRADIUS 3.0.26 di VPS billing (Maret 2026):
+
+### 17.1 RADIUS Menggunakan UDP, Bukan TCP
+
+- Port 1812/1813 menggunakan **UDP**
+- `fsockopen()` atau `telnet` tidak bisa digunakan untuk test koneksi RADIUS
+- Gunakan `radtest` atau cek koneksi database RADIUS sebagai pengganti
+
+### 17.2 Dictionary Mikrotik
+
+- **WAJIB** include di `/etc/freeradius/3.0/dictionary`:
+  ```
+  $INCLUDE /usr/share/freeradius/dictionary.mikrotik
+  ```
+- Tanpa ini, attribute `Mikrotik-Rate-Limit` dan `Mikrotik-Address-List` akan menyebabkan `Access-Reject`
+- Attribute `Mikrotik-Local-Address` **TIDAK ADA** di dictionary — jangan pernah insert ke radreply
+
+### 17.3 Default PPP Profile WAJIB Punya local-address
+
+```
+/ppp profile set default local-address=10.170.1.1 remote-address=broadband
+```
+
+Tanpa `local-address`, RADIUS user akan gagal mendapat IP dan muncul error:
+```
+could not determine remote IP address
+```
+
+### 17.4 Framed-Pool per Paket
+
+- Setiap paket (`packages` table) punya field `pppoe_pool` (default: `broadband`)
+- RADIUS mengirim `Framed-Pool` sesuai paket pelanggan
+- Saat isolasi, `Framed-Pool` diubah ke `pool-isolir`
+- Pool harus sudah ada di Mikrotik (`/ip pool`)
+
+### 17.5 Isolasi: Jangan Pakai Rate Limit 1k/1k
+
+- Bandwidth 1k/1k **terlalu lambat** untuk memuat halaman apapun
+- Pelanggan tidak akan bisa melihat halaman pemberitahuan isolir
+- Gunakan method `pool` — pelanggan dapat IP dari `pool-isolir` + NAT redirect ke halaman isolir tanpa batas bandwidth
+
+### 17.6 RADIUS Secret Terenkripsi
+
+- Secret RADIUS disimpan **terenkripsi** di tabel `radius_servers` (menggunakan Laravel `Crypt` facade)
+- Akses plaintext via accessor `$radiusServer->decrypted_secret`
+- Secret di tabel `nas` (RADIUS DB) disimpan plaintext (standar FreeRADIUS)
+
+### 17.7 Fallback saat VPN Putus
+
+- Mikrotik terhubung ke VPS billing via **VPN** (untuk API Mikrotik, bukan RADIUS)
+- Jika VPN putus: **RADIUS tetap jalan** (selama ada routing ke VPS via IP publik)
+- PPPoE secret lokal di Mikrotik berfungsi sebagai fallback jika RADIUS unreachable
+- Billing API (port 8728) yang tidak bisa diakses saat VPN putus
+
+### 17.8 Menambah Router Baru
+
+Checklist saat menambah router baru ke RADIUS:
+
+1. **Billing:** Buat router + assign ke Radius Server → NAS otomatis tersync (RouterObserver)
+2. **Mikrotik:**
+   ```
+   /radius add service=ppp address=<IP_PUBLIK_VPS> secret=<SECRET>
+   /ppp aaa set use-radius=yes accounting=yes interim-update=5m
+   /ppp profile set default local-address=<GATEWAY_IP> remote-address=<POOL_NORMAL>
+   ```
+3. **FreeRADIUS:** Restart service (`sudo systemctl restart freeradius`) agar NAS baru terbaca
+4. **Firewall VPS:** Pastikan port 1812-1813/UDP terbuka untuk IP/subnet router baru
+
+### 17.9 Verifikasi RADIUS Aktif
+
+PPPoE session yang menggunakan RADIUS ditandai dengan flag **`R`** di Mikrotik:
+
+```
+/ppp active print
+# Flags: R - RADIUS
+#   0 R <...> username@ind.net  pppoe  ...
+```
+
+Jika tidak ada flag `R`, berarti masih menggunakan PPPoE secret lokal.
+
+### 17.10 Scheduled Tasks RADIUS
+
+| Jadwal | Command | Fungsi |
+|--------|---------|--------|
+| Minggu 04:30 | `radius:cleanup` | Hapus radacct & radpostauth > 3 bulan |
+
+---
+
 > **Dokumen ini dibuat untuk ISP Billing System Java Indonusa v1.0**
-> Terakhir diupdate: Maret 2026
+> Terakhir diupdate: 19 Maret 2026

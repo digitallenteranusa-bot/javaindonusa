@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\RadiusServer;
 use App\Models\Router;
 use App\Http\Requests\Admin\Router\StoreRouterRequest;
 use App\Http\Requests\Admin\Router\UpdateRouterRequest;
@@ -56,6 +57,7 @@ class RouterController extends Controller
     {
         return Inertia::render('Admin/Router/Form', [
             'router' => null,
+            'radiusServers' => RadiusServer::where('is_active', true)->get(['id', 'name']),
         ]);
     }
 
@@ -174,6 +176,7 @@ class RouterController extends Controller
     {
         return Inertia::render('Admin/Router/Form', [
             'router' => $router,
+            'radiusServers' => RadiusServer::where('is_active', true)->get(['id', 'name']),
         ]);
     }
 

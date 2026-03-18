@@ -5,6 +5,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 const props = defineProps({
     router: Object,
+    radiusServers: Array,
 })
 
 const isEdit = computed(() => !!props.router)
@@ -16,6 +17,7 @@ const form = useForm({
     api_port: props.router?.api_port || 8728,
     username: props.router?.username || 'admin',
     password: '',
+    radius_server_id: props.router?.radius_server_id || '',
     is_active: props.router?.is_active ?? true,
     notes: props.router?.notes || '',
 })
@@ -137,6 +139,26 @@ const submit = () => {
                             <li>IP > Services > api (port default 8728)</li>
                             <li>User harus memiliki akses API (read, write, api, policy)</li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="radiusServers?.length" class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">RADIUS Server</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Radius Server</label>
+                        <select
+                            v-model="form.radius_server_id"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">-- Tidak menggunakan RADIUS --</option>
+                            <option v-for="rs in radiusServers" :key="rs.id" :value="rs.id">
+                                {{ rs.name }}
+                            </option>
+                        </select>
+                        <p class="text-gray-500 text-sm mt-1">Pilih RADIUS server untuk autentikasi PPPoE terpusat</p>
                     </div>
                 </div>
             </div>

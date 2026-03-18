@@ -20,6 +20,7 @@ class StoreRouterRequest extends FormRequest
             'api_port' => 'required|integer|min:1|max:65535',
             'username' => 'required|string|max:50',
             'password' => 'required|string|max:100',
+            'radius_server_id' => 'nullable|exists:radius_servers,id',
             'is_active' => 'boolean',
             'notes' => 'nullable|string|max:1000',
         ];

@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Radius\Nas;
+use App\Models\Radius\RadAcct;
+use App\Models\Radius\RadCheck;
 use App\Models\RadiusServer;
 use App\Services\Radius\RadiusService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -139,21 +143,32 @@ class RadiusServerController extends Controller
     }
 
     /**
-     * Test Radius Server connection (placeholder)
+     * Test RADIUS connection by checking FreeRADIUS DB status.
      */
-    public function testConnection(RadiusServer $radiusServer)
+    public function testConnection(RadiusServer $radiusServer, RadiusService $radiusService)
     {
-        // This is a placeholder - actual RADIUS testing requires RADIUS client library
-        // For now, just do a basic port check
-
-        $socket = @fsockopen($radiusServer->ip_address, $radiusServer->auth_port, $errno, $errstr, 5);
-
-        if ($socket) {
-            fclose($socket);
-            return back()->with('success', 'Port Radius dapat dijangkau (test koneksi penuh belum tersedia)');
+        if (!$radiusService->isEnabled()) {
+            return back()->with('error', 'Integrasi RADIUS belum diaktifkan. Set RADIUS_ENABLED=true di .env');
         }
 
-        return back()->with('error', "Tidak dapat terhubung ke port {$radiusServer->auth_port}: {$errstr}");
+        try {
+            DB::connection('radius')->getPdo();
+
+            $users = RadCheck::distinct('username')->count('username');
+            $nasCount = Nas::count();
+            $activeSessions = RadAcct::active()->count();
+
+            $nasForServer = Nas::where('nasname', $radiusServer->ip_address)->exists()
+                ? 'terdaftar'
+                : 'belum terdaftar di NAS';
+
+            return back()->with('success',
+                "RADIUS DB OK — {$users} user, {$nasCount} NAS, {$activeSessions} session aktif. " .
+                "Server {$radiusServer->ip_address}: {$nasForServer}"
+            );
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal terhubung ke RADIUS DB: ' . $e->getMessage());
+        }
     }
 
     /**

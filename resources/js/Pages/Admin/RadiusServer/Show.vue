@@ -158,11 +158,17 @@ const formatDate = (date) => {
             <!-- Mikrotik Config Guide -->
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <h2 class="text-lg font-semibold mb-4">Konfigurasi Mikrotik</h2>
-                <p class="text-sm text-gray-500 mb-3">Jalankan perintah berikut di terminal Mikrotik:</p>
+
+                <div v-if="radiusServer.routers?.length" class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p class="text-sm text-green-700 font-medium">{{ radiusServer.routers.length }} router sudah terhubung</p>
+                    <p class="text-xs text-green-600 mt-1">Pastikan konfigurasi RADIUS di setiap Mikrotik sudah benar</p>
+                </div>
+
+                <p class="text-sm text-gray-500 mb-3">Perintah di terminal Mikrotik:</p>
                 <div class="bg-gray-900 text-green-400 rounded-lg p-4 text-xs font-mono space-y-2 overflow-x-auto">
                     <p class="text-gray-500"># Tambah RADIUS server</p>
                     <p>/radius add service=ppp \</p>
-                    <p class="pl-4">address={{ radiusServer.ip_address }} \</p>
+                    <p class="pl-4">address=&lt;IP_PUBLIK_VPS&gt; \</p>
                     <p class="pl-4">secret=&lt;SECRET&gt; \</p>
                     <p class="pl-4">authentication-port={{ radiusServer.auth_port }} \</p>
                     <p class="pl-4">accounting-port={{ radiusServer.acct_port }} \</p>
@@ -172,7 +178,10 @@ const formatDate = (date) => {
                     <p class="pl-4">accounting=yes \</p>
                     <p class="pl-4">interim-update=5m</p>
                 </div>
-                <p class="text-xs text-gray-400 mt-3">Ganti &lt;SECRET&gt; dengan RADIUS secret yang sudah dikonfigurasi</p>
+                <div class="mt-3 text-xs text-gray-400 space-y-1">
+                    <p>&lt;IP_PUBLIK_VPS&gt; = IP publik server billing yang bisa dijangkau dari Mikrotik</p>
+                    <p>&lt;SECRET&gt; = RADIUS shared secret yang dikonfigurasi di server ini</p>
+                </div>
             </div>
         </div>
 

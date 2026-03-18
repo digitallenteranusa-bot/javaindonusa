@@ -23,6 +23,7 @@ class PackageFactory extends Factory
             'price' => $this->faker->randomElement([100000, 150000, 200000, 300000, 500000]),
             'description' => $this->faker->sentence(),
             'is_active' => true,
+            'pppoe_pool' => 'broadband',
         ];
     }
 }

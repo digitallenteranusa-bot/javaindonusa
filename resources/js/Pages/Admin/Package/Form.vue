@@ -24,6 +24,7 @@ const form = useForm({
     burst_time: props.package?.burst_time || '',
     priority: props.package?.priority || 8,
     address_list: props.package?.address_list || '',
+    pppoe_pool: props.package?.pppoe_pool || 'broadband',
     sort_order: props.package?.sort_order || 0,
 })
 
@@ -251,6 +252,19 @@ const submit = () => {
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 placeholder="Contoh: PAKET-10M"
                             >
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">PPPoE Pool (RADIUS)</label>
+                            <input
+                                v-model="form.pppoe_pool"
+                                type="text"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                placeholder="broadband"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Nama IP pool di Mikrotik untuk Framed-Pool RADIUS</p>
                         </div>
                     </div>
 

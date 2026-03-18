@@ -60,6 +60,17 @@ class RadiusService
                     ]);
                 }
 
+                // Insert Framed-Pool from package
+                $pool = $customer->package?->pppoe_pool;
+                if ($pool) {
+                    RadReply::create([
+                        'username' => $username,
+                        'attribute' => 'Framed-Pool',
+                        'op' => ':=',
+                        'value' => $pool,
+                    ]);
+                }
+
                 // Insert default group
                 RadUserGroup::create([
                     'username' => $username,

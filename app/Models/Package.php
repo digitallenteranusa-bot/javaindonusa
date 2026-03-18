@@ -26,6 +26,7 @@ class Package extends Model
         'burst_time',
         'priority',
         'address_list',
+        'pppoe_pool',
         'sort_order',
     ];
 

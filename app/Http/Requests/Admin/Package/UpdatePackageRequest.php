@@ -29,6 +29,7 @@ class UpdatePackageRequest extends FormRequest
             'burst_time' => 'nullable|string|max:20',
             'priority' => 'nullable|integer|min:1|max:8',
             'address_list' => 'nullable|string|max:50',
+            'pppoe_pool' => 'nullable|string|max:50',
             'sort_order' => 'nullable|integer|min:0',
         ];
     }

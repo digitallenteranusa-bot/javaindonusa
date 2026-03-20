@@ -40,7 +40,7 @@ class RadiusSync extends Command
             if ($this->option('dry-run')) {
                 $count = \App\Models\Customer::whereNotNull('pppoe_username')
                     ->where('pppoe_username', '!=', '')
-                    ->whereIn('status', ['active', 'isolated'])
+                    ->whereIn('status', ['active', 'isolated', 'suspended'])
                     ->count();
                 $this->info("  Would sync {$count} customers.");
             } else {

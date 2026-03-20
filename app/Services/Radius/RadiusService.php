@@ -414,11 +414,11 @@ class RadiusService
         Customer::with('package')
             ->whereNotNull('pppoe_username')
             ->where('pppoe_username', '!=', '')
-            ->whereIn('status', ['active', 'isolated'])
+            ->whereIn('status', ['active', 'isolated', 'suspended'])
             ->chunk(100, function ($customers) use (&$stats) {
                 foreach ($customers as $customer) {
-                    if ($customer->status === 'isolated') {
-                        // Sync as isolated
+                    if (in_array($customer->status, ['isolated', 'suspended'])) {
+                        // Sync as isolated (both isolated and suspended go to isolation pool)
                         $synced = $this->syncCustomer($customer);
                         if ($synced) {
                             $this->isolateCustomer($customer);

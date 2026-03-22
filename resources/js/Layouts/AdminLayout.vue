@@ -7,6 +7,17 @@ const { isDark, toggleTheme } = useTheme()
 
 const page = usePage()
 const user = computed(() => page.props.auth?.user)
+const permissions = computed(() => page.props.auth?.user?.permissions || [])
+const isAdmin = computed(() => user.value?.role === 'admin')
+
+const hasPermission = (permission) => {
+    if (isAdmin.value) return true
+    return permissions.value.includes(permission)
+}
+
+const filterByPermission = (items) => {
+    return items.filter(item => !item.permission || hasPermission(item.permission))
+}
 
 // Flash message handling with auto-dismiss
 const showSuccess = ref(false)
@@ -71,57 +82,57 @@ const closeMobileMenu = () => {
     mobileMenuOpen.value = false
 }
 
-// Menu Groups
+// Menu Groups - each item has optional 'permission' for visibility control
 const mainNavigation = [
-    { name: 'Dashboard', href: '/admin', icon: 'home' },
-    { name: 'Pelanggan', href: '/admin/customers', icon: 'users' },
-    { name: 'Mapping', href: '/admin/mapping', icon: 'globe' },
-    { name: 'Broadcast', href: '/admin/broadcasts/create', icon: 'megaphone' },
+    { name: 'Dashboard', href: '/admin', icon: 'home', permission: 'dashboard.view' },
+    { name: 'Pelanggan', href: '/admin/customers', icon: 'users', permission: 'customers.view' },
+    { name: 'Mapping', href: '/admin/mapping', icon: 'globe', permission: 'mapping.view' },
+    { name: 'Broadcast', href: '/admin/broadcasts/create', icon: 'megaphone', permission: 'customers.view' },
 ]
 
 const billingNavigation = [
-    { name: 'Invoice', href: '/admin/invoices', icon: 'document' },
-    { name: 'Belum Bayar', href: '/admin/billing/unpaid', icon: 'clipboard' },
-    { name: 'Isolir', href: '/admin/isolation', icon: 'shield' },
-    { name: 'Pembayaran', href: '/admin/payments', icon: 'credit-card' },
+    { name: 'Invoice', href: '/admin/invoices', icon: 'document', permission: 'invoices.view' },
+    { name: 'Belum Bayar', href: '/admin/billing/unpaid', icon: 'clipboard', permission: 'invoices.view' },
+    { name: 'Isolir', href: '/admin/isolation', icon: 'shield', permission: 'invoices.view' },
+    { name: 'Pembayaran', href: '/admin/payments', icon: 'credit-card', permission: 'payments.view' },
 ]
 
 const collectorNavigation = [
-    { name: 'Pengeluaran Penagih', href: '/admin/expenses', icon: 'receipt' },
-    { name: 'Setoran', href: '/admin/settlements', icon: 'cash' },
-    { name: 'Performa Penagih', href: '/admin/finance/collector-performance', icon: 'user-group' },
+    { name: 'Pengeluaran Penagih', href: '/admin/expenses', icon: 'receipt', permission: 'expenses.view' },
+    { name: 'Setoran', href: '/admin/settlements', icon: 'cash', permission: 'settlements.view' },
+    { name: 'Performa Penagih', href: '/admin/finance/collector-performance', icon: 'user-group', permission: 'collectors.view' },
 ]
 
 const financeNavigation = [
-    { name: 'Dashboard', href: '/admin/finance', icon: 'banknotes' },
-    { name: 'Pengeluaran Operasional', href: '/admin/finance/expenses', icon: 'receipt' },
-    { name: 'Analisa Pendapatan', href: '/admin/analytics/revenue', icon: 'chart' },
-    { name: 'Laporan', href: '/admin/reports', icon: 'chart' },
+    { name: 'Dashboard', href: '/admin/finance', icon: 'banknotes', permission: 'finance.view' },
+    { name: 'Pengeluaran Operasional', href: '/admin/finance/expenses', icon: 'receipt', permission: 'finance.manage' },
+    { name: 'Analisa Pendapatan', href: '/admin/analytics/revenue', icon: 'chart', permission: 'reports.view' },
+    { name: 'Laporan', href: '/admin/reports', icon: 'chart', permission: 'reports.view' },
 ]
 
 const networkNavigation = [
-    { name: 'Perangkat', href: '/admin/devices', icon: 'device' },
-    { name: 'Kesehatan Jaringan', href: '/admin/analytics/network', icon: 'signal' },
-    { name: 'Kesehatan VPS', href: '/admin/analytics/vps', icon: 'server' },
-    { name: 'VPN Server', href: '/admin/vpn-server', icon: 'vpn' },
+    { name: 'Perangkat', href: '/admin/devices', icon: 'device', permission: 'devices.view' },
+    { name: 'Kesehatan Jaringan', href: '/admin/analytics/network', icon: 'signal', permission: 'devices.view' },
+    { name: 'Kesehatan VPS', href: '/admin/analytics/vps', icon: 'server', permission: 'system.view' },
+    { name: 'VPN Server', href: '/admin/vpn-server', icon: 'vpn', permission: 'routers.view' },
 ]
 
 const masterNavigation = [
-    { name: 'Paket', href: '/admin/packages', icon: 'cube' },
-    { name: 'Area', href: '/admin/areas', icon: 'map' },
-    { name: 'Router', href: '/admin/routers', icon: 'server' },
-    { name: 'Merk Router', href: '/admin/router-brands', icon: 'wifi' },
-    { name: 'Radius Server', href: '/admin/radius-servers', icon: 'shield' },
-    { name: 'ODP', href: '/admin/odps', icon: 'odp' },
-    { name: 'OLT', href: '/admin/olts', icon: 'olt' },
+    { name: 'Paket', href: '/admin/packages', icon: 'cube', permission: 'packages.view' },
+    { name: 'Area', href: '/admin/areas', icon: 'map', permission: 'areas.view' },
+    { name: 'Router', href: '/admin/routers', icon: 'server', permission: 'routers.view' },
+    { name: 'Merk Router', href: '/admin/router-brands', icon: 'wifi', permission: 'routers.view' },
+    { name: 'Radius Server', href: '/admin/radius-servers', icon: 'shield', permission: 'radius.view' },
+    { name: 'ODP', href: '/admin/odps', icon: 'odp', permission: 'odps.view' },
+    { name: 'OLT', href: '/admin/olts', icon: 'olt', permission: 'olts.view' },
 ]
 
 const systemNavigation = [
-    { name: 'Users', href: '/admin/users', icon: 'user-group' },
-    { name: 'Audit Log', href: '/admin/audit-logs', icon: 'clipboard' },
-    { name: 'Roles', href: '/admin/roles', icon: 'shield' },
-    { name: 'Pengaturan', href: '/admin/settings', icon: 'cog' },
-    { name: 'Sistem', href: '/admin/system', icon: 'info' },
+    { name: 'Users', href: '/admin/users', icon: 'user-group', permission: 'users.view' },
+    { name: 'Audit Log', href: '/admin/audit-logs', icon: 'clipboard', permission: 'audit.view' },
+    { name: 'Roles', href: '/admin/roles', icon: 'shield', permission: 'roles.view' },
+    { name: 'Pengaturan', href: '/admin/settings', icon: 'cog', permission: 'settings.view' },
+    { name: 'Sistem', href: '/admin/system', icon: 'info', permission: 'system.view' },
 ]
 
 const isActive = (href) => {
@@ -301,7 +312,7 @@ const getIcon = (name) => ({
                             <span>Menu Utama</span>
                         </div>
                         <ul class="space-y-1">
-                            <li v-for="item in mainNavigation" :key="item.name">
+                            <li v-for="item in filterByPermission(mainNavigation)" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span class="truncate">{{ item.name }}</span>
@@ -311,7 +322,7 @@ const getIcon = (name) => ({
                     </div>
 
                     <!-- Billing & Tagihan -->
-                    <div class="mb-4">
+                    <div v-if="filterByPermission(billingNavigation).length" class="mb-4">
                         <button
                             @click="toggleSection('billing')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
@@ -332,7 +343,7 @@ const getIcon = (name) => ({
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <ul v-show="expandedSections.billing" class="space-y-1 overflow-hidden">
-                                <li v-for="item in billingNavigation" :key="item.name">
+                                <li v-for="item in filterByPermission(billingNavigation)" :key="item.name">
                                     <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                         <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                         <span class="truncate">{{ item.name }}</span>
@@ -343,7 +354,7 @@ const getIcon = (name) => ({
                     </div>
 
                     <!-- Penagih -->
-                    <div class="mb-4">
+                    <div v-if="filterByPermission(collectorNavigation).length" class="mb-4">
                         <button
                             @click="toggleSection('collector')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-orange-400 uppercase tracking-wider hover:text-orange-300 transition-colors"
@@ -364,7 +375,7 @@ const getIcon = (name) => ({
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <ul v-show="expandedSections.collector" class="space-y-1 overflow-hidden">
-                                <li v-for="item in collectorNavigation" :key="item.name">
+                                <li v-for="item in filterByPermission(collectorNavigation)" :key="item.name">
                                     <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                         <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                         <span class="truncate">{{ item.name }}</span>
@@ -375,7 +386,7 @@ const getIcon = (name) => ({
                     </div>
 
                     <!-- Keuangan -->
-                    <div class="mb-4">
+                    <div v-if="filterByPermission(financeNavigation).length" class="mb-4">
                         <button
                             @click="toggleSection('finance')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-green-400 uppercase tracking-wider hover:text-green-300 transition-colors"
@@ -396,7 +407,7 @@ const getIcon = (name) => ({
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <ul v-show="expandedSections.finance" class="space-y-1 overflow-hidden">
-                                <li v-for="item in financeNavigation" :key="item.name">
+                                <li v-for="item in filterByPermission(financeNavigation)" :key="item.name">
                                     <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                         <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                         <span class="truncate">{{ item.name }}</span>
@@ -407,7 +418,7 @@ const getIcon = (name) => ({
                     </div>
 
                     <!-- Jaringan -->
-                    <div class="mb-4">
+                    <div v-if="filterByPermission(networkNavigation).length" class="mb-4">
                         <button
                             @click="toggleSection('network')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-cyan-400 uppercase tracking-wider hover:text-cyan-300 transition-colors"
@@ -428,7 +439,7 @@ const getIcon = (name) => ({
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <ul v-show="expandedSections.network" class="space-y-1 overflow-hidden">
-                                <li v-for="item in networkNavigation" :key="item.name">
+                                <li v-for="item in filterByPermission(networkNavigation)" :key="item.name">
                                     <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                         <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                         <span class="truncate">{{ item.name }}</span>
@@ -439,7 +450,7 @@ const getIcon = (name) => ({
                     </div>
 
                     <!-- Master Data -->
-                    <div class="mb-4">
+                    <div v-if="filterByPermission(masterNavigation).length" class="mb-4">
                         <button
                             @click="toggleSection('master')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
@@ -460,7 +471,7 @@ const getIcon = (name) => ({
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <ul v-show="expandedSections.master" class="space-y-1 overflow-hidden">
-                                <li v-for="item in masterNavigation" :key="item.name">
+                                <li v-for="item in filterByPermission(masterNavigation)" :key="item.name">
                                     <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                         <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                         <span class="truncate">{{ item.name }}</span>
@@ -471,7 +482,7 @@ const getIcon = (name) => ({
                     </div>
 
                     <!-- System -->
-                    <div class="mb-4">
+                    <div v-if="filterByPermission(systemNavigation).length" class="mb-4">
                         <button
                             @click="toggleSection('system')"
                             class="w-full flex items-center justify-between px-3 mb-2 text-sm font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
@@ -492,7 +503,7 @@ const getIcon = (name) => ({
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <ul v-show="expandedSections.system" class="space-y-1 overflow-hidden">
-                                <li v-for="item in systemNavigation" :key="item.name">
+                                <li v-for="item in filterByPermission(systemNavigation)" :key="item.name">
                                     <Link :href="item.href" :class="navLinkClass(item.href)" @click="closeMobileMenu">
                                         <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                         <span class="truncate">{{ item.name }}</span>
@@ -568,7 +579,7 @@ const getIcon = (name) => ({
                         <span>Menu Utama</span>
                     </div>
                     <ul class="space-y-1">
-                        <li v-for="item in mainNavigation" :key="item.name">
+                        <li v-for="item in filterByPermission(mainNavigation)" :key="item.name">
                             <Link :href="item.href" :class="navLinkClass(item.href)">
                                 <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                 <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
@@ -578,7 +589,7 @@ const getIcon = (name) => ({
                 </div>
 
                 <!-- Billing & Tagihan -->
-                <div class="mb-4">
+                <div v-if="filterByPermission(billingNavigation).length" class="mb-4">
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('billing')"
@@ -600,7 +611,7 @@ const getIcon = (name) => ({
                         leave-to-class="opacity-0 max-h-0"
                     >
                         <ul v-show="expandedSections.billing || !sidebarOpen" class="space-y-1 overflow-hidden">
-                            <li v-for="item in billingNavigation" :key="item.name">
+                            <li v-for="item in filterByPermission(billingNavigation)" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
@@ -611,7 +622,7 @@ const getIcon = (name) => ({
                 </div>
 
                 <!-- Penagih -->
-                <div class="mb-4">
+                <div v-if="filterByPermission(collectorNavigation).length" class="mb-4">
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('collector')"
@@ -633,7 +644,7 @@ const getIcon = (name) => ({
                         leave-to-class="opacity-0 max-h-0"
                     >
                         <ul v-show="expandedSections.collector || !sidebarOpen" class="space-y-1 overflow-hidden">
-                            <li v-for="item in collectorNavigation" :key="item.name">
+                            <li v-for="item in filterByPermission(collectorNavigation)" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
@@ -644,7 +655,7 @@ const getIcon = (name) => ({
                 </div>
 
                 <!-- Keuangan -->
-                <div class="mb-4">
+                <div v-if="filterByPermission(financeNavigation).length" class="mb-4">
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('finance')"
@@ -666,7 +677,7 @@ const getIcon = (name) => ({
                         leave-to-class="opacity-0 max-h-0"
                     >
                         <ul v-show="expandedSections.finance || !sidebarOpen" class="space-y-1 overflow-hidden">
-                            <li v-for="item in financeNavigation" :key="item.name">
+                            <li v-for="item in filterByPermission(financeNavigation)" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
@@ -677,7 +688,7 @@ const getIcon = (name) => ({
                 </div>
 
                 <!-- Jaringan -->
-                <div class="mb-4">
+                <div v-if="filterByPermission(networkNavigation).length" class="mb-4">
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('network')"
@@ -699,7 +710,7 @@ const getIcon = (name) => ({
                         leave-to-class="opacity-0 max-h-0"
                     >
                         <ul v-show="expandedSections.network || !sidebarOpen" class="space-y-1 overflow-hidden">
-                            <li v-for="item in networkNavigation" :key="item.name">
+                            <li v-for="item in filterByPermission(networkNavigation)" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
@@ -710,7 +721,7 @@ const getIcon = (name) => ({
                 </div>
 
                 <!-- Master Data -->
-                <div class="mb-4">
+                <div v-if="filterByPermission(masterNavigation).length" class="mb-4">
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('master')"
@@ -732,7 +743,7 @@ const getIcon = (name) => ({
                         leave-to-class="opacity-0 max-h-0"
                     >
                         <ul v-show="expandedSections.master || !sidebarOpen" class="space-y-1 overflow-hidden">
-                            <li v-for="item in masterNavigation" :key="item.name">
+                            <li v-for="item in filterByPermission(masterNavigation)" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>
@@ -743,7 +754,7 @@ const getIcon = (name) => ({
                 </div>
 
                 <!-- System -->
-                <div class="mb-4">
+                <div v-if="filterByPermission(systemNavigation).length" class="mb-4">
                     <button
                         v-if="sidebarOpen"
                         @click="toggleSection('system')"
@@ -765,7 +776,7 @@ const getIcon = (name) => ({
                         leave-to-class="opacity-0 max-h-0"
                     >
                         <ul v-show="expandedSections.system || !sidebarOpen" class="space-y-1 overflow-hidden">
-                            <li v-for="item in systemNavigation" :key="item.name">
+                            <li v-for="item in filterByPermission(systemNavigation)" :key="item.name">
                                 <Link :href="item.href" :class="navLinkClass(item.href)">
                                     <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0" />
                                     <span v-if="sidebarOpen" class="truncate">{{ item.name }}</span>

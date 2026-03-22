@@ -9,9 +9,11 @@ use App\Models\Payment;
 use App\Models\Expense;
 use App\Models\Settlement;
 use App\Models\CollectionLog;
+use App\Jobs\SendNotificationJob;
 use App\Services\Billing\DebtIsolationService;
 use App\Services\Notification\NotificationService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Exceptions\Collector\UnauthorizedCustomerAccessException;
@@ -610,30 +612,60 @@ class CollectorService
     }
 
     /**
-     * Kirim notifikasi pembayaran ke pelanggan via WhatsApp
+     * Kirim notifikasi pembayaran ke pelanggan via WhatsApp (queued, 1 pesan/menit)
+     *
+     * Menggunakan queue dengan delay bertahap untuk menghindari block dari provider WA.
+     * Setiap pesan WA dijadwalkan minimal 60 detik setelah pesan terakhir.
      */
     protected function sendPaymentNotification(Customer $customer, array $paymentResult): void
     {
         try {
-            // Refresh customer untuk mendapatkan data terbaru (total_debt)
             $customer->refresh();
 
-            // Kirim konfirmasi pembayaran
-            $this->notificationService->sendPaymentConfirmation($customer, $paymentResult['payment']);
+            $delaySeconds = config('notification.whatsapp.rate_limit.bulk_delay_seconds', 60);
+            $payment = $paymentResult['payment'];
+            $messageCount = ($paymentResult['access_opened'] ?? false) ? 2 : 1;
 
-            // Jika akses dibuka (dari isolir), kirim notifikasi tambahan
+            // Atomic: hitung delay dan reserve slot (mencegah race condition antar penagih)
+            $delay = Cache::lock('wa_queue_lock', 5)->block(5, function () use ($delaySeconds, $messageCount) {
+                $nextAvailable = (int) Cache::get('wa_queue_next_available', 0);
+                $now = now()->timestamp;
+                $delay = max(0, $nextAvailable - $now);
+
+                // Reserve slot untuk semua pesan yang akan dikirim
+                Cache::put('wa_queue_next_available', max($now, $nextAvailable) + ($delaySeconds * $messageCount), 3600);
+
+                return $delay;
+            });
+
+            // Dispatch payment confirmation ke queue dengan delay
+            SendNotificationJob::dispatch(
+                'whatsapp',
+                $customer->phone,
+                $this->notificationService->buildPaymentConfirmationMessage($customer, $payment),
+                null,
+                ['notification_type' => 'payment']
+            )->delay(now()->addSeconds($delay));
+
+            // Jika akses dibuka, kirim notifikasi tambahan dengan delay berikutnya
             if ($paymentResult['access_opened'] ?? false) {
-                $this->notificationService->sendAccessOpenedNotice($customer);
+                SendNotificationJob::dispatch(
+                    'whatsapp',
+                    $customer->phone,
+                    $this->notificationService->buildAccessOpenedMessage($customer),
+                    null,
+                    ['notification_type' => 'access_opened']
+                )->delay(now()->addSeconds($delay + $delaySeconds));
             }
 
-            Log::info('Payment notification sent', [
+            Log::info('Payment notification queued', [
                 'customer_id' => $customer->id,
-                'payment_id' => $paymentResult['payment']->id,
+                'payment_id' => $payment->id,
+                'delay_seconds' => $delay,
                 'access_opened' => $paymentResult['access_opened'] ?? false,
             ]);
         } catch (\Exception $e) {
-            // Log error tapi jangan gagalkan proses pembayaran
-            Log::error('Failed to send payment notification', [
+            Log::error('Failed to queue payment notification', [
                 'customer_id' => $customer->id,
                 'payment_id' => $paymentResult['payment']->id ?? null,
                 'error' => $e->getMessage(),

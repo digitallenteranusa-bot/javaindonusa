@@ -644,7 +644,7 @@ class NotificationService
         return $details->join("\n") . "\n";
     }
 
-    protected function buildAccessOpenedMessage(Customer $customer): string
+    public function buildAccessOpenedMessage(Customer $customer): string
     {
         $companyName = $this->ispInfo?->company_name ?? 'ISP';
 
@@ -659,7 +659,7 @@ class NotificationService
             "_{$companyName}_";
     }
 
-    protected function buildPaymentConfirmationMessage(Customer $customer, Payment $payment): string
+    public function buildPaymentConfirmationMessage(Customer $customer, Payment $payment): string
     {
         $companyName = $this->ispInfo?->company_name ?? 'ISP';
         $amount = number_format($payment->amount, 0, ',', '.');

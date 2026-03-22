@@ -16,19 +16,21 @@ return new class extends Migration
             ['group' => 'dashboard', 'description' => 'Melihat dashboard']
         );
 
-        // Tambahkan ke role technician jika belum ada
-        $exists = \DB::table('role_permissions')
-            ->where('role', 'technician')
-            ->where('permission_id', $permission->id)
-            ->exists();
+        // Tambahkan dashboard.view ke role technician & finance jika belum ada
+        foreach (['technician', 'finance'] as $role) {
+            $exists = \DB::table('role_permissions')
+                ->where('role', $role)
+                ->where('permission_id', $permission->id)
+                ->exists();
 
-        if (!$exists) {
-            \DB::table('role_permissions')->insert([
-                'role' => 'technician',
-                'permission_id' => $permission->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            if (!$exists) {
+                \DB::table('role_permissions')->insert([
+                    'role' => $role,
+                    'permission_id' => $permission->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
 
         // Clear permission cache
@@ -44,8 +46,8 @@ return new class extends Migration
 
         if ($permission) {
             \DB::table('role_permissions')
-                ->where('role', 'technician')
                 ->where('permission_id', $permission->id)
+                ->whereIn('role', ['technician', 'finance'])
                 ->delete();
         }
 

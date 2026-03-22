@@ -186,6 +186,7 @@ class PermissionSeeder extends Seeder
 
         // Finance role permissions
         $financePermissions = [
+            'dashboard.view',
             'finance.view',
             'finance.manage',
             'customers.view',

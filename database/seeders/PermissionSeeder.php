@@ -163,8 +163,9 @@ class PermissionSeeder extends Seeder
             'mapping.view',
         ];
 
-        // Default permissions for 'teknisi' role (if exists)
+        // Default permissions for 'technician' role
         $teknisiPermissions = [
+            'dashboard.view',
             'customers.view',
             'customers.edit',
             'devices.view',

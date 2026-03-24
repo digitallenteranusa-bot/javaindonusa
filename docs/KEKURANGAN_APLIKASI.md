@@ -73,7 +73,7 @@
 
 33. [x] **Backup ke Google Drive** — Sudah diimplementasi dengan spatie/laravel-backup + OAuth2.
 34. [ ] **Monitoring & alerting** — Tidak ada Prometheus, New Relic, atau Datadog. Tidak bisa detect performance degradation.
-35. [x] **Sentry DSN kosong** — Fixed: Sentry DSN dikonfigurasi di production. Backend (PHP) + Frontend (Vue.js) error monitoring aktif. Performance tracing enabled.
+35. [x] **Sentry DSN kosong** — Fixed: Sentry DSN dikonfigurasi di production. Backend (PHP) + Frontend (Vue.js) error monitoring aktif. Performance tracing enabled. **TODO:** Hapus 2 test event di dashboard Sentry (resolve/delete issue "This is a test exception sent from the Sentry Laravel SDK"), dan set `APP_ENV=production` di `.env` server agar environment tidak tercatat sebagai `local`.
 36. [ ] **Log aggregation** — Log hanya di `storage/logs/`, tidak ada ELK/Papertrail/Datadog integration.
 37. [ ] **Cache invalidation** — Hanya 2 `Cache::forget()` ditemukan. Dashboard cache tidak di-invalidate saat invoice/payment berubah.
 

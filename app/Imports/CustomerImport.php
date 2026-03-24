@@ -227,7 +227,7 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'collector_id' => $collectorId,
             'connection_type' => $connectionType,
             'pppoe_username' => $row['pppoe_username'] ?? null,
-            'pppoe_password' => 'client001', // Default password
+            'pppoe_password' => 'client001', // Default password — semua pelanggan existing sudah pakai ini
             'static_ip' => $row['static_ip'] ?? null,
             'status' => $this->parseStatus($row['status'] ?? 'active'),
             'billing_type' => 'prepaid', // Default: bayar di muka

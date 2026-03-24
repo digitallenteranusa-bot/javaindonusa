@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Services\Billing\DebtIsolationService;
+use App\Services\Billing\InvoiceService;
 use App\Http\Requests\Admin\Invoice\GenerateForSelectedRequest;
 use App\Http\Requests\Admin\Invoice\MarkPaidRequest;
 use App\Http\Requests\Admin\Invoice\CancelInvoiceRequest;
@@ -20,10 +21,12 @@ use Maatwebsite\Excel\Facades\Excel;
 class InvoiceController extends Controller
 {
     protected DebtIsolationService $billingService;
+    protected InvoiceService $invoiceService;
 
-    public function __construct(DebtIsolationService $billingService)
+    public function __construct(DebtIsolationService $billingService, InvoiceService $invoiceService)
     {
         $this->billingService = $billingService;
+        $this->invoiceService = $invoiceService;
     }
 
     /**
@@ -112,6 +115,7 @@ class InvoiceController extends Controller
             'customer:id,customer_id,name,address,phone,email,total_debt',
             'customer.package:id,name,price',
             'payments' => fn($q) => $q->orderBy('created_at', 'desc'),
+            'items',
         ]);
 
         return Inertia::render('Admin/Invoice/Show', [
@@ -316,6 +320,37 @@ class InvoiceController extends Controller
         // Customer debt recalculation handled by InvoiceObserver
 
         return back()->with('success', 'Invoice berhasil ditandai lunas');
+    }
+
+    /**
+     * Amend invoice (adjust total amount)
+     */
+    public function amend(Request $request, Invoice $invoice)
+    {
+        $request->validate([
+            'total_amount' => 'required|numeric|min:0',
+            'reason' => 'required|string|max:500',
+        ], [
+            'total_amount.required' => 'Jumlah baru wajib diisi.',
+            'total_amount.min' => 'Jumlah tidak boleh negatif.',
+            'reason.required' => 'Alasan perubahan wajib diisi.',
+        ]);
+
+        if (in_array($invoice->status, ['paid', 'cancelled'])) {
+            return back()->with('error', 'Invoice yang sudah lunas atau dibatalkan tidak dapat diubah');
+        }
+
+        try {
+            $this->invoiceService->amendInvoice(
+                $invoice,
+                (float) $request->total_amount,
+                $request->reason
+            );
+
+            return back()->with('success', 'Invoice berhasil diubah');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal mengubah invoice: ' . $e->getMessage());
+        }
     }
 
     /**

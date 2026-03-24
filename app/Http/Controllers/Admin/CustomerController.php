@@ -169,6 +169,31 @@ class CustomerController extends Controller
     }
 
     /**
+     * Search customers (JSON response for AJAX)
+     */
+    public function search(Request $request)
+    {
+        $search = $request->get('search', '');
+        $limit = min((int) $request->get('limit', 10), 50);
+
+        if (strlen($search) < 2) {
+            return response()->json(['customers' => []]);
+        }
+
+        $customers = Customer::where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('customer_id', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            })
+            ->select('id', 'customer_id', 'name', 'phone', 'total_debt', 'status')
+            ->orderBy('name')
+            ->limit($limit)
+            ->get();
+
+        return response()->json(['customers' => $customers]);
+    }
+
+    /**
      * Show customer detail
      */
     public function show(Customer $customer)

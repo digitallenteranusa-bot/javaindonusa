@@ -76,6 +76,22 @@ const submitCancel = () => {
     })
 }
 
+// Amend invoice
+const showAmendModal = ref(false)
+const amendForm = ref({
+    total_amount: props.invoice.total_amount,
+    reason: '',
+})
+
+const submitAmend = () => {
+    router.post(`/admin/invoices/${props.invoice.id}/amend`, amendForm.value, {
+        onSuccess: () => {
+            showAmendModal.value = false
+            amendForm.value.reason = ''
+        },
+    })
+}
+
 // Print invoice
 const printInvoice = () => {
     window.print()
@@ -143,29 +159,48 @@ const deleteInvoice = () => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y">
-                                <tr>
-                                    <td class="px-4 py-3">
-                                        <p class="font-medium">{{ invoice.package_name }}</p>
-                                        <p class="text-sm text-gray-500">
-                                            Periode {{ invoice.period_month }}/{{ invoice.period_year }}
-                                        </p>
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        {{ formatCurrency(invoice.package_price) }}
-                                    </td>
-                                </tr>
-                                <tr v-if="invoice.additional_charges > 0">
-                                    <td class="px-4 py-3 text-gray-600">Biaya Tambahan</td>
-                                    <td class="px-4 py-3 text-right">
-                                        {{ formatCurrency(invoice.additional_charges) }}
-                                    </td>
-                                </tr>
-                                <tr v-if="invoice.discount > 0">
-                                    <td class="px-4 py-3 text-gray-600">Diskon</td>
-                                    <td class="px-4 py-3 text-right text-green-600">
-                                        -{{ formatCurrency(invoice.discount) }}
-                                    </td>
-                                </tr>
+                                <!-- Line items if available -->
+                                <template v-if="invoice.items?.length">
+                                    <tr v-for="item in invoice.items" :key="item.id">
+                                        <td class="px-4 py-3">
+                                            <p :class="item.type === 'package' ? 'font-medium' : 'text-gray-600'">
+                                                {{ item.description }}
+                                            </p>
+                                            <p v-if="item.type === 'package'" class="text-sm text-gray-500">
+                                                Periode {{ invoice.period_month }}/{{ invoice.period_year }}
+                                            </p>
+                                        </td>
+                                        <td class="px-4 py-3 text-right" :class="item.amount < 0 ? 'text-green-600' : ''">
+                                            {{ item.amount < 0 ? '-' : '' }}{{ formatCurrency(Math.abs(item.amount)) }}
+                                        </td>
+                                    </tr>
+                                </template>
+                                <!-- Fallback: legacy invoices without line items -->
+                                <template v-else>
+                                    <tr>
+                                        <td class="px-4 py-3">
+                                            <p class="font-medium">{{ invoice.package_name }}</p>
+                                            <p class="text-sm text-gray-500">
+                                                Periode {{ invoice.period_month }}/{{ invoice.period_year }}
+                                            </p>
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            {{ formatCurrency(invoice.package_price) }}
+                                        </td>
+                                    </tr>
+                                    <tr v-if="invoice.additional_charges > 0">
+                                        <td class="px-4 py-3 text-gray-600">Biaya Tambahan</td>
+                                        <td class="px-4 py-3 text-right">
+                                            {{ formatCurrency(invoice.additional_charges) }}
+                                        </td>
+                                    </tr>
+                                    <tr v-if="invoice.discount > 0">
+                                        <td class="px-4 py-3 text-gray-600">Diskon</td>
+                                        <td class="px-4 py-3 text-right text-green-600">
+                                            -{{ formatCurrency(invoice.discount) }}
+                                        </td>
+                                    </tr>
+                                </template>
                             </tbody>
                             <tfoot class="bg-gray-50">
                                 <tr>
@@ -335,6 +370,14 @@ const deleteInvoice = () => {
                         </button>
 
                         <button
+                            v-if="invoice.status !== 'paid' && invoice.status !== 'cancelled'"
+                            @click="showAmendModal = true; amendForm.total_amount = invoice.total_amount"
+                            class="w-full py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 text-sm"
+                        >
+                            Ubah Jumlah Invoice
+                        </button>
+
+                        <button
                             v-if="invoice.status === 'pending'"
                             @click="showCancelModal = true"
                             class="w-full py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm"
@@ -406,6 +449,57 @@ const deleteInvoice = () => {
                             class="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                         >
                             Batalkan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Amend Modal -->
+        <div
+            v-if="showAmendModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            @click.self="showAmendModal = false"
+        >
+            <div class="bg-white rounded-xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">Ubah Jumlah Invoice</h3>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Saat Ini</label>
+                        <p class="text-lg font-bold text-gray-600">{{ formatCurrency(invoice.total_amount) }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Baru *</label>
+                        <input
+                            v-model.number="amendForm.total_amount"
+                            type="number"
+                            min="0"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Perubahan *</label>
+                        <textarea
+                            v-model="amendForm.reason"
+                            rows="3"
+                            placeholder="Jelaskan alasan perubahan jumlah..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button
+                            @click="showAmendModal = false"
+                            class="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            @click="submitAmend"
+                            :disabled="!amendForm.reason || amendForm.total_amount === invoice.total_amount"
+                            class="flex-1 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"
+                        >
+                            Simpan Perubahan
                         </button>
                     </div>
                 </div>

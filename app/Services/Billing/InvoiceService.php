@@ -4,6 +4,7 @@ namespace App\Services\Billing;
 
 use App\Events\InvoiceGenerated;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Customer;
 use App\Models\DebtHistory;
 use Illuminate\Support\Facades\DB;
@@ -138,6 +139,36 @@ class InvoiceService
                 'due_date' => $dueDate,
                 'status' => 'pending',
             ]);
+
+            // Create invoice line items for detailed breakdown
+            $sortOrder = 0;
+            InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'description' => "Paket {$package->name}",
+                'type' => InvoiceItem::TYPE_PACKAGE,
+                'amount' => $packagePrice,
+                'sort_order' => ++$sortOrder,
+            ]);
+
+            if ($discount > 0) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => $discountReason ?? 'Diskon',
+                    'type' => InvoiceItem::TYPE_DISCOUNT,
+                    'amount' => -$discount,
+                    'sort_order' => ++$sortOrder,
+                ]);
+            }
+
+            if ($ppn > 0) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => 'PPN 11%',
+                    'type' => InvoiceItem::TYPE_TAX,
+                    'amount' => $ppn,
+                    'sort_order' => ++$sortOrder,
+                ]);
+            }
 
             // Add to debt
             $this->debtService->addDebt(
@@ -289,6 +320,54 @@ class InvoiceService
                     $invoice->customer,
                     $remainingAmount,
                     "Manual payment - Invoice #{$invoice->invoice_number}"
+                );
+            }
+
+            return $invoice->fresh();
+        });
+    }
+
+    /**
+     * Amend invoice — adjust amount for unpaid/partial invoices only.
+     * Recalculates remaining_amount and adjusts debt accordingly.
+     */
+    public function amendInvoice(Invoice $invoice, float $newTotalAmount, ?string $reason = null): Invoice
+    {
+        if (in_array($invoice->status, ['paid', 'cancelled'])) {
+            throw InvoiceStateException::cannotCancel(); // reuse: cannot modify paid/cancelled
+        }
+
+        return DB::transaction(function () use ($invoice, $newTotalAmount, $reason) {
+            $oldTotalAmount = (float) $invoice->total_amount;
+            $difference = $newTotalAmount - $oldTotalAmount;
+
+            // Update invoice amounts
+            $newRemaining = max(0, $newTotalAmount - (float) $invoice->paid_amount);
+            $invoice->update([
+                'total_amount' => $newTotalAmount,
+                'remaining_amount' => $newRemaining,
+                'notes' => $reason
+                    ? ($invoice->notes ? $invoice->notes . "\n" : '') . "[Amend] {$reason}"
+                    : $invoice->notes,
+                'status' => $newRemaining <= 0 ? 'paid' : $invoice->status,
+                'paid_at' => $newRemaining <= 0 ? now() : $invoice->paid_at,
+            ]);
+
+            // Adjust debt: positive difference = add debt, negative = reduce debt
+            if ($difference > 0) {
+                $this->debtService->addDebt(
+                    $invoice->customer,
+                    $difference,
+                    'adjustment_add',
+                    'invoice',
+                    $invoice->id,
+                    "Amendment invoice #{$invoice->invoice_number}: +Rp " . number_format($difference, 0, ',', '.') . ($reason ? " ({$reason})" : '')
+                );
+            } elseif ($difference < 0) {
+                $this->debtService->reduceDebt(
+                    $invoice->customer,
+                    abs($difference),
+                    "Amendment invoice #{$invoice->invoice_number}: -Rp " . number_format(abs($difference), 0, ',', '.') . ($reason ? " ({$reason})" : '')
                 );
             }
 

@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\SettlementController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\CreditNoteController;
+use App\Http\Controllers\Admin\PaymentPlanController;
 use App\Http\Controllers\Admin\DeviceController;
 use App\Http\Controllers\Admin\AdminAuditLogController;
 use App\Http\Controllers\Admin\OdpController;
@@ -67,6 +69,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Parameterized routes after static routes
     Route::middleware(['permission:customers.view'])->group(function () {
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
     });
     Route::middleware(['permission:customers.edit'])->group(function () {
@@ -250,6 +253,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:invoices.cancel'])->group(function () {
         Route::post('/invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])
             ->name('invoices.cancel');
+        Route::post('/invoices/{invoice}/amend', [InvoiceController::class, 'amend'])
+            ->name('invoices.amend');
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])
             ->name('invoices.destroy');
     });
@@ -257,6 +262,17 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/invoices-export', [InvoiceController::class, 'export'])->name('invoices.export');
         Route::post('/invoices/bulk-pdf', [InvoiceController::class, 'bulkExportPdf'])
             ->name('invoices.bulk-pdf');
+    });
+
+    // ================================================================
+    // CREDIT NOTES (Refund / Credit / Adjustment)
+    // ================================================================
+    Route::middleware(['permission:invoices.cancel'])->group(function () {
+        Route::get('/credit-notes', [CreditNoteController::class, 'index'])->name('credit-notes.index');
+        Route::get('/credit-notes/create', [CreditNoteController::class, 'create'])->name('credit-notes.create');
+        Route::post('/credit-notes', [CreditNoteController::class, 'store'])->name('credit-notes.store');
+        Route::post('/credit-notes/{creditNote}/approve', [CreditNoteController::class, 'approve'])->name('credit-notes.approve');
+        Route::post('/credit-notes/{creditNote}/reject', [CreditNoteController::class, 'reject'])->name('credit-notes.reject');
     });
 
     // ================================================================
@@ -279,6 +295,17 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:payments.cancel'])->group(function () {
         Route::post('/payments/{payment}/cancel', [PaymentController::class, 'cancel'])
             ->name('payments.cancel');
+    });
+
+    // ================================================================
+    // PAYMENT PLANS (Cicilan)
+    // ================================================================
+    Route::middleware(['permission:payments.create'])->group(function () {
+        Route::get('/payment-plans', [PaymentPlanController::class, 'index'])->name('payment-plans.index');
+        Route::get('/payment-plans/create', [PaymentPlanController::class, 'create'])->name('payment-plans.create');
+        Route::post('/payment-plans', [PaymentPlanController::class, 'store'])->name('payment-plans.store');
+        Route::get('/payment-plans/{paymentPlan}', [PaymentPlanController::class, 'show'])->name('payment-plans.show');
+        Route::post('/payment-plans/{paymentPlan}/cancel', [PaymentPlanController::class, 'cancel'])->name('payment-plans.cancel');
     });
     Route::middleware(['permission:payments.export'])->group(function () {
         Route::get('/payments-export', [PaymentController::class, 'export'])->name('payments.export');

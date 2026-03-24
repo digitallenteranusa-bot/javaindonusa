@@ -94,6 +94,11 @@ class Invoice extends Model
             ->withTimestamps();
     }
 
+    public function items(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class)->orderBy('sort_order');
+    }
+
     public function debtHistories(): HasMany
     {
         return $this->hasMany(DebtHistory::class);

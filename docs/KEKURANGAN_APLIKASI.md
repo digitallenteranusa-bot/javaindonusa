@@ -73,7 +73,7 @@
 
 33. [x] **Backup ke Google Drive** — Sudah diimplementasi dengan spatie/laravel-backup + OAuth2.
 34. [ ] **Monitoring & alerting** — Tidak ada Prometheus, New Relic, atau Datadog. Tidak bisa detect performance degradation.
-35. [ ] **Sentry DSN kosong** — Config Sentry ada tapi `SENTRY_DSN` kemungkinan kosong di production.
+35. [x] **Sentry DSN kosong** — Fixed: Sentry DSN dikonfigurasi di production. Backend (PHP) + Frontend (Vue.js) error monitoring aktif. Performance tracing enabled.
 36. [ ] **Log aggregation** — Log hanya di `storage/logs/`, tidak ada ELK/Papertrail/Datadog integration.
 37. [ ] **Cache invalidation** — Hanya 2 `Cache::forget()` ditemukan. Dashboard cache tidak di-invalidate saat invoice/payment berubah.
 
@@ -103,10 +103,10 @@
 | C. Notifikasi | 5 | 1 | 4 |
 | D. Laporan | 6 | 0 | 6 |
 | E. UI/UX | 6 | 0 | 6 |
-| F. Infrastruktur | 5 | 1 | 4 |
+| F. Infrastruktur | 5 | 2 | 3 |
 | G. Testing | 3 | 0 | 3 |
 | H. Integrasi | 2 | 0 | 2 |
-| **Total** | **42** | **12** | **30** |
+| **Total** | **42** | **13** | **29** |
 
 ---
 
@@ -121,6 +121,7 @@
 - #3 SQL injection risk DashboardService
 - #5 Default password import
 - #34 Monitoring & alerting
+- ~~#35 Sentry DSN~~ (configured)
 - #41 Circuit breaker payment gateway
 - #42 Mikrotik retry logic
 

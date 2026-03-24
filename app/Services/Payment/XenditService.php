@@ -11,6 +11,7 @@ use App\Services\Billing\PaymentService;
 use App\Services\Notification\NotificationService;
 use App\Exceptions\Billing\NoPayableInvoiceException;
 use App\Exceptions\Billing\PaymentGatewayException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -274,7 +275,10 @@ class XenditService
             $fee = $data['fees_paid_amount'] ?? 0;
             $transaction->update(['method' => $paymentMethod, 'fee' => $fee]);
 
-            $this->processSuccessfulPayment($transaction, $data);
+            // Wrap in DB transaction for idempotency lock
+            DB::transaction(function () use ($transaction, $data) {
+                $this->processSuccessfulPayment($transaction, $data);
+            });
         } elseif ($status === 'EXPIRED') {
             $transaction->update(['status' => XenditTransaction::STATUS_EXPIRED]);
         } elseif (in_array($status, ['FAILED', 'VOIDED'])) {
@@ -287,6 +291,16 @@ class XenditService
      */
     protected function processSuccessfulPayment(XenditTransaction $transaction, array $data): void
     {
+        // Idempotency: re-check with pessimistic lock to prevent double payment from concurrent callbacks
+        $locked = XenditTransaction::where('id', $transaction->id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$locked || $locked->status === XenditTransaction::STATUS_PAID) {
+            Log::info('Xendit: Skipping duplicate callback', ['external_id' => $transaction->external_id]);
+            return;
+        }
+
         $customer = $transaction->customer;
 
         if (!$customer) {
@@ -425,7 +439,9 @@ class XenditService
 
                 if ($newStatus !== $transaction->status) {
                     if (in_array($newStatus, ['PAID', 'SETTLED']) && $transaction->status !== XenditTransaction::STATUS_PAID) {
-                        $this->processSuccessfulPayment($transaction, $data);
+                        DB::transaction(function () use ($transaction, $data) {
+                            $this->processSuccessfulPayment($transaction, $data);
+                        });
                     } elseif ($newStatus === 'EXPIRED') {
                         $transaction->update(['status' => XenditTransaction::STATUS_EXPIRED]);
                     } elseif (in_array($newStatus, ['FAILED', 'VOIDED'])) {

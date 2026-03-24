@@ -21,14 +21,24 @@ Route::middleware(['auth', 'role:penagih'])->prefix('collector')->name('collecto
 
     // Serve receipt images (protected)
     Route::get('/receipts/{path}', function ($path) {
-        $fullPath = storage_path('app/public/receipts/' . $path);
+        // Security: prevent path traversal — only allow safe filenames
+        $safePath = basename($path);
+        $fullPath = storage_path('app/public/receipts/' . $safePath);
 
-        if (!file_exists($fullPath)) {
+        // Double-check resolved path is within receipts directory
+        $realPath = realpath($fullPath);
+        $allowedDir = realpath(storage_path('app/public/receipts'));
+
+        if (!$realPath || !$allowedDir || !str_starts_with($realPath, $allowedDir)) {
             abort(404);
         }
 
-        $mime = mime_content_type($fullPath);
-        return response()->file($fullPath, ['Content-Type' => $mime]);
+        if (!file_exists($realPath)) {
+            abort(404);
+        }
+
+        $mime = mime_content_type($realPath);
+        return response()->file($realPath, ['Content-Type' => $mime]);
     })->where('path', '.*')->name('receipt');
 
     // ================================================================

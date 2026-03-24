@@ -752,8 +752,22 @@ class SettingsController extends Controller
      */
     public function downloadDatabaseBackup(string $filename)
     {
-        // Security: prevent directory traversal
-        if (str_contains($filename, '..') || str_contains($filename, '/')) {
+        // Security: prevent directory traversal and only allow SQL backup files
+        if (str_contains($filename, '..') || str_contains($filename, '/') || str_contains($filename, '\\')) {
+            abort(404, 'Backup tidak ditemukan');
+        }
+
+        // Whitelist allowed extensions
+        $allowedExtensions = ['.sql', '.sql.gz', '.sql.zip'];
+        $hasValidExtension = false;
+        foreach ($allowedExtensions as $ext) {
+            if (str_ends_with($filename, $ext)) {
+                $hasValidExtension = true;
+                break;
+            }
+        }
+
+        if (!$hasValidExtension) {
             abort(404, 'Backup tidak ditemukan');
         }
 

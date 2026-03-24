@@ -11,6 +11,7 @@ use App\Services\Billing\PaymentService;
 use App\Services\Notification\NotificationService;
 use App\Exceptions\Billing\NoPayableInvoiceException;
 use App\Exceptions\Billing\PaymentGatewayException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -232,7 +233,10 @@ class TripayService
         ]);
 
         if ($status === 'PAID') {
-            $this->processSuccessfulPayment($transaction, $data);
+            // Wrap in DB transaction for idempotency lock
+            DB::transaction(function () use ($transaction, $data) {
+                $this->processSuccessfulPayment($transaction, $data);
+            });
         } elseif (in_array($status, ['EXPIRED', 'FAILED'])) {
             $transaction->update(['status' => $status]);
         } elseif ($status === 'REFUND') {
@@ -245,6 +249,16 @@ class TripayService
      */
     protected function processSuccessfulPayment(TripayTransaction $transaction, array $data): void
     {
+        // Idempotency: re-check with pessimistic lock to prevent double payment from concurrent callbacks
+        $locked = TripayTransaction::where('id', $transaction->id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$locked || $locked->status === TripayTransaction::STATUS_PAID) {
+            Log::info('Tripay: Skipping duplicate callback', ['reference' => $transaction->reference]);
+            return;
+        }
+
         $customer = $transaction->customer;
 
         if (!$customer) {
@@ -370,7 +384,9 @@ class TripayService
                 $newStatus = $data['status'] ?? $transaction->status;
                 if ($newStatus !== $transaction->status) {
                     if ($newStatus === 'PAID' && $transaction->status !== TripayTransaction::STATUS_PAID) {
-                        $this->processSuccessfulPayment($transaction, $data);
+                        DB::transaction(function () use ($transaction, $data) {
+                            $this->processSuccessfulPayment($transaction, $data);
+                        });
                     } else {
                         $transaction->update(['status' => $newStatus]);
                     }

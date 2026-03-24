@@ -7,7 +7,9 @@ use App\Services\Customer\CustomerPortalService;
 use App\Services\Mikrotik\MikrotikService;
 use App\Services\Payment\TripayService;
 use App\Services\Payment\XenditService;
+use App\Services\PdfService;
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Router;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -314,6 +316,22 @@ class PortalController extends Controller
             'isp_info' => $ispInfo,
             'transfer_proof_wa_url' => $this->portalService->getTransferProofWhatsAppUrl($customer),
         ]);
+    }
+
+    /**
+     * Download invoice PDF
+     */
+    public function downloadInvoicePdf(Invoice $invoice, PdfService $pdfService)
+    {
+        $customer = $this->getAuthenticatedCustomer();
+
+        if (!$customer || $invoice->customer_id !== $customer->id) {
+            abort(403);
+        }
+
+        $pdf = $pdfService->generateInvoicePdf($invoice);
+
+        return $pdf->download("invoice_{$invoice->invoice_number}.pdf");
     }
 
     // ================================================================

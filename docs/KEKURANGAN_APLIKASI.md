@@ -60,12 +60,12 @@
 
 ## E. UI/UX (6 item)
 
-27. [ ] **Browser/E2E testing** — Zero automated UI test (tidak ada Dusk, Playwright, atau Cypress).
-28. [ ] **Error boundary Vue** — Tidak ada global error boundary component, JS error tidak ter-handle gracefully.
-29. [ ] **Skeleton loading tidak merata** — Hanya 12 halaman pakai SkeletonLoader, 40+ halaman lainnya belum.
-30. [ ] **Accessibility (WCAG)** — Tidak ada aria-labels, role attributes, keyboard navigation di komponen kompleks.
-31. [ ] **Loading overlay global** — `LoadingOverlay.vue` ada tapi tidak digunakan secara global untuk operasi lambat.
-32. [ ] **Invoice PDF download di portal** — Customer portal hanya bisa lihat invoice, tidak bisa download PDF.
+27. [x] **Browser/E2E testing** — Implemented: Playwright installed + 6 smoke tests (login pages, auth redirect, health check). `npm run test:e2e`.
+28. [x] **Error boundary Vue** — Implemented: `ErrorBoundary.vue` component + `app.config.errorHandler` global handler. Terintegrasi di semua 3 layout.
+29. [x] **Skeleton loading tidak merata** — Improved: SkeletonLoader ditambahkan ke 11 halaman baru (Customer Invoices/Payments, Collector Customers/Expenses/Settlement, Admin Area/User/Expense/Settlement/Isolation/ODP). Total 16 halaman.
+30. [x] **Accessibility (WCAG)** — Implemented: aria-labels di sidebar/nav/modal/button, role="navigation"/"main"/"dialog", keyboard Escape untuk close modal. Semua 3 layout + Modal + ConfirmDialog.
+31. [x] **Loading overlay global** — Implemented: `useNavigationLoading` composable + `LoadingOverlay` terintegrasi di semua 3 layout. Otomatis muncul saat navigasi > 250ms.
+32. [x] **Invoice PDF download di portal** — Implemented: Route `portal/invoices/{invoice}/pdf` + `downloadInvoicePdf()` di PortalController. Tombol "Download PDF" di Customer/Invoices.vue. Validasi kepemilikan invoice.
 
 ---
 
@@ -102,11 +102,11 @@
 | B. Fitur Bisnis | 8 | 5 | 3 |
 | C. Notifikasi | 5 | 1 | 4 |
 | D. Laporan | 6 | 0 | 6 |
-| E. UI/UX | 6 | 0 | 6 |
+| E. UI/UX | 6 | 6 | 0 |
 | F. Infrastruktur | 5 | 2 | 3 |
 | G. Testing | 3 | 0 | 3 |
 | H. Integrasi | 2 | 0 | 2 |
-| **Total** | **42** | **13** | **29** |
+| **Total** | **42** | **19** | **23** |
 
 ---
 

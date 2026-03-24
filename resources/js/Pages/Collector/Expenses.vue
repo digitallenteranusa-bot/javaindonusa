@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import CollectorLayout from '@/Layouts/CollectorLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 
 const props = defineProps({
     expenses: Object,
@@ -148,7 +149,8 @@ const closeImagePreview = () => {
             <div class="px-4 mt-4">
                 <h3 class="text-sm font-medium text-gray-500 mb-3">Riwayat Belanja</h3>
 
-                <div class="space-y-3">
+                <SkeletonLoader v-if="!expenses?.data" type="card" :rows="3" />
+                <div v-else class="space-y-3">
                     <div
                         v-for="expense in expenses.data"
                         :key="expense.id"

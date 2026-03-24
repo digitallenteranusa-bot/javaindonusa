@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import CollectorLayout from '@/Layouts/CollectorLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 
 const props = defineProps({
     customers: Object,
@@ -273,8 +274,9 @@ onMounted(() => {
 
             <!-- Customer List -->
             <div class="px-4 mt-4 space-y-3">
+                <SkeletonLoader v-if="!customers?.data" type="card" :rows="5" />
                 <div
-                    v-for="customer in customers.data"
+                    v-else v-for="customer in customers.data"
                     :key="customer.id"
                     class="bg-white rounded-xl shadow-sm overflow-hidden"
                 >

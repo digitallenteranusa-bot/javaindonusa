@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 import debounce from 'lodash/debounce'
 
 const props = defineProps({
@@ -197,7 +198,8 @@ watch([search, areaFilter, packageFilter, perPage], applyFilters)
         </div>
 
         <!-- Table -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <SkeletonLoader v-if="!customers?.data" type="table" :rows="5" :columns="5" />
+        <div v-else class="bg-white rounded-xl shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50">

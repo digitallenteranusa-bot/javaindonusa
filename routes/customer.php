@@ -51,6 +51,7 @@ Route::prefix('portal')->name('customer.')->group(function () {
         Route::get('/invoices', [PortalController::class, 'invoices'])->name('invoices');
         Route::get('/payments', [PortalController::class, 'payments'])->name('payments');
         Route::get('/payment-info', [PortalController::class, 'paymentInfo'])->name('payment-info');
+        Route::get('/invoices/{invoice}/pdf', [PortalController::class, 'downloadInvoicePdf'])->name('invoice.pdf');
 
         // Tripay Online Payment
         Route::get('/pay', [TripayController::class, 'payPage'])->name('tripay.pay');

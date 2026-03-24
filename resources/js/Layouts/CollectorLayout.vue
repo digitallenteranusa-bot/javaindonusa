@@ -1,6 +1,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Link, usePage, router } from '@inertiajs/vue3'
+import ErrorBoundary from '@/Components/ErrorBoundary.vue'
+import LoadingOverlay from '@/Components/LoadingOverlay.vue'
+import { useNavigationLoading } from '@/Composables/useNavigationLoading'
+
+const { isNavigating } = useNavigationLoading()
 
 const page = usePage()
 const user = computed(() => page.props.auth?.user)
@@ -42,11 +47,16 @@ const logout = () => {
 
 <template>
     <div class="min-h-screen bg-gray-100">
+        <!-- Loading Overlay -->
+        <LoadingOverlay :show="isNavigating" label="Memuat..." />
+
         <!-- Main Content -->
-        <slot />
+        <ErrorBoundary>
+            <slot />
+        </ErrorBoundary>
 
         <!-- Bottom Navigation -->
-        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-40">
+        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-40" role="navigation" aria-label="Navigasi penagih">
             <div class="flex justify-around max-w-lg mx-auto">
                 <Link
                     href="/collector"

@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3'
 import CustomerLayout from '@/Layouts/CustomerLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 
 const props = defineProps({
     customer: Object,
@@ -61,7 +62,8 @@ const getStatusBadge = (status) => {
 
         <!-- Invoice List -->
         <div class="px-4 py-4">
-            <div class="space-y-3">
+            <SkeletonLoader v-if="!invoices?.data" type="card" :rows="3" />
+            <div v-else class="space-y-3">
                 <div
                     v-for="invoice in invoices.data"
                     :key="invoice.id"
@@ -86,6 +88,20 @@ const getStatusBadge = (status) => {
                                 {{ getStatusBadge(invoice.status).text }}
                             </span>
                         </div>
+                    </div>
+
+                    <!-- Download PDF -->
+                    <div class="mt-3 pt-3 border-t border-gray-100">
+                        <a
+                            :href="`/portal/invoices/${invoice.id}/pdf`"
+                            target="_blank"
+                            class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Download PDF
+                        </a>
                     </div>
 
                     <!-- Payment Info -->

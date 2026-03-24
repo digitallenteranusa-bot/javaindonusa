@@ -1,5 +1,5 @@
 <script setup>
-import { watch } from 'vue'
+import { watch, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
     show: {
@@ -17,6 +17,10 @@ const props = defineProps({
     position: {
         type: String,
         default: 'center', // center, bottom
+    },
+    ariaLabel: {
+        type: String,
+        default: 'Dialog',
     },
 })
 
@@ -44,6 +48,16 @@ watch(() => props.show, (value) => {
         document.body.style.overflow = ''
     }
 })
+
+// Close on Escape key
+const handleKeydown = (e) => {
+    if (e.key === 'Escape' && props.show) {
+        close()
+    }
+}
+
+onMounted(() => document.addEventListener('keydown', handleKeydown))
+onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 </script>
 
 <template>
@@ -52,6 +66,9 @@ watch(() => props.show, (value) => {
             <div
                 v-show="show"
                 class="fixed inset-0 z-50 overflow-y-auto"
+                role="dialog"
+                :aria-modal="show"
+                :aria-label="ariaLabel"
                 scroll-region
             >
                 <div

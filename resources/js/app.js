@@ -87,6 +87,11 @@ createInertiaApp({
             });
         }
 
+        // Global Vue error handler — catch unhandled component errors
+        app.config.errorHandler = (err, instance, info) => {
+            console.error('[Vue Error]', err, info);
+        };
+
         app.use(plugin)
             .use(ZiggyVue)
             .mount(el);

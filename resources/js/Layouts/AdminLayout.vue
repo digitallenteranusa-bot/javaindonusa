@@ -2,6 +2,11 @@
 import { ref, computed, onMounted, onUnmounted, watch, h } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { useTheme } from '@/Composables/useTheme'
+import ErrorBoundary from '@/Components/ErrorBoundary.vue'
+import LoadingOverlay from '@/Components/LoadingOverlay.vue'
+import { useNavigationLoading } from '@/Composables/useNavigationLoading'
+
+const { isNavigating } = useNavigationLoading()
 
 const { isDark, toggleTheme } = useTheme()
 
@@ -282,6 +287,8 @@ const getIcon = (name) => ({
             <aside
                 v-if="mobileMenuOpen"
                 class="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-gray-900 lg:hidden"
+                role="navigation"
+                aria-label="Menu navigasi mobile"
             >
                 <!-- Logo with Close Button -->
                 <div class="flex h-16 items-center justify-between px-4 bg-gray-800">
@@ -298,13 +305,14 @@ const getIcon = (name) => ({
                     <button
                         @click="mobileMenuOpen = false"
                         class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-700"
+                        aria-label="Tutup menu"
                     >
                         <component :is="getIcon('close')" class="w-6 h-6" />
                     </button>
                 </div>
 
                 <!-- Mobile Navigation -->
-                <nav class="flex-1 overflow-y-auto py-4 px-3">
+                <nav class="flex-1 overflow-y-auto py-4 px-3" aria-label="Navigasi utama">
                     <!-- Main -->
                     <div class="mb-4">
                         <div class="px-3 mb-2 flex items-center gap-2 text-sm font-bold text-blue-400 uppercase tracking-wider">
@@ -546,6 +554,8 @@ const getIcon = (name) => ({
                 'fixed inset-y-0 left-0 z-40 flex-col bg-gray-900 transition-all duration-300 hidden lg:flex',
                 sidebarOpen ? 'w-64' : 'w-20'
             ]"
+            role="navigation"
+            aria-label="Menu navigasi desktop"
         >
             <!-- Logo -->
             <div class="flex h-16 items-center justify-between px-4 bg-gray-800">
@@ -562,6 +572,7 @@ const getIcon = (name) => ({
                 <button
                     @click="toggleSidebar"
                     class="text-gray-400 hover:text-white"
+                    :aria-label="sidebarOpen ? 'Tutup sidebar' : 'Buka sidebar'"
                 >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -571,7 +582,7 @@ const getIcon = (name) => ({
             </div>
 
             <!-- Desktop Navigation -->
-            <nav class="flex-1 overflow-y-auto py-4 px-3">
+            <nav class="flex-1 overflow-y-auto py-4 px-3" aria-label="Navigasi utama">
                 <!-- Main -->
                 <div class="mb-4">
                     <div v-if="sidebarOpen" class="px-3 mb-2 flex items-center gap-2 text-sm font-bold text-blue-400 uppercase tracking-wider">
@@ -810,6 +821,7 @@ const getIcon = (name) => ({
                     <button
                         @click="mobileMenuOpen = true"
                         class="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700"
+                        aria-label="Buka menu navigasi"
                     >
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -862,9 +874,14 @@ const getIcon = (name) => ({
                 </div>
             </header>
 
+            <!-- Loading Overlay -->
+            <LoadingOverlay :show="isNavigating" label="Memuat..." />
+
             <!-- Page Content -->
-            <main class="p-4 lg:p-8">
-                <slot />
+            <main class="p-4 lg:p-8" role="main">
+                <ErrorBoundary>
+                    <slot />
+                </ErrorBoundary>
             </main>
         </div>
 

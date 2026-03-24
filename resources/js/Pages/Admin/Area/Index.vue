@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 
 const props = defineProps({
     areas: Object,
@@ -64,7 +65,8 @@ const deleteArea = (area) => {
         </div>
 
         <!-- Table -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <SkeletonLoader v-if="!areas?.data" type="table" :rows="5" :columns="5" />
+        <div v-else class="bg-white rounded-xl shadow-sm overflow-hidden">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>

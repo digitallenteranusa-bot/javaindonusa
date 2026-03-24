@@ -54,7 +54,7 @@ const typeStyles = {
 </script>
 
 <template>
-    <Modal :show="show" max-width="sm" @close="emit('cancel')">
+    <Modal :show="show" max-width="sm" :aria-label="title" @close="emit('cancel')">
         <div class="p-6">
             <div class="flex items-start gap-4">
                 <div

@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3'
 import CustomerLayout from '@/Layouts/CustomerLayout.vue'
+import SkeletonLoader from '@/Components/SkeletonLoader.vue'
 
 const props = defineProps({
     customer: Object,
@@ -71,7 +72,8 @@ const getMethodBadge = (method) => {
 
         <!-- Payment List -->
         <div class="px-4 py-4">
-            <div class="space-y-3">
+            <SkeletonLoader v-if="!payments?.data" type="card" :rows="3" />
+            <div v-else class="space-y-3">
                 <div
                     v-for="payment in payments.data"
                     :key="payment.id"

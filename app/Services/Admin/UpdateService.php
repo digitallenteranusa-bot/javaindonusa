@@ -362,9 +362,9 @@ class UpdateService
             // Step 2: composer install (only if git pull succeeded)
             if (!$hasError) {
                 $output = [];
-                exec("cd " . escapeshellarg($basePath) . " && composer install --no-dev --optimize-autoloader 2>&1", $output, $returnCode);
+                exec("cd " . escapeshellarg($basePath) . " && composer update --no-dev --optimize-autoloader --no-interaction 2>&1", $output, $returnCode);
                 $stepOutput = implode("\n", $output);
-                $steps[] = ['step' => 'composer install', 'output' => $stepOutput, 'success' => $returnCode === 0];
+                $steps[] = ['step' => 'composer update', 'output' => $stepOutput, 'success' => $returnCode === 0];
                 if ($returnCode !== 0) {
                     $hasError = true;
                 }
@@ -381,8 +381,9 @@ class UpdateService
                 }
             }
 
-            // Step 4: migrate
+            // Step 4: ensure storage directories exist + migrate
             if (!$hasError) {
+                exec("cd " . escapeshellarg($basePath) . " && mkdir -p storage/framework/{views,cache,sessions,testing} && mkdir -p storage/app/backups 2>&1");
                 $output = [];
                 exec("cd " . escapeshellarg($basePath) . " && php artisan migrate --force 2>&1", $output, $returnCode);
                 $stepOutput = implode("\n", $output);
@@ -392,11 +393,23 @@ class UpdateService
                 }
             }
 
-            // Step 5: optimize clear
+            // Step 5: optimize clear + rebuild cache
             $output = [];
             exec("cd " . escapeshellarg($basePath) . " && php artisan optimize:clear 2>&1", $output, $returnCode);
             $stepOutput = implode("\n", $output);
             $steps[] = ['step' => 'php artisan optimize:clear', 'output' => $stepOutput, 'success' => $returnCode === 0];
+
+            // Step 6: rebuild config/route/view cache
+            $output = [];
+            exec("cd " . escapeshellarg($basePath) . " && php artisan optimize 2>&1", $output, $returnCode);
+            $stepOutput = implode("\n", $output);
+            $steps[] = ['step' => 'php artisan optimize', 'output' => $stepOutput, 'success' => $returnCode === 0];
+
+            // Step 7: restart queue worker to pick up new code
+            $output = [];
+            exec("cd " . escapeshellarg($basePath) . " && php artisan queue:restart 2>&1", $output, $returnCode);
+            $stepOutput = implode("\n", $output);
+            $steps[] = ['step' => 'php artisan queue:restart', 'output' => $stepOutput, 'success' => $returnCode === 0];
 
             // Bring application back up
             Artisan::call('up');

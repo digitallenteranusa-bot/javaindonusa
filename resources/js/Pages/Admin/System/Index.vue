@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Head, router, usePage } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 const props = defineProps({
@@ -30,10 +30,6 @@ const restoringDbBackup = ref(false)
 const uploadingDbBackup = ref(false)
 const dbBackupFile = ref(null)
 const dbBackupFileInput = ref(null)
-
-// Git pull update
-const pullingUpdate = ref(false)
-const updateLog = ref('')
 
 // File upload
 const backupFile = ref(null)
@@ -113,27 +109,6 @@ const loadBackups = async () => {
     } finally {
         loadingBackups.value = false
     }
-}
-
-const page = usePage()
-
-const gitPullUpdate = () => {
-    if (!confirm('Apakah Anda yakin ingin menjalankan update? Proses ini akan menjalankan git pull, composer install, npm build, dan migrate.')) {
-        return
-    }
-
-    pullingUpdate.value = true
-    updateLog.value = ''
-
-    router.post('/admin/system/git-pull-update', {}, {
-        preserveScroll: true,
-        onFinish: () => {
-            pullingUpdate.value = false
-            if (page.props.flash?.updateLog) {
-                updateLog.value = page.props.flash.updateLog
-            }
-        }
-    })
 }
 
 const confirmRestore = (backup) => {
@@ -462,52 +437,17 @@ const formatNumber = (num) => {
                     <!-- Git Pull Update -->
                     <div class="border border-gray-200 rounded-lg p-4">
                         <h4 class="font-medium text-gray-900 mb-3">Update Aplikasi</h4>
-                        <p class="text-sm text-gray-500 mb-4">Update langsung dari repository via git pull + build</p>
-
-                        <div class="space-y-3">
-                            <!-- Status: ada update / sudah terbaru -->
-                            <div v-if="updateInfo.update_available" class="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                                </svg>
-                                <div>
-                                    <p class="text-sm font-medium text-green-800">Update tersedia: v{{ updateInfo.latest_version }}</p>
-                                    <p class="text-xs text-green-600">Versi saat ini: v{{ appVersion }}</p>
-                                </div>
-                            </div>
-                            <div v-else class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center gap-2">
                                 <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                <p class="text-sm text-gray-600">Aplikasi sudah versi terbaru (v{{ appVersion }})</p>
+                                <p class="text-sm text-gray-600">Versi: v{{ appVersion }}</p>
                             </div>
-
-                            <button
-                                @click="gitPullUpdate"
-                                :disabled="pullingUpdate"
-                                class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                <svg v-if="pullingUpdate" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                </svg>
-                                {{ pullingUpdate ? 'Sedang mengupdate...' : 'Update Sekarang' }}
-                            </button>
                         </div>
-
-                        <!-- Update Log Output -->
-                        <div v-if="updateLog" class="mt-4">
-                            <h5 class="text-sm font-medium text-gray-700 mb-2">Log Update:</h5>
-                            <pre class="p-3 bg-gray-900 text-green-400 text-xs rounded-lg overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap">{{ updateLog }}</pre>
-                        </div>
-
-                        <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
-                            <p class="text-xs text-yellow-700">
-                                <strong>Proses:</strong> git pull &rarr; composer install &rarr; npm build &rarr; migrate &rarr; clear cache. Aplikasi akan masuk maintenance mode selama proses.
-                            </p>
+                        <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+                            <p class="text-sm text-blue-700">Update aplikasi dilakukan via SSH. Jalankan perintah berikut di server:</p>
+                            <pre class="mt-2 p-2 bg-blue-900 text-blue-100 text-xs rounded overflow-x-auto">cd /var/www/billing && git stash && git pull origin main && composer update --no-dev --optimize-autoloader --ignore-platform-reqs && php artisan migrate --force && mkdir -p storage/framework/{views,cache,sessions,testing} && php artisan optimize:clear && php artisan optimize && npm run build && php artisan queue:restart</pre>
                         </div>
                     </div>
 

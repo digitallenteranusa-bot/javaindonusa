@@ -611,22 +611,6 @@ class SettingsController extends Controller
     }
 
     /**
-     * Run git pull + build update on server
-     */
-    public function gitPullUpdate(UpdateService $updateService)
-    {
-        $result = $updateService->gitPullUpdate();
-
-        if ($result['success']) {
-            return back()->with('success', $result['message'] ?? 'Update berhasil')
-                         ->with('updateLog', $result['output'] ?? '');
-        }
-
-        return back()->with('error', $result['error'] ?? 'Gagal menjalankan update')
-                     ->with('updateLog', $result['output'] ?? '');
-    }
-
-    /**
      * Get list of backups
      */
     public function getBackups(UpdateService $updateService)

@@ -533,7 +533,7 @@ sudo supervisorctl restart all
 
 # Atau jika tidak pakai Supervisor, restart manual
 pkill -f "queue:work"
-nohup php artisan queue:work redis --daemon > /dev/null 2>&1 &
+nohup php artisan queue:work redis --queue=default,notifications --daemon > /dev/null 2>&1 &
 ```
 
 **Script Update Cepat:**

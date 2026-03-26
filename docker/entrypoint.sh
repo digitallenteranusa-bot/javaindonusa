@@ -34,7 +34,7 @@ echo "==> Starting Nginx..."
 nginx -g "daemon off;" &
 
 echo "==> Starting queue worker..."
-php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600 &
+php artisan queue:work redis --queue=default,notifications --sleep=3 --tries=3 --max-time=3600 &
 
 echo "==> All services started."
 wait

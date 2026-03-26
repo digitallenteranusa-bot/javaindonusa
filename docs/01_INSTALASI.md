@@ -671,7 +671,7 @@ Group=www-data
 Restart=always
 RestartSec=5
 WorkingDirectory=/var/www/billing
-ExecStart=/usr/bin/php /var/www/billing/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+ExecStart=/usr/bin/php /var/www/billing/artisan queue:work redis --queue=default,notifications --sleep=3 --tries=3 --max-time=3600
 
 StandardOutput=append:/var/log/billing-worker.log
 StandardError=append:/var/log/billing-worker-error.log
@@ -729,7 +729,7 @@ sudo nano /etc/supervisor/conf.d/billing-worker.conf
 ```ini
 [program:billing-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/billing/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600 --max-jobs=1000
+command=php /var/www/billing/artisan queue:work redis --queue=default,notifications --sleep=3 --tries=3 --max-time=3600 --max-jobs=1000
 autostart=true
 autorestart=true
 stopasgroup=true

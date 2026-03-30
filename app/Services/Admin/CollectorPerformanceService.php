@@ -50,13 +50,15 @@ class CollectorPerformanceService
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->get();
 
+            // Billable = hanya invoice yang belum lunas (perlu ditagih penagih)
+            // Invoice yang sudah paid (dari kredit/bayar lebih bulan lalu) tidak dihitung
             $totalBillable = (float) Invoice::whereHas('customer', function ($q) use ($collector) {
                     $q->where('collector_id', $collector->id);
                 })
                 ->where('period_year', $year)
                 ->where('period_month', $month)
-                ->whereNotIn('status', ['cancelled'])
-                ->sum('total_amount');
+                ->whereIn('status', ['pending', 'partial', 'overdue'])
+                ->sum('remaining_amount');
 
             $totalCollected = (float) $payments->sum('amount');
             $cashCollected = (float) $payments->where('payment_method', 'cash')->sum('amount');

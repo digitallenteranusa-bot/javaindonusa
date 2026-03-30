@@ -711,6 +711,12 @@ class DashboardService
      */
     protected function getYearMonthExpressions(string $column): array
     {
+        $allowed = ['created_at', 'updated_at', 'deleted_at', 'paid_at', 'due_date'];
+
+        if (! in_array($column, $allowed, true)) {
+            throw new \InvalidArgumentException("Column not allowed: {$column}");
+        }
+
         $driver = DB::getDriverName();
 
         if ($driver === 'sqlite') {

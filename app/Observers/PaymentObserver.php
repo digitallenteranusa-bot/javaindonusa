@@ -24,4 +24,10 @@ class PaymentObserver
 
         DashboardService::clearDashboardCache();
     }
+
+    public function deleted(Payment $payment): void
+    {
+        $payment->customer?->recalculateTotalDebt();
+        DashboardService::clearDashboardCache();
+    }
 }

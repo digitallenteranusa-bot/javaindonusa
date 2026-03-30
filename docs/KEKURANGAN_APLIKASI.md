@@ -1,6 +1,6 @@
 # Kekurangan Aplikasi ISP Billing
 
-**Review:** 2026-03-17 (updated 2026-03-24)
+**Review:** 2026-03-17 (updated 2026-03-30)
 **Total:** 42 item, kategori A-H
 
 ---
@@ -16,7 +16,7 @@
 
 1. [x] `APP_DEBUG=false` di production
 2. [x] **Path Traversal di route receipt collector** — Fixed: `basename()` + `realpath()` validation memastikan file hanya dari folder receipts.
-3. [ ] **SQL Injection risk di DashboardService** — `getYearMonthExpressions()` interpolasi column name langsung ke raw SQL. Saat ini hardcoded `created_at`/`deleted_at`, tapi arsitektur memungkinkan injection. Fix: whitelist column.
+3. [x] **SQL Injection risk di DashboardService** — Fixed: `getYearMonthExpressions()` sekarang memvalidasi column name terhadap whitelist (`created_at`, `updated_at`, `deleted_at`, `paid_at`, `due_date`). Throw `InvalidArgumentException` jika column tidak diizinkan.
 4. [x] **Backup download tanpa validasi ekstensi** — Fixed: whitelist ekstensi `.sql`, `.sql.gz`, `.sql.zip` + cek backslash.
 5. [x] **Default password di Customer Import** — Tidak diubah: `client001` adalah password standar yang sudah dipakai semua pelanggan aktif. Bukan bug, ini by design.
 6. [ ] **CSP terlalu permisif** — `SecurityHeaders.php` menggunakan `'unsafe-inline'` dan `'unsafe-eval'` untuk script-src. Fix: gunakan nonce-based CSP.
@@ -27,7 +27,7 @@
 ## B. Fitur Bisnis (8 item)
 
 8. [ ] **Prorating** — Tidak ada perhitungan pro-rata untuk aktivasi/suspend di tengah bulan.
-9. [ ] **Denda keterlambatan (surcharge/late fee)** — Infrastruktur ada di DebtHistory tapi belum diimplementasikan di billing logic.
+9. [ ] **Denda keterlambatan (surcharge/late fee)** — Infrastruktur ada (`DebtService::addLateFee()`, `DebtHistory::recordLateFee()`, `Setting::KEY_LATE_FEE`) tapi method tidak pernah dipanggil dari billing logic. `CheckOverdue` command hanya update status, tidak apply fee.
 10. [x] **Refund/credit notes** — Implemented: CreditNote model + CreditNoteService (create/approve/reject) + admin CRUD pages. Tipe: refund, credit, adjustment. Approval workflow (pending → approved/rejected).
 11. [ ] **Customer contract/SLA tracking** — Tidak ada tracking kontrak, tanggal mulai/berakhir, perpanjangan otomatis.
 12. [x] **Payment plan/cicilan** — Implemented: PaymentPlan + PaymentPlanInstallment model, PaymentPlanService (create/cancel/record), admin CRUD pages. 2-24 bulan, jadwal otomatis, progress tracking.
@@ -39,22 +39,22 @@
 
 ## C. Notifikasi (5 item)
 
-16. [ ] **SMS notification** — Infrastruktur channel ada tapi tidak dikonfigurasi/aktif.
-17. [ ] **Notification scheduling** — Tidak bisa schedule notifikasi untuk dikirim di waktu tertentu.
-18. [ ] **Do-not-disturb hours** — Tidak ada pengaturan jam jangan ganggu pelanggan.
-19. [ ] **Notification analytics** — Tidak ada tracking open rate, delivery rate, failure rate.
+16. [ ] **SMS notification** — Config driver ada (Zenziva, Twilio, Nexmo, RajaSMS, NusaSMS) tapi class `SmsChannel` tidak ada. Method `sendSms()` direferensi di `SendNotificationJob` dan `TestNotification` tapi belum diimplementasi di `NotificationService`.
+17. [x] **Notification scheduling** — Implemented: Job-based scheduling via queue. `SendPaymentReminderJob` (configurable days before due), `SendOverdueNotices` (days after due: 1, 3, 7). Retry 3x dengan backoff 60s.
+18. [x] **Do-not-disturb hours** — Implemented sebagai "Business Hours": config `notification.business_hours` (08:00-20:00 WIB). `SendNotificationJob::isWithinBusinessHours()` delay notif ke jam kerja berikutnya jika di luar jam. Optional skip weekends.
+19. [ ] **Notification analytics** — Hanya logging success/fail ke `billing_logs` via `BillingLog::logSystem()`. Tidak ada metrics dashboard (delivery rate, failure rate, open rate).
 20. [x] **WhatsApp rate limiting** — Sudah diimplementasi: `rate_limit.per_minute`, `delay_ms`, `bulk_delay_seconds` di config, staggered delay di SendBulkNotificationJob.
 
 ---
 
 ## D. Laporan (6 item)
 
-21. [ ] **Revenue forecast/projection** — Tidak ada prediksi pendapatan berdasarkan trend.
-22. [ ] **Churn analysis** — Tidak ada analisa customer lifecycle, churn rate, retention cohort.
+21. [ ] **Revenue forecast/projection** — Tidak ada prediksi pendapatan. Yang ada: historical trend (`getMonthlyRevenueTrend`), YoY comparison, MoM growth rate — tapi tidak ada forecasting algorithm.
+22. [ ] **Churn analysis** — Partial: `getCustomerGrowthTrend()` tracking new vs churn (soft delete) per bulan. Belum ada: retention cohort, churn rate %, lifecycle analysis, churn prediction.
 23. [ ] **Scheduled report delivery** — Tidak bisa kirim laporan otomatis via email secara berkala.
-24. [ ] **Export CSV/Excel** — 9 halaman punya referensi export tapi tidak ada implementasi (tombol export tidak functional).
-25. [ ] **Custom report builder** — Admin tidak bisa buat laporan custom dengan filter/kolom pilihan sendiri.
-26. [ ] **Bad debt analysis** — Tidak ada analisa piutang tak tertagih dan write-off.
+24. [x] **Export CSV/Excel** — Implemented: 9 export class (Maatwebsite Excel) fully functional — Invoice, Payment, Expense, UnpaidCustomers, CollectorReport, CollectorDetail, CollectorPerformanceSummary, AuditLog, CustomerTemplate. Semua punya routes + UI buttons.
+25. [ ] **Custom report builder** — Report pre-defined (Revenue Overview, Collector Performance, Area Performance). Admin tidak bisa pilih kolom/filter sendiri. Untuk skala ISP ini, prioritas rendah.
+26. [ ] **Bad debt analysis** — Write-off function ada (`DebtService::writeOffDebt()`, `DebtHistory::TYPE_WRITEOFF`), debt aging 5 kategori ada (`ReportService::getDebtAging()`). Belum ada: bad debt analytics dashboard, write-off trend, write-off reason categorization.
 
 ---
 
@@ -72,25 +72,25 @@
 ## F. Infrastruktur (5 item)
 
 33. [x] **Backup ke Google Drive** — Sudah diimplementasi dengan spatie/laravel-backup + OAuth2.
-34. [ ] **Monitoring & alerting** — Tidak ada Prometheus, New Relic, atau Datadog. Tidak bisa detect performance degradation.
+34. [x] **Monitoring & alerting** — Partial: Sentry aktif (error tracking + performance tracing, `traces_sample_rate` 0.1). Breadcrumb tracking untuk logs, cache, SQL, queue, HTTP. Belum ada: Prometheus/Datadog untuk infrastructure metrics.
 35. [x] **Sentry DSN kosong** — Fixed: Sentry DSN dikonfigurasi di production. Backend (PHP) + Frontend (Vue.js) error monitoring aktif. Performance tracing enabled. **TODO:** Hapus 2 test event di dashboard Sentry (resolve/delete issue "This is a test exception sent from the Sentry Laravel SDK"), dan set `APP_ENV=production` di `.env` server agar environment tidak tercatat sebagai `local`.
-36. [ ] **Log aggregation** — Log hanya di `storage/logs/`, tidak ada ELK/Papertrail/Datadog integration.
-37. [ ] **Cache invalidation** — Hanya 2 `Cache::forget()` ditemukan. Dashboard cache tidak di-invalidate saat invoice/payment berubah.
+36. [ ] **Log aggregation** — Config Papertrail + Slack channel ada di `config/logging.php` tapi tidak dikonfigurasi di `.env`. Default masih `daily` ke `storage/logs/`. Tidak ada ELK/Datadog.
+37. [x] **Cache invalidation** — Fixed: 19 `Cache::forget()` calls. `DashboardService::clearDashboardCache()` menghapus 10 cache key sekaligus. Dipanggil dari `InvoiceObserver`, `PaymentObserver`, `CustomerObserver` pada event created/updated/deleted. Tambahan: Setting, Permission, IspInfo, ExpenseController juga invalidate cache masing-masing.
 
 ---
 
 ## G. Testing (3 item)
 
-38. [ ] **Integration test end-to-end** — Mayoritas test unit dengan mock. Tidak ada test flow Payment -> Isolation -> Notification secara end-to-end.
-39. [ ] **API contract test** — Tidak ada validasi response API terhadap OpenAPI spec. Hanya 5 basic API test.
-40. [ ] **Performance/load test** — Tidak ada load test (Locust, k6). Tidak bisa validasi dashboard load time atau queue under load.
+38. [ ] **Integration test end-to-end** — 186 test methods total (unit + feature). 6 Playwright smoke tests. Tidak ada test flow Payment → Isolation → Notification secara end-to-end.
+39. [ ] **API contract test** — 19 basic API tests (Auth 6, Customer 5, Invoice 4, Payment 4). Tidak ada OpenAPI spec validation atau contract testing framework.
+40. [ ] **Performance/load test** — Tidak ada load test (Locust, k6, Artillery). Tidak bisa validasi dashboard load time atau queue under load.
 
 ---
 
 ## H. Integrasi (2 item)
 
-41. [ ] **Circuit breaker pattern** — Jika payment gateway down, semua request gagal tanpa fallback. Tidak ada circuit breaker.
-42. [ ] **Mikrotik retry logic** — 26 exception block ditemukan tapi tidak ada retry dengan exponential backoff. Isolation command bisa gagal tanpa retry.
+41. [ ] **Circuit breaker pattern** — TripayService dan XenditService hanya basic try-catch. Tidak ada circuit breaker state (OPEN/CLOSED/HALF_OPEN), fallback, atau auto-recovery.
+42. [ ] **Mikrotik retry logic** — `RouterOSClient::read()` punya fixed 10ms delay (`usleep(10000)`) dengan max 100 attempts, tapi hanya untuk empty word reads. Tidak ada exponential backoff untuk connection failure atau isolation command.
 
 ---
 
@@ -98,15 +98,15 @@
 
 | Kategori | Total | Selesai | Sisa |
 |----------|-------|---------|------|
-| A. Keamanan | 7 | 5 | 2 |
+| A. Keamanan | 7 | 6 | 1 |
 | B. Fitur Bisnis | 8 | 5 | 3 |
-| C. Notifikasi | 5 | 1 | 4 |
-| D. Laporan | 6 | 0 | 6 |
+| C. Notifikasi | 5 | 3 | 2 |
+| D. Laporan | 6 | 1 | 5 |
 | E. UI/UX | 6 | 6 | 0 |
-| F. Infrastruktur | 5 | 2 | 3 |
+| F. Infrastruktur | 5 | 4 | 1 |
 | G. Testing | 3 | 0 | 3 |
 | H. Integrasi | 2 | 0 | 2 |
-| **Total** | **42** | **19** | **23** |
+| **Total** | **42** | **25** | **17** |
 
 ---
 
@@ -118,25 +118,25 @@
 - ~~#15 Idempotency payment callback~~ (fixed)
 
 ### Penting (High)
-- #3 SQL injection risk DashboardService
-- #5 Default password import
-- #34 Monitoring & alerting
-- ~~#35 Sentry DSN~~ (configured)
+- ~~#3 SQL injection risk DashboardService~~ (fixed: whitelist validation)
 - #41 Circuit breaker payment gateway
 - #42 Mikrotik retry logic
 
 ### Sedang (Medium)
 - #8 Prorating
 - #9 Denda keterlambatan
-- ~~#20 WhatsApp rate limiting~~ (sudah done)
-- #24 Export CSV/Excel
-- #37 Cache invalidation
+- #6 CSP nonce-based
 - #38 Integration test E2E
 
 ### Bisa Nanti (Low)
+- #11 Customer contract/SLA
 - #16 SMS notification
-- #17 Notification scheduling
+- #19 Notification analytics
 - #21 Revenue forecast
 - #22 Churn analysis
+- #23 Scheduled report delivery
 - #25 Custom report builder
-- #30 Accessibility WCAG
+- #26 Bad debt analysis dashboard
+- #36 Log aggregation
+- #39 API contract test
+- #40 Performance/load test

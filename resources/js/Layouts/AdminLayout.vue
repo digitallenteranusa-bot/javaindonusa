@@ -111,6 +111,8 @@ const collectorNavigation = [
 const financeNavigation = [
     { name: 'Dashboard', href: '/admin/finance', icon: 'banknotes', permission: 'finance.view' },
     { name: 'Pengeluaran Operasional', href: '/admin/finance/expenses', icon: 'receipt', permission: 'finance.manage' },
+    { name: 'Credit Note', href: '/admin/credit-notes', icon: 'document', permission: 'invoices.cancel' },
+    { name: 'Cicilan', href: '/admin/payment-plans', icon: 'clipboard', permission: 'payments.create' },
     { name: 'Analisa Pendapatan', href: '/admin/analytics/revenue', icon: 'chart', permission: 'reports.view' },
     { name: 'Laporan', href: '/admin/reports', icon: 'chart', permission: 'reports.view' },
 ]

@@ -55,9 +55,9 @@ const initMap = () => {
         maxZoom: 19
     })
 
-    baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '© Esri',
-        maxZoom: 19
+    baseLayers.satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        attribution: '© Google',
+        maxZoom: 21
     })
 
     baseLayers.satellite.addTo(map.value)

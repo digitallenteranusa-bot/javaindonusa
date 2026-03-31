@@ -42,31 +42,31 @@ class UserSeeder extends Seeder
                 'name' => 'Budi Santoso',
                 'email' => 'budi@javaindonusa.net',
                 'phone' => '08122222221',
-                'commission_rate' => 2.5,
+                'commission_rate' => 0,
             ],
             [
                 'name' => 'Agus Setiawan',
                 'email' => 'agus@javaindonusa.net',
                 'phone' => '08122222222',
-                'commission_rate' => 2.5,
+                'commission_rate' => 0,
             ],
             [
                 'name' => 'Dedi Kurniawan',
                 'email' => 'dedi@javaindonusa.net',
                 'phone' => '08122222223',
-                'commission_rate' => 3.0,
+                'commission_rate' => 0,
             ],
             [
                 'name' => 'Eko Prasetyo',
                 'email' => 'eko@javaindonusa.net',
                 'phone' => '08122222224',
-                'commission_rate' => 2.5,
+                'commission_rate' => 0,
             ],
             [
                 'name' => 'Fajar Hidayat',
                 'email' => 'fajar@javaindonusa.net',
                 'phone' => '08122222225',
-                'commission_rate' => 2.0,
+                'commission_rate' => 0,
             ],
         ];
 

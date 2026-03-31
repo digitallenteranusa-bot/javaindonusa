@@ -127,7 +127,8 @@ const openMapPicker = async () => {
     map = L.map(mapContainer.value).setView([defaultLat, defaultLng], 17)
 
     // Satellite layer
-    L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
         attribution: '© Google',
         maxZoom: 21
     }).addTo(map)

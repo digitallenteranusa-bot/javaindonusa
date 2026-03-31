@@ -59,7 +59,8 @@ const initMap = () => {
         maxZoom: 19
     })
 
-    baseLayers.satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    baseLayers.satellite = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
         attribution: '© Google',
         maxZoom: 21
     })

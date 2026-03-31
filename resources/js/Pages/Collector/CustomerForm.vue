@@ -181,12 +181,13 @@ const openMapPicker = async () => {
 
     map = L.map(mapContainer.value, {
         zoomControl: true,
-        attributionControl: false
+        attributionControl: false,
+        maxZoom: 27
     }).setView([defaultLat, defaultLng], 17)
 
     // Satellite layer
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxNativeZoom: 19,
+        maxNativeZoom: 18,
         maxZoom: 27
     }).addTo(map)
 

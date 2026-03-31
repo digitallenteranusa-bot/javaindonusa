@@ -45,7 +45,7 @@ onMounted(async () => {
 })
 
 const initMap = () => {
-    map.value = L.map(mapContainer.value).setView(
+    map.value = L.map(mapContainer.value, { maxZoom: 27 }).setView(
         [props.centerPoint.lat, props.centerPoint.lng],
         17
     )
@@ -58,7 +58,7 @@ const initMap = () => {
 
     baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: '© Esri',
-        maxNativeZoom: 19,
+        maxNativeZoom: 18,
         maxZoom: 27
     })
 

@@ -13,7 +13,7 @@ body {
     background-color: rgb(17 24 39); /* gray-900 */
 }
 
-.dark .bg-white {
+.dark .bg-white:not(.leaflet-container *) {
     background-color: rgb(31 41 55); /* gray-800 */
     color: rgb(229 231 235); /* gray-200 */
 }
@@ -154,6 +154,23 @@ textarea:focus {
 
 .badge-secondary {
     @apply bg-gray-100 text-gray-800;
+}
+
+/* Leaflet - prevent dark mode from affecting map tiles */
+.leaflet-container,
+.leaflet-container * {
+    color: initial;
+}
+
+.leaflet-container .leaflet-tile-pane,
+.leaflet-container .leaflet-tile,
+.leaflet-container .leaflet-control-container {
+    background-color: transparent !important;
+}
+
+.leaflet-tile {
+    outline: none !important;
+    border: none !important;
 }
 
 /* Leaflet attribution - make smaller and subtle */

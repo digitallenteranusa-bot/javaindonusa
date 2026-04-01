@@ -99,6 +99,8 @@ const billingNavigation = [
     { name: 'Invoice', href: '/admin/invoices', icon: 'document', permission: 'invoices.view' },
     { name: 'Belum Bayar', href: '/admin/billing/unpaid', icon: 'clipboard', permission: 'invoices.view' },
     { name: 'Isolir', href: '/admin/isolation', icon: 'shield', permission: 'invoices.view' },
+    { name: 'Cuti', href: '/admin/suspended', icon: 'clock', permission: 'customers.view' },
+    { name: 'Terminated', href: '/admin/terminated', icon: 'x-circle', permission: 'customers.view' },
     { name: 'Pembayaran', href: '/admin/payments', icon: 'credit-card', permission: 'payments.view' },
     { name: 'Credit Note', href: '/admin/credit-notes', icon: 'document', permission: 'invoices.cancel' },
     { name: 'Cicilan', href: '/admin/payment-plans', icon: 'clipboard', permission: 'payments.create' },
@@ -237,6 +239,12 @@ const icons = {
     },
     vpn: {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>`
+    },
+    clock: {
+        template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
+    },
+    'x-circle': {
+        template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`
     },
     'chevron-down': {
         template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`

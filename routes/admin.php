@@ -33,6 +33,8 @@ use App\Http\Controllers\Admin\NetworkMonitoringController;
 use App\Http\Controllers\Admin\VpsMonitoringController;
 use App\Http\Controllers\Admin\CollectorPerformanceController;
 use App\Http\Controllers\Admin\UnpaidMonitoringController;
+use App\Http\Controllers\Admin\SuspendedController;
+use App\Http\Controllers\Admin\TerminatedController;
 
 /*
 |--------------------------------------------------------------------------
@@ -107,6 +109,26 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:customers.edit'])->group(function () {
         Route::post('/isolation/{customer}/isolate', [IsolationController::class, 'isolate'])->name('isolation.isolate');
         Route::post('/isolation/{customer}/reopen', [IsolationController::class, 'reopen'])->name('isolation.reopen');
+    });
+
+    // ================================================================
+    // SUSPENDED (CUTI)
+    // ================================================================
+    Route::middleware(['permission:customers.view'])->group(function () {
+        Route::get('/suspended', [SuspendedController::class, 'index'])->name('suspended.index');
+    });
+    Route::middleware(['permission:customers.edit'])->group(function () {
+        Route::post('/suspended/{customer}/unsuspend', [SuspendedController::class, 'unsuspend'])->name('suspended.unsuspend');
+    });
+
+    // ================================================================
+    // TERMINATED
+    // ================================================================
+    Route::middleware(['permission:customers.view'])->group(function () {
+        Route::get('/terminated', [TerminatedController::class, 'index'])->name('terminated.index');
+    });
+    Route::middleware(['permission:customers.edit'])->group(function () {
+        Route::post('/terminated/{customer}/reactivate', [TerminatedController::class, 'reactivate'])->name('terminated.reactivate');
     });
 
     // ================================================================

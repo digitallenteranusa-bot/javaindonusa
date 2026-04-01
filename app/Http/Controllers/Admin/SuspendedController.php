@@ -35,10 +35,10 @@ class SuspendedController extends Controller
             });
         }
 
-        $sortField = $request->get('sort', 'suspended_at');
-        $allowedSortFields = ['suspended_at', 'name', 'customer_id'];
+        $sortField = $request->get('sort', 'suspension_start_date');
+        $allowedSortFields = ['suspension_start_date', 'name', 'customer_id'];
         if (!in_array($sortField, $allowedSortFields)) {
-            $sortField = 'suspended_at';
+            $sortField = 'suspension_start_date';
         }
         $query->orderBy($sortField, $request->get('direction', 'desc'));
 

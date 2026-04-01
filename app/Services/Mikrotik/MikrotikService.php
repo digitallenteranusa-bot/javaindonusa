@@ -488,9 +488,29 @@ class MikrotikService
             return ['success' => false, 'message' => 'No router assigned'];
         }
 
+        $isRadius = config('radius.enabled', false) && !empty($customer->pppoe_username);
+
         try {
             $this->connect($router);
 
+            // RADIUS customers: isolation handled by RadiusService (pool/address-list),
+            // Mikrotik only needs to disconnect active session to force reconnect
+            if ($isRadius) {
+                $result = ['success' => true, 'message' => 'RADIUS customer — disconnect session'];
+                if ($customer->pppoe_username) {
+                    $disconnectResult = $this->disconnectPPPoE($customer->pppoe_username);
+                    Log::info('RADIUS isolation: session disconnect', [
+                        'customer_id' => $customer->id,
+                        'username' => $customer->pppoe_username,
+                        'disconnected' => $disconnectResult['success'] ?? false,
+                    ]);
+                }
+
+                BillingLog::logCustomer($customer, 'customer_isolated', 'Isolated via RADIUS (session disconnected)');
+                return $result;
+            }
+
+            // Non-RADIUS: use Mikrotik local isolation methods
             $isolationMethod = config('mikrotik.isolation.method', 'address_list');
             $result = [];
 
@@ -561,9 +581,29 @@ class MikrotikService
             return ['success' => false, 'message' => 'No router assigned'];
         }
 
+        $isRadius = config('radius.enabled', false) && !empty($customer->pppoe_username);
+
         try {
             $this->connect($router);
 
+            // RADIUS customers: reopen handled by RadiusService (restore pool/rate-limit),
+            // Mikrotik only needs to disconnect session to force reconnect with new attributes
+            if ($isRadius) {
+                $result = ['success' => true, 'message' => 'RADIUS customer — disconnect session'];
+                if ($customer->pppoe_username) {
+                    $disconnectResult = $this->disconnectPPPoE($customer->pppoe_username);
+                    Log::info('RADIUS reopen: session disconnect', [
+                        'customer_id' => $customer->id,
+                        'username' => $customer->pppoe_username,
+                        'disconnected' => $disconnectResult['success'] ?? false,
+                    ]);
+                }
+
+                BillingLog::logCustomer($customer, 'customer_reopened', 'Access reopened via RADIUS (session disconnected)');
+                return $result;
+            }
+
+            // Non-RADIUS: use Mikrotik local methods
             $isolationMethod = config('mikrotik.isolation.method', 'address_list');
             $result = [];
 

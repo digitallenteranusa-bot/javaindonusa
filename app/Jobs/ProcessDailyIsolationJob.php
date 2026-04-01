@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\Setting;
 use App\Services\Mikrotik\MikrotikService;
 use App\Services\Notification\NotificationService;
+use App\Services\Radius\RadiusService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -99,6 +100,16 @@ class ProcessDailyIsolationJob implements ShouldQueue
                         'isolation_date' => now(),
                         'isolation_reason' => "Auto-isolir: Tunggakan {$thresholdMonths}+ bulan",
                     ]);
+
+                    // Sync isolation to RADIUS (update Framed-Pool → pool-isolir)
+                    try {
+                        app(RadiusService::class)->isolateCustomer($customer);
+                    } catch (\Exception $e) {
+                        Log::warning('Auto-isolation: RADIUS sync failed', [
+                            'customer_id' => $customer->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
 
                     // Send notification
                     $notificationService->sendAsync(

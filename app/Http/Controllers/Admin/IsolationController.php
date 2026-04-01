@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Package;
 use App\Services\Mikrotik\MikrotikService;
 use App\Services\Notification\NotificationService;
+use App\Services\Radius\RadiusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -96,6 +97,17 @@ class IsolationController extends Controller
             $customer = Customer::with(['router', 'package'])->find($customerId);
             if ($customer) {
                 app(MikrotikService::class)->isolateCustomer($customer);
+
+                // Sync isolation to RADIUS (update Framed-Pool → pool-isolir)
+                try {
+                    app(RadiusService::class)->isolateCustomer($customer);
+                } catch (\Exception $e) {
+                    Log::warning('Manual isolation: RADIUS sync failed', [
+                        'customer_id' => $customer->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 app(NotificationService::class)->sendIsolationNotice($customer);
             }
         })->onQueue('isolation');

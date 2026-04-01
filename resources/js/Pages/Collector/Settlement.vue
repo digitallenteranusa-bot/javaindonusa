@@ -161,6 +161,12 @@ const canSettle = computed(() => {
                             </span>
                         </div>
                         <div class="flex justify-between items-center">
+                            <span class="text-gray-400 text-sm">Transfer bulan ini</span>
+                            <span class="text-sm text-gray-400">
+                                {{ formatCurrency(pendingSettlement?.transfer_collection || 0) }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center">
                             <span class="text-gray-600">Belanja Disetujui</span>
                             <span class="font-semibold text-red-600">
                                 -{{ formatCurrency(pendingSettlement?.approved_expense || 0) }}

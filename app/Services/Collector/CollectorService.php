@@ -478,10 +478,11 @@ class CollectorService
             ->where('payment_method', 'cash')
             ->sum('amount');
 
-        // Total pembayaran transfer (info saja, tidak perlu disetor)
+        // Total pembayaran transfer — info saja, reset per bulan (tidak perlu disetor)
+        $monthStart = Carbon::now()->startOfMonth();
         $transferCollection = Payment::where('collector_id', $collector->id)
             ->where('status', 'verified')
-            ->where('created_at', '>=', $startDate)
+            ->where('created_at', '>=', $monthStart)
             ->where('created_at', '<=', $endDate)
             ->where('payment_method', 'transfer')
             ->sum('amount');

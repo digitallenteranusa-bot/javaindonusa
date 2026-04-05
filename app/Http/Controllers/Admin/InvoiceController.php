@@ -133,7 +133,7 @@ class InvoiceController extends Controller
 
         // Get customers without invoice for this period
         $periodFirstDay = Carbon::create($periodYear, $periodMonth, 1)->format('Y-m-d');
-        $customers = Customer::whereIn('status', ['active', 'isolated'])
+        $customers = Customer::where('status', Customer::STATUS_ACTIVE)
             ->whereDoesntHave('invoices', function ($q) use ($periodMonth, $periodYear) {
                 $q->where('period_month', $periodMonth)
                     ->where('period_year', $periodYear)
@@ -186,8 +186,8 @@ class InvoiceController extends Controller
         $search = trim($request->get('search', ''));
         $showAll = $request->boolean('show_all', false);
 
-        // Start with base query - active or isolated customers
-        $query = Customer::whereIn('status', ['active', 'isolated'])
+        // Only active customers — isolated customers should not get new invoices
+        $query = Customer::where('status', Customer::STATUS_ACTIVE)
             ->with(['package:id,name,price', 'area:id,name']);
 
         // Search filter
@@ -253,7 +253,7 @@ class InvoiceController extends Controller
         $periodYear = $validated['year'];
 
         $customers = Customer::whereIn('id', $validated['customer_ids'])
-            ->whereIn('status', ['active', 'isolated'])
+            ->where('status', Customer::STATUS_ACTIVE)
             ->with('package')
             ->get();
 

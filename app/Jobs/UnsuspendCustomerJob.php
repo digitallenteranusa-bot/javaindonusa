@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Customer;
 use App\Services\Mikrotik\MikrotikService;
 use App\Services\Notification\NotificationService;
+use App\Services\Radius\RadiusService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -60,6 +61,16 @@ class UnsuspendCustomerJob implements ShouldQueue
                     'suspension_end_date' => null,
                     'suspension_reason' => null,
                 ]);
+
+                // Sync reopen to RADIUS (restore Framed-Pool, rate-limit, group)
+                try {
+                    app(RadiusService::class)->reopenCustomer($customer);
+                } catch (\Exception $e) {
+                    Log::warning('RADIUS reopen failed (unsuspend)', [
+                        'customer_id' => $customer->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
                 Log::info('Customer unsuspended successfully', [
                     'customer_id' => $customer->id,

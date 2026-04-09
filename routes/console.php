@@ -129,9 +129,9 @@ Schedule::command('radius:cleanup')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler.log'));
 
-// Sync latest backup to Google Drive every 2 days at 02:30 (after DB backup)
+// Sync latest backup to Google Drive every 3 days at 02:30 (after DB backup)
 Schedule::command('backup:google-drive')
-    ->cron('30 2 */2 * *')
+    ->cron('30 2 */3 * *')
     ->timezone('Asia/Jakarta')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/backup.log'));

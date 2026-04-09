@@ -15,6 +15,7 @@ return [
                     database_path('migrations'),
                     database_path('seeders'),
                     resource_path('views'),
+                    storage_path('app/public'),
                 ],
 
                 'exclude' => [],
@@ -26,6 +27,7 @@ return [
 
             'databases' => [
                 'mysql',
+                'radius',
             ],
         ],
 

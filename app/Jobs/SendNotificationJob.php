@@ -88,24 +88,35 @@ class SendNotificationJob implements ShouldQueue
         };
 
         if (!$result['success']) {
-            Log::warning('Notification job failed', [
-                'channel' => $this->channel,
-                'recipient' => $this->recipient,
-                'error' => $result['message'] ?? 'Unknown error',
-                'attempt' => $this->attempts(),
-            ]);
+            try {
+                Log::warning('Notification job failed', [
+                    'channel' => $this->channel,
+                    'recipient' => $this->recipient,
+                    'error' => $result['message'] ?? 'Unknown error',
+                    'attempt' => $this->attempts(),
+                ]);
+            } catch (\Exception $logException) {
+                // Ignore log failures
+            }
 
             // Throw exception to trigger retry
             if ($this->attempts() < $this->tries) {
                 throw new \Exception($result['message'] ?? 'Failed to send notification');
             }
+
+            return;
         }
 
-        Log::info('Notification sent', [
-            'channel' => $this->channel,
-            'recipient' => $this->recipient,
-            'success' => $result['success'],
-        ]);
+        // Notification sent successfully - log but don't let log failure trigger retry
+        try {
+            Log::info('Notification sent', [
+                'channel' => $this->channel,
+                'recipient' => $this->recipient,
+                'success' => true,
+            ]);
+        } catch (\Exception $logException) {
+            // Ignore log failures - notification was already sent successfully
+        }
     }
 
     /**

@@ -660,18 +660,26 @@ class CollectorService
                 )->delay(now()->addSeconds($delay + $delaySeconds));
             }
 
-            Log::info('Payment notification queued', [
-                'customer_id' => $customer->id,
-                'payment_id' => $payment->id,
-                'delay_seconds' => $delay,
-                'access_opened' => $paymentResult['access_opened'] ?? false,
-            ]);
+            try {
+                Log::info('Payment notification queued', [
+                    'customer_id' => $customer->id,
+                    'payment_id' => $payment->id,
+                    'delay_seconds' => $delay,
+                    'access_opened' => $paymentResult['access_opened'] ?? false,
+                ]);
+            } catch (\Exception $logException) {
+                // Ignore log failures - notification was already queued successfully
+            }
         } catch (\Exception $e) {
-            Log::error('Failed to queue payment notification', [
-                'customer_id' => $customer->id,
-                'payment_id' => $paymentResult['payment']->id ?? null,
-                'error' => $e->getMessage(),
-            ]);
+            try {
+                Log::error('Failed to queue payment notification', [
+                    'customer_id' => $customer->id,
+                    'payment_id' => $paymentResult['payment']->id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            } catch (\Exception $logException) {
+                // Ignore log failures
+            }
         }
     }
 

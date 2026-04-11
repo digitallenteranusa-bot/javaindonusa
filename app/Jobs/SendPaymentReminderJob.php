@@ -84,18 +84,26 @@ class SendPaymentReminderJob implements ShouldQueue
                 $dispatchIndex++;
             } catch (\Exception $e) {
                 $results['skipped']++;
-                Log::error('Payment reminder dispatch error', [
-                    'customer_id' => $customer->id,
-                    'error' => $e->getMessage(),
-                ]);
+                try {
+                    Log::error('Payment reminder dispatch error', [
+                        'customer_id' => $customer->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                } catch (\Exception $logException) {
+                    // Ignore log failures - continue processing remaining customers
+                }
             }
         }
 
-        Log::info('Payment reminder jobs dispatched', [
-            'days_before_due' => $this->daysBeforeDue,
-            'results' => $results,
-            'delay_per_message' => $bulkDelay . 's',
-        ]);
+        try {
+            Log::info('Payment reminder jobs dispatched', [
+                'days_before_due' => $this->daysBeforeDue,
+                'results' => $results,
+                'delay_per_message' => $bulkDelay . 's',
+            ]);
+        } catch (\Exception $logException) {
+            // Ignore log failures
+        }
     }
 
     /**

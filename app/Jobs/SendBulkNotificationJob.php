@@ -66,21 +66,29 @@ class SendBulkNotificationJob implements ShouldQueue
 
                 $dispatched++;
             } catch (\Exception $e) {
-                Log::error('Bulk notification dispatch error', [
-                    'customer_id' => $customer->id,
-                    'type' => $this->type,
-                    'error' => $e->getMessage(),
-                ]);
+                try {
+                    Log::error('Bulk notification dispatch error', [
+                        'customer_id' => $customer->id,
+                        'type' => $this->type,
+                        'error' => $e->getMessage(),
+                    ]);
+                } catch (\Exception $logException) {
+                    // Ignore log failures - continue processing remaining customers
+                }
             }
         }
 
-        Log::info('Bulk notification jobs dispatched', [
-            'type' => $this->type,
-            'total_customers' => $customers->count(),
-            'dispatched' => $dispatched,
-            'delay_per_message' => $bulkDelay . 's',
-            'estimated_duration' => ($dispatched * $bulkDelay) . 's',
-        ]);
+        try {
+            Log::info('Bulk notification jobs dispatched', [
+                'type' => $this->type,
+                'total_customers' => $customers->count(),
+                'dispatched' => $dispatched,
+                'delay_per_message' => $bulkDelay . 's',
+                'estimated_duration' => ($dispatched * $bulkDelay) . 's',
+            ]);
+        } catch (\Exception $logException) {
+            // Ignore log failures
+        }
     }
 
     /**

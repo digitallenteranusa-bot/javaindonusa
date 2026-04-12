@@ -34,6 +34,7 @@ class SendNotificationJob implements ShouldQueue
     protected string $message;
     protected ?string $subject;
     protected array $options;
+    protected int $rescheduleCount;
 
     /**
      * Create a new job instance.
@@ -43,13 +44,15 @@ class SendNotificationJob implements ShouldQueue
         string $recipient,
         string $message,
         ?string $subject = null,
-        array $options = []
+        array $options = [],
+        int $rescheduleCount = 0
     ) {
         $this->channel = $channel;
         $this->recipient = $recipient;
         $this->message = $message;
         $this->subject = $subject;
         $this->options = $options;
+        $this->rescheduleCount = $rescheduleCount;
 
         $this->onQueue(config('notification.queue.queue_name', 'notifications'));
     }
@@ -61,10 +64,34 @@ class SendNotificationJob implements ShouldQueue
     {
         // Check business hours if enabled
         if (!$this->isWithinBusinessHours()) {
-            // Release the job to be processed later
-            $this->release(
-                $this->calculateDelayUntilBusinessHours()
-            );
+            // Re-dispatch fresh job instead of release(): on Redis queue,
+            // release() counts as an attempt and exhausts $tries quickly
+            // when notifications cluster near a business-hours boundary,
+            // causing MaxAttemptsExceededException before handle() ever runs.
+            if ($this->rescheduleCount >= 10) {
+                try {
+                    Log::warning('Notification dropped after too many reschedules', [
+                        'channel' => $this->channel,
+                        'recipient' => $this->recipient,
+                        'reschedule_count' => $this->rescheduleCount,
+                    ]);
+                } catch (\Exception $logException) {
+                    // Ignore log failures
+                }
+                return;
+            }
+
+            $delay = max(60, $this->calculateDelayUntilBusinessHours());
+
+            self::dispatch(
+                $this->channel,
+                $this->recipient,
+                $this->message,
+                $this->subject,
+                $this->options,
+                $this->rescheduleCount + 1
+            )->delay(now()->addSeconds($delay));
+
             return;
         }
 

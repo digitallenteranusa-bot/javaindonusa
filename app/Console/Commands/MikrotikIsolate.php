@@ -142,6 +142,13 @@ class MikrotikIsolate extends Command
             $this->info('Reopening customer access...');
 
             try {
+                // RADIUS: restore pool internet dulu SEBELUM disconnect session
+                try {
+                    app(RadiusService::class)->reopenCustomer($customer);
+                } catch (\Exception $e) {
+                    $this->warn('RADIUS sync failed: ' . $e->getMessage());
+                }
+
                 $result = $mikrotikService->reopenCustomer($customer);
 
                 if ($result['success']) {

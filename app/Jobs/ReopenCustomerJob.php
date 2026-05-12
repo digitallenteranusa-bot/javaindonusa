@@ -59,7 +59,18 @@ class ReopenCustomerJob implements ShouldQueue
         }
 
         try {
-            // Execute reopen on router
+            // RADIUS: restore pool internet dulu SEBELUM disconnect session,
+            // agar saat pelanggan reconnect langsung dapat IP internet
+            try {
+                app(RadiusService::class)->reopenCustomer($customer);
+            } catch (\Exception $e) {
+                Log::warning('RADIUS reopen failed', [
+                    'customer_id' => $customer->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // Execute reopen on router (disconnect PPPoE session)
             $result = $mikrotikService->reopenCustomer($customer);
 
             if ($result['success']) {
@@ -69,16 +80,6 @@ class ReopenCustomerJob implements ShouldQueue
                     'isolation_date' => null,
                     'isolation_reason' => null,
                 ]);
-
-                // Sync reopen to RADIUS (non-blocking)
-                try {
-                    app(RadiusService::class)->reopenCustomer($customer);
-                } catch (\Exception $e) {
-                    Log::warning('RADIUS reopen failed', [
-                        'customer_id' => $customer->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
 
                 Log::info('Customer access reopened successfully', [
                     'customer_id' => $customer->id,

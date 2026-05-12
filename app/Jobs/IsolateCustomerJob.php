@@ -67,7 +67,18 @@ class IsolateCustomerJob implements ShouldQueue
         }
 
         try {
-            // Execute isolation on router
+            // RADIUS: update DB dulu (Framed-Pool → pool-isolir) SEBELUM disconnect session,
+            // agar saat pelanggan reconnect sudah dapat pool isolir
+            try {
+                app(RadiusService::class)->isolateCustomer($customer);
+            } catch (\Exception $e) {
+                Log::warning('RADIUS isolation failed', [
+                    'customer_id' => $customer->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // Execute isolation on router (disconnect PPPoE session)
             $result = $mikrotikService->isolateCustomer($customer);
 
             if ($result['success']) {
@@ -77,16 +88,6 @@ class IsolateCustomerJob implements ShouldQueue
                     'isolation_date' => now(),
                     'isolation_reason' => 'Tunggakan melebihi batas',
                 ]);
-
-                // Sync isolation to RADIUS (non-blocking)
-                try {
-                    app(RadiusService::class)->isolateCustomer($customer);
-                } catch (\Exception $e) {
-                    Log::warning('RADIUS isolation failed', [
-                        'customer_id' => $customer->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
 
                 Log::info('Customer isolated successfully', [
                     'customer_id' => $customer->id,

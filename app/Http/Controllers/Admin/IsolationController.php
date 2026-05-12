@@ -91,14 +91,13 @@ class IsolationController extends Controller
             'isolation_reason' => $request->reason,
         ]);
 
-        // Execute Mikrotik isolation via queue
+        // Execute isolation via queue
         $customerId = $customer->id;
         dispatch(function () use ($customerId) {
             $customer = Customer::with(['router', 'package'])->find($customerId);
             if ($customer) {
-                app(MikrotikService::class)->isolateCustomer($customer);
-
-                // Sync isolation to RADIUS (update Framed-Pool → pool-isolir)
+                // RADIUS: update DB dulu (Framed-Pool → pool-isolir) SEBELUM disconnect session,
+                // agar saat pelanggan reconnect sudah dapat pool isolir
                 try {
                     app(RadiusService::class)->isolateCustomer($customer);
                 } catch (\Exception $e) {
@@ -107,6 +106,8 @@ class IsolationController extends Controller
                         'error' => $e->getMessage(),
                     ]);
                 }
+
+                app(MikrotikService::class)->isolateCustomer($customer);
 
                 app(NotificationService::class)->sendIsolationNotice($customer);
             }

@@ -90,7 +90,17 @@ class ProcessDailyIsolationJob implements ShouldQueue
                     continue;
                 }
 
-                // Execute isolation
+                // RADIUS: update DB dulu SEBELUM disconnect session
+                try {
+                    app(RadiusService::class)->isolateCustomer($customer);
+                } catch (\Exception $e) {
+                    Log::warning('Auto-isolation: RADIUS sync failed', [
+                        'customer_id' => $customer->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                // Execute isolation (disconnect PPPoE session)
                 $result = $mikrotikService->isolateCustomer($customer);
 
                 if ($result['success']) {
@@ -100,16 +110,6 @@ class ProcessDailyIsolationJob implements ShouldQueue
                         'isolation_date' => now(),
                         'isolation_reason' => "Auto-isolir: Tunggakan {$thresholdMonths}+ bulan",
                     ]);
-
-                    // Sync isolation to RADIUS (update Framed-Pool → pool-isolir)
-                    try {
-                        app(RadiusService::class)->isolateCustomer($customer);
-                    } catch (\Exception $e) {
-                        Log::warning('Auto-isolation: RADIUS sync failed', [
-                            'customer_id' => $customer->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
 
                     // Send notification
                     $notificationService->sendAsync(

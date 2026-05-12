@@ -7,6 +7,7 @@ use App\Jobs\IsolateCustomerJob;
 use App\Jobs\ReopenCustomerJob;
 use App\Services\Mikrotik\MikrotikService;
 use App\Services\Notification\NotificationService;
+use App\Services\Radius\RadiusService;
 use Illuminate\Console\Command;
 
 class MikrotikIsolate extends Command
@@ -77,6 +78,13 @@ class MikrotikIsolate extends Command
             $this->info('Isolating customer...');
 
             try {
+                // RADIUS: update DB dulu SEBELUM disconnect session
+                try {
+                    app(RadiusService::class)->isolateCustomer($customer);
+                } catch (\Exception $e) {
+                    $this->warn('RADIUS sync failed: ' . $e->getMessage());
+                }
+
                 $result = $mikrotikService->isolateCustomer($customer);
 
                 if ($result['success']) {

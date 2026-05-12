@@ -73,9 +73,9 @@ return [
 
         // Rate limiting (aman untuk unofficial WA API: Fonnte, WatZap, dll)
         'rate_limit' => [
-            'per_minute' => env('WHATSAPP_RATE_LIMIT', 5),
-            'delay_ms' => env('WHATSAPP_DELAY_MS', 3000),
-            'bulk_delay_seconds' => env('WHATSAPP_BULK_DELAY_SECONDS', 60),
+            'per_minute' => env('WHATSAPP_RATE_LIMIT', 2),
+            'delay_ms' => env('WHATSAPP_DELAY_MS', 5000),
+            'bulk_delay_seconds' => env('WHATSAPP_BULK_DELAY_SECONDS', 180),
         ],
     ],
 

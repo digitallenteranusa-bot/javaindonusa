@@ -110,6 +110,7 @@ const collectorNavigation = [
     { name: 'Pengeluaran Penagih', href: '/admin/expenses', icon: 'receipt', permission: 'expenses.view' },
     { name: 'Setoran', href: '/admin/settlements', icon: 'cash', permission: 'settlements.view' },
     { name: 'Performa Penagih', href: '/admin/finance/collector-performance', icon: 'user-group', permission: 'collectors.view' },
+    { name: 'Piutang Pelanggan', href: '/admin/collector/customer-debt', icon: 'document', permission: 'collectors.view' },
 ]
 
 const financeNavigation = [

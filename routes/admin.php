@@ -35,6 +35,7 @@ use App\Http\Controllers\Admin\CollectorPerformanceController;
 use App\Http\Controllers\Admin\UnpaidMonitoringController;
 use App\Http\Controllers\Admin\SuspendedController;
 use App\Http\Controllers\Admin\TerminatedController;
+use App\Http\Controllers\Admin\CustomerDebtReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -519,6 +520,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::middleware(['permission:reports.export'])->group(function () {
         Route::get('/reports/collectors/export', [ReportController::class, 'exportCollectorPerformance'])
             ->name('reports.collectors.export');
+    });
+
+    // ================================================================
+    // PIUTANG PELANGGAN PER PENAGIH
+    // ================================================================
+    Route::middleware(['permission:collectors.view'])->group(function () {
+        Route::get('/collector/customer-debt', [CustomerDebtReportController::class, 'index'])
+            ->name('collector.customer-debt');
+        Route::get('/collector/customer-debt/export', [CustomerDebtReportController::class, 'export'])
+            ->name('collector.customer-debt.export');
     });
 
     // ================================================================

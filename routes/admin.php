@@ -621,7 +621,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // ================================================================
     Route::middleware(['permission:customers.view'])->group(function () {
         Route::get('/router-brands', [RouterBrandController::class, 'index'])->name('router-brands.index');
-        Route::get('/router-brands/{brand}', [RouterBrandController::class, 'show'])->name('router-brands.show');
+        Route::get('/router-brands/{brand}', [RouterBrandController::class, 'show'])->where('brand', '.*')->name('router-brands.show');
     });
 
     // ================================================================

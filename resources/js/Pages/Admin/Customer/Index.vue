@@ -54,6 +54,17 @@ const downloadTemplate = () => {
     window.location.href = '/admin/customers-import-template'
 }
 
+const exportCustomers = () => {
+    const params = new URLSearchParams()
+    if (statusFilter.value) params.append('status', statusFilter.value)
+    if (areaFilter.value) params.append('area_id', areaFilter.value)
+    if (packageFilter.value) params.append('package_id', packageFilter.value)
+    if (collectorFilter.value) params.append('collector_id', collectorFilter.value)
+    if (search.value) params.append('search', search.value)
+
+    window.location.href = `/admin/customers-export?${params.toString()}`
+}
+
 // Format currency
 const formatCurrency = (value) => {
     return new Intl.NumberFormat('id-ID', {
@@ -119,6 +130,15 @@ const deleteCustomer = (customer) => {
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-gray-900">Pelanggan</h1>
                 <div class="flex items-center gap-2">
+                    <button
+                        @click="exportCustomers"
+                        class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Export Excel
+                    </button>
                     <button
                         @click="openImportModal"
                         class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"

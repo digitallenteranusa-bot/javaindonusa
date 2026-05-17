@@ -19,6 +19,7 @@ use App\Http\Requests\Admin\Customer\WriteOffDebtRequest;
 use App\Http\Requests\Admin\Customer\ImportCustomerRequest;
 use App\Imports\CustomerImport;
 use App\Exports\CustomerTemplateExport;
+use App\Exports\CustomerExport;
 use App\Jobs\SuspendCustomerJob;
 use App\Jobs\UnsuspendCustomerJob;
 use Illuminate\Http\Request;
@@ -350,6 +351,25 @@ class CustomerController extends Controller
         }
 
         return back()->with('info', 'Hutang sudah sesuai, tidak ada perubahan');
+    }
+
+    /**
+     * Export customers to Excel
+     */
+    public function export(Request $request)
+    {
+        $filename = 'data_pelanggan_' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(
+            new CustomerExport(
+                $request->get('status'),
+                $request->get('area_id'),
+                $request->get('package_id'),
+                $request->get('collector_id'),
+                $request->get('search'),
+            ),
+            $filename
+        );
     }
 
     /**

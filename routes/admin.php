@@ -72,6 +72,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Parameterized routes after static routes
     Route::middleware(['permission:customers.view'])->group(function () {
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/customers-export', [CustomerController::class, 'export'])->name('customers.export');
         Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
     });

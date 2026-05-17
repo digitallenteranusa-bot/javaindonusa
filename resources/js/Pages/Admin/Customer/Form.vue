@@ -17,7 +17,7 @@ const isEdit = computed(() => !!props.customer)
 // Dropdown options
 const kecamatanOptions = ['Pule']
 const kelurahanOptions = ['Pule', 'Pakel', 'Kembangan', 'Joho', 'Tanggaran', 'Jombok', 'Karanganyar', 'Sukokidul']
-const routerMerkOptions = ['TENDA', 'TOTOLINK N200RE', 'TOTOLINK N300RE', 'ZTE', 'HUAWEI', 'GM', 'NETIS', 'DLINK', 'TP-LINK', 'NOKIA', 'GLOBAL']
+const routerMerkOptions = ['ZTE', 'ZTE F477V2 EPON', 'ZTE F663NV3A', 'ZTE F663V2', 'ZTE F460', 'ZTE F677V2 EPON', 'ZTE F677', 'ZTE F609 V1', 'ZTE F609 V2', 'ZTE F609 V3', 'HUAWEI HG8245A', 'HUAWEI HG8245H', 'HUAWEI HG/EG8245H5', 'HUAWEI HG/EG8145', 'HUAWEI HG/EG8546', 'MAIPU', 'C-DATA', 'GM', 'NETIS', 'DLINK', 'TP-LINK', 'NOKIA', 'GLOBAL', 'TENDA', 'TOTOLINK N200RE', 'TOTOLINK N300RE', 'HS AIRPO', 'MERCUSYS']
 
 // Custom kecamatan input toggle
 const showCustomKecamatan = ref(false)

@@ -629,34 +629,54 @@ class DebtIsolationService
     public function openAccess(Customer $customer): bool
     {
         try {
-            // 1. Koneksi ke Mikrotik
+            $isRadius = config('radius.enabled', false) && !empty($customer->pppoe_username);
+
+            if ($isRadius) {
+                // RADIUS: restore pool & rate-limit di DB RADIUS dulu
+                try {
+                    app(\App\Services\Radius\RadiusService::class)->reopenCustomer($customer);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::warning('openAccess: RADIUS reopen failed', [
+                        'customer_id' => $customer->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Koneksi ke Mikrotik
             $this->mikrotik->connect($customer->router);
 
-            // Tentukan tipe koneksi (default pppoe jika tidak diset)
             $connectionType = $customer->connection_type ?? 'pppoe';
 
-            // 2. Hapus dari address list ISOLIR
-            $ipAddress = $customer->static_ip ?? $customer->ip_address;
-            if ($ipAddress) {
-                $this->mikrotik->removeFromAddressList($ipAddress, 'ISOLIR');
+            if ($isRadius) {
+                // RADIUS: disconnect session agar reconnect dengan atribut baru
+                if ($customer->pppoe_username) {
+                    $this->mikrotik->disconnectPPPoE($customer->pppoe_username);
+                }
+            } else {
+                // Non-RADIUS: operasi Mikrotik lokal
+                $ipAddress = $customer->static_ip ?? $customer->ip_address;
+                if ($ipAddress) {
+                    $this->mikrotik->removeFromAddressList($ipAddress, 'ISOLIR');
+                }
+
+                if ($connectionType === 'pppoe' && $customer->package && $customer->pppoe_username) {
+                    $profileName = $customer->package->mikrotik_profile ?? 'default';
+                    $this->mikrotik->changePPPoEProfile($customer->pppoe_username, $profileName);
+                    $this->mikrotik->disconnectPPPoE($customer->pppoe_username);
+                }
             }
 
-            // 3. Kembalikan profile normal
-            if ($connectionType === 'pppoe' && $customer->package && $customer->pppoe_username) {
-                $profileName = $customer->package->mikrotik_profile ?? 'default';
-                $this->mikrotik->changePPPoEProfile($customer->pppoe_username, $profileName);
-            }
-
-            // 4. Update status customer
+            // Update status customer
             $customer->update([
                 'status' => 'active',
                 'isolation_reason' => null,
             ]);
 
-            // 5. Dispatch reopen event (sends notification via listener)
+            // Dispatch reopen event (sends notification via listener)
             CustomerReopened::dispatch($customer);
 
-            // 6. Log aktivitas
+            // Log aktivitas
             BillingLog::logCustomer(
                 $customer,
                 BillingLog::ACTION_CUSTOMER_REOPENED,

@@ -53,32 +53,23 @@ class ProcessDailyIsolationJob implements ShouldQueue
             'errors' => [],
         ];
 
-        // Get customers that should be isolated
-        $customersToIsolate = $this->getCustomersToIsolate(
-            $thresholdMonths,
-            $gracePeriodDays,
-            $recentPaymentDays,
-            $excludeRapel
-        );
+        $customers = Customer::where('status', 'active')
+            ->where('total_debt', '>', 0)
+            ->with(['router', 'package', 'invoices' => function ($query) {
+                $query->whereIn('status', ['pending', 'partial', 'overdue']);
+            }])
+            ->get();
 
-        Log::info("Found {$customersToIsolate->count()} customers to evaluate for isolation");
+        Log::info("Found {$customers->count()} customers to evaluate for isolation");
 
-        foreach ($customersToIsolate as $customer) {
+        foreach ($customers as $customer) {
             try {
-                // Skip if already isolated
-                if ($customer->status === 'isolated') {
-                    $results['skipped_already_isolated']++;
-                    continue;
-                }
-
-                // Skip rapel customers if configured
-                if ($excludeRapel && $customer->is_rapel && $customer->rapel_months > 0) {
+                $isRapel = $customer->is_rapel || $customer->payment_behavior === 'rapel';
+                if ($excludeRapel && $isRapel) {
                     $results['skipped_rapel']++;
-                    Log::info("Skipping rapel customer", ['customer_id' => $customer->id]);
                     continue;
                 }
 
-                // Check for recent payment
                 $recentPayment = Payment::where('customer_id', $customer->id)
                     ->where('status', 'verified')
                     ->where('created_at', '>=', now()->subDays($recentPaymentDays))
@@ -86,7 +77,11 @@ class ProcessDailyIsolationJob implements ShouldQueue
 
                 if ($recentPayment) {
                     $results['skipped_recent_payment']++;
-                    Log::info("Skipping customer with recent payment", ['customer_id' => $customer->id]);
+                    continue;
+                }
+
+                $consecutiveMonths = $this->countConsecutiveUnpaidMonths($customer, $gracePeriodDays);
+                if ($consecutiveMonths < $thresholdMonths) {
                     continue;
                 }
 
@@ -100,18 +95,15 @@ class ProcessDailyIsolationJob implements ShouldQueue
                     ]);
                 }
 
-                // Execute isolation (disconnect PPPoE session)
                 $result = $mikrotikService->isolateCustomer($customer);
 
                 if ($result['success']) {
-                    // Update customer status
                     $customer->update([
                         'status' => 'isolated',
                         'isolation_date' => now(),
-                        'isolation_reason' => "Auto-isolir: Tunggakan {$thresholdMonths}+ bulan",
+                        'isolation_reason' => "Auto-isolir: Tunggakan {$consecutiveMonths} bulan berturut-turut",
                     ]);
 
-                    // Send notification
                     $notificationService->sendAsync(
                         'whatsapp',
                         $customer->phone,
@@ -123,6 +115,7 @@ class ProcessDailyIsolationJob implements ShouldQueue
                     Log::info("Customer isolated", [
                         'customer_id' => $customer->id,
                         'customer_name' => $customer->name,
+                        'consecutive_months' => $consecutiveMonths,
                         'total_debt' => $customer->total_debt,
                     ]);
                 } else {
@@ -133,8 +126,7 @@ class ProcessDailyIsolationJob implements ShouldQueue
                     ];
                 }
 
-                // Rate limiting
-                usleep(100000); // 100ms delay between operations
+                usleep(100000);
 
             } catch (\Exception $e) {
                 $results['failed']++;
@@ -153,30 +145,44 @@ class ProcessDailyIsolationJob implements ShouldQueue
         Log::info("Daily isolation process completed", $results);
     }
 
-    /**
-     * Get customers that should be isolated
-     */
-    protected function getCustomersToIsolate(
-        int $thresholdMonths,
-        int $gracePeriodDays,
-        int $recentPaymentDays,
-        bool $excludeRapel
-    ) {
-        // Calculate threshold date
-        $thresholdDate = now()->subMonths($thresholdMonths)->subDays($gracePeriodDays);
+    protected function countConsecutiveUnpaidMonths(Customer $customer, int $graceDays): int
+    {
+        $now = Carbon::now();
 
-        return Customer::where('status', 'active')
-            ->where('total_debt', '>', 0)
-            ->whereHas('invoices', function ($query) use ($thresholdDate) {
-                $query->whereIn('status', ['pending', 'partial', 'overdue'])
-                    ->where('due_date', '<', $thresholdDate);
-            })
-            ->when($excludeRapel, function ($query) {
-                // Include rapel customers but we'll filter them in the loop
-                // to provide proper logging
-            })
-            ->with(['router', 'package'])
-            ->get();
+        $overdueInvoices = $customer->invoices->filter(function ($invoice) use ($now, $graceDays) {
+            $gracePeriodEnd = Carbon::parse($invoice->due_date)->addDays($graceDays);
+            return $now->isAfter($gracePeriodEnd);
+        });
+
+        if ($overdueInvoices->isEmpty()) {
+            return 0;
+        }
+
+        $sorted = $overdueInvoices->sortByDesc(function ($invoice) {
+            return $invoice->period_year * 100 + $invoice->period_month;
+        });
+
+        $consecutive = 0;
+        $previousPeriod = null;
+
+        foreach ($sorted as $invoice) {
+            $currentPeriod = Carbon::create($invoice->period_year, $invoice->period_month, 1);
+
+            if ($previousPeriod === null) {
+                $consecutive = 1;
+                $previousPeriod = $currentPeriod;
+                continue;
+            }
+
+            if ($currentPeriod->isSameMonth($previousPeriod->copy()->subMonth())) {
+                $consecutive++;
+                $previousPeriod = $currentPeriod;
+            } else {
+                break;
+            }
+        }
+
+        return $consecutive;
     }
 
     /**

@@ -44,7 +44,7 @@ Schedule::command('billing:check-overdue')
     ->appendOutputTo(storage_path('logs/scheduler.log'));
 
 // Process isolation for overdue customers daily at 06:30
-Schedule::command('billing:process-isolation')
+Schedule::command('billing:process-isolation --force')
     ->dailyAt('06:30')
     ->timezone('Asia/Jakarta')
     ->withoutOverlapping()

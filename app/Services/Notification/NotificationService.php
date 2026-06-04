@@ -661,6 +661,24 @@ class NotificationService
     {
         $companyName = $this->ispInfo?->company_name ?? 'ISP';
 
+        $customTemplate = Setting::getValue('notification', 'access_opened_template', '');
+
+        if (!empty($customTemplate)) {
+            $message = str_replace(
+                ['{nama}', '{customer_id}', '{paket}', '{telepon}', '{whatsapp}'],
+                [
+                    $customer->name,
+                    $customer->customer_id,
+                    $customer->package?->name ?? '-',
+                    $this->ispInfo?->phone_primary ?? '',
+                    $this->ispInfo?->whatsapp_number ?? '',
+                ],
+                $customTemplate
+            );
+
+            return $message . "\n\n_{$companyName}_";
+        }
+
         return "✅ *LAYANAN AKTIF KEMBALI*\n\n" .
             "Yth. Bapak/Ibu *{$customer->name}*,\n\n" .
             "Pembayaran Anda telah kami terima.\n" .

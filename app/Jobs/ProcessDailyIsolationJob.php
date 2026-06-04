@@ -190,7 +190,13 @@ class ProcessDailyIsolationJob implements ShouldQueue
      */
     protected function buildIsolationMessage(Customer $customer): string
     {
-        $totalDebt = number_format($customer->total_debt, 0, ',', '.');
+        $graceDays = config('mikrotik.auto_isolation.grace_period_days', 7);
+        $overdueDebt = Invoice::where('customer_id', $customer->id)
+            ->whereIn('status', ['pending', 'partial', 'overdue'])
+            ->whereDate('due_date', '<', now()->subDays($graceDays))
+            ->sum('remaining_amount');
+
+        $totalDebt = number_format($overdueDebt ?: $customer->total_debt, 0, ',', '.');
 
         return "🔴 *PEMBERITAHUAN ISOLIR*\n\n" .
             "Yth. Bapak/Ibu *{$customer->name}*,\n\n" .

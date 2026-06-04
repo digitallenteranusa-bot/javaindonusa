@@ -269,6 +269,7 @@ class NotificationService
     public function sendIsolationNotice(Customer $customer): array
     {
         $message = $this->buildIsolationMessage($customer);
+        $overdueDebt = $this->getOverdueDebtAmount($customer);
 
         if ($customer->email) {
             $this->sendEmail($customer->email, new IsolationNoticeMail($customer));
@@ -279,7 +280,7 @@ class NotificationService
             'template_id' => $this->getMekariTemplateId('isolation'),
             'params'      => [
                 $customer->name,                                        // {{1}}
-                number_format($customer->total_debt, 0, ',', '.'),     // {{2}}
+                number_format($overdueDebt, 0, ',', '.'),              // {{2}}
                 $this->ispInfo?->phone_primary ?? '',                   // {{3}}
                 $customer->customer_id,                                 // {{4}}
             ],
@@ -541,10 +542,22 @@ class NotificationService
             "_{$companyName}_";
     }
 
+    protected function getOverdueDebtAmount(Customer $customer): float
+    {
+        $graceDays = config('billing.grace_days', 7);
+
+        $overdueDebt = Invoice::where('customer_id', $customer->id)
+            ->whereIn('status', ['pending', 'partial', 'overdue'])
+            ->whereDate('due_date', '<', now()->subDays($graceDays))
+            ->sum('remaining_amount');
+
+        return $overdueDebt ?: $customer->total_debt;
+    }
+
     protected function buildIsolationMessage(Customer $customer): string
     {
         $companyName = $this->ispInfo?->company_name ?? 'ISP';
-        $totalDebt = number_format($customer->total_debt, 0, ',', '.');
+        $totalDebt = number_format($this->getOverdueDebtAmount($customer), 0, ',', '.');
         $portalUrl = config('app.url') . '/portal/isolation/' . $customer->id;
 
         // Cek apakah ada template custom dari settings

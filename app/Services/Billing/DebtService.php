@@ -268,9 +268,10 @@ class DebtService
                 'paid_at' => $newRemaining <= 0 ? now() : null,
             ]);
 
-            // Kurangi total hutang
-            $customer->decrement('total_debt', $creditToUse);
-            $balanceAfter = max(0, $balanceBefore - $creditToUse);
+            // Sinkronkan total hutang dari invoice (hindari double-adjust dengan InvoiceObserver)
+            $customer->recalculateTotalDebt();
+            $customer->refresh();
+            $balanceAfter = (float) $customer->total_debt;
 
             return DebtHistory::create([
                 'customer_id' => $customer->id,

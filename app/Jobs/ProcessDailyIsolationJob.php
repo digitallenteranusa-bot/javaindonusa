@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Setting;
+use App\Jobs\SendNotificationJob;
 use App\Services\Mikrotik\MikrotikService;
 use App\Services\Notification\NotificationService;
 use App\Services\Radius\RadiusService;
@@ -104,11 +105,11 @@ class ProcessDailyIsolationJob implements ShouldQueue
                         'isolation_reason' => "Auto-isolir: Tunggakan {$consecutiveMonths} bulan berturut-turut",
                     ]);
 
-                    $notificationService->sendAsync(
+                    SendNotificationJob::dispatch(
                         'whatsapp',
                         $customer->phone,
                         $this->buildIsolationMessage($customer)
-                    );
+                    )->delay(now()->addMinutes($results['isolated']));
 
                     $results['isolated']++;
 

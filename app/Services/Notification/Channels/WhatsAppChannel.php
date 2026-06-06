@@ -723,14 +723,33 @@ class WhatsAppChannel
                 return ['success' => false, 'status' => 'Unknown driver'];
             }
 
-            $response = Http::withHeaders([
-                'Authorization' => $this->apiKey,
-            ])->get($endpoint);
+            if ($this->driver === 'fonnte') {
+                $response = Http::withHeaders([
+                    'Authorization' => $this->apiKey,
+                ])->post($endpoint);
+            } else {
+                $response = Http::withHeaders([
+                    'Authorization' => $this->apiKey,
+                ])->get($endpoint);
+            }
+
+            $data = $response->json();
+
+            if ($this->driver === 'fonnte' && $response->successful()) {
+                $deviceStatus = $data['device_status'] ?? 'unknown';
+                return [
+                    'success' => $deviceStatus === 'connect',
+                    'status' => $deviceStatus === 'connect'
+                        ? 'Connected - ' . ($data['device'] ?? '')
+                        : 'Device ' . $deviceStatus,
+                    'response' => $data,
+                ];
+            }
 
             return [
                 'success' => $response->successful(),
                 'status' => $response->successful() ? 'Connected' : 'Connection failed',
-                'response' => $response->json(),
+                'response' => $data,
             ];
         } catch (\Exception $e) {
             return ['success' => false, 'status' => $e->getMessage()];

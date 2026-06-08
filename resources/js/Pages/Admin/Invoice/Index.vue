@@ -584,7 +584,7 @@ const toggleSelectAll = () => {
                                         </svg>
                                     </button>
                                     <button
-                                        v-if="invoice.status !== 'paid' && invoice.paid_amount === 0"
+                                        v-if="invoice.status !== 'paid' && Number(invoice.paid_amount) === 0"
                                         @click="deleteInvoice(invoice)"
                                         class="p-1 text-gray-500 hover:text-red-600"
                                         title="Hapus"

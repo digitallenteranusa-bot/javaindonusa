@@ -464,7 +464,7 @@ const dismissMessage = () => {
                             <p class="text-gray-500 text-xs mt-1">Kosongkan untuk pelanggan lama. Invoice mulai dari bulan ini.</p>
                         </div>
 
-                        <div>
+                        <div v-if="!isEditing">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Hutang Awal (Rp)</label>
                             <input
                                 v-model="form.total_debt"

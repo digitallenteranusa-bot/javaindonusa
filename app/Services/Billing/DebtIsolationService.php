@@ -310,6 +310,8 @@ class DebtIsolationService
                 "Pembayaran Rp " . number_format($amount, 0, ',', '.') . " dari {$customer->name}"
             );
 
+            // 7. Sinkronkan total_debt dengan invoice aktual
+            $customer->recalculateTotalDebt();
             $customer->refresh();
 
             // Hitung kredit yang ditambahkan (jika bayar lebih dari total hutang)

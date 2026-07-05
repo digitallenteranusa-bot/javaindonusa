@@ -81,7 +81,9 @@ const transferProof = ref(null)
 const isSubmitting = ref(false)
 
 const openPaymentModal = () => {
-    paymentAmount.value = props.customer.total_debt
+    paymentAmount.value = Number(props.customer.total_debt) > 0
+        ? props.customer.total_debt
+        : unpaidFromInvoices.value
     paymentNotes.value = ''
     transferProof.value = null
     isSubmitting.value = false
@@ -203,6 +205,17 @@ onMounted(() => {
     getCurrentLocation()
 })
 
+// Hitung sisa hutang dari invoice (fallback jika total_debt tidak sinkron)
+const unpaidFromInvoices = computed(() => {
+    return (props.customer.invoices || [])
+        .filter(inv => ['pending', 'partial', 'overdue'].includes(inv.status))
+        .reduce((sum, inv) => sum + Number(inv.remaining_amount), 0)
+})
+
+const hasBillableDebt = computed(() => {
+    return Number(props.customer.total_debt) > 0 || unpaidFromInvoices.value > 0
+})
+
 // Active tab
 const activeTab = ref('invoices')
 </script>
@@ -314,7 +327,7 @@ const activeTab = ref('invoices')
                             Navigasi
                         </button>
                         <button
-                            v-if="customer.total_debt > 0"
+                            v-if="hasBillableDebt"
                             @click="openPaymentModal"
                             class="flex-1 flex items-center justify-center gap-1 py-2 bg-blue-500 text-white rounded-lg text-sm"
                         >
@@ -460,7 +473,7 @@ const activeTab = ref('invoices')
                             <p class="font-semibold">{{ customer.name }}</p>
                             <p class="text-sm text-gray-600">{{ customer.customer_id }}</p>
                             <p class="text-red-600 font-semibold mt-1">
-                                Hutang: {{ formatCurrency(customer.total_debt) }}
+                                Hutang: {{ formatCurrency(Math.max(Number(customer.total_debt), unpaidFromInvoices)) }}
                             </p>
                         </div>
 

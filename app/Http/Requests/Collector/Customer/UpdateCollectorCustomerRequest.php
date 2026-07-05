@@ -29,7 +29,6 @@ class UpdateCollectorCustomerRequest extends FormRequest
             'connection_type' => 'required|in:pppoe,static',
             'billing_date' => 'required|integer|min:1|max:28',
             'billing_start_date' => 'nullable|date',
-            'total_debt' => 'nullable|numeric|min:0',
             'rapel_months' => 'nullable|integer|min:0|max:12',
             'discount_type' => 'nullable|in:none,nominal,percentage',
             'discount_value' => 'nullable|numeric|min:0',

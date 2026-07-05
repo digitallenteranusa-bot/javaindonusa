@@ -490,17 +490,16 @@ class CollectorService
         // Total semua collection
         $totalCollection = $cashCollection + $transferCollection;
 
-        // Pengeluaran yang disetujui — hanya bulan ini (reset tiap bulan)
-        $monthStart = Carbon::now()->startOfMonth();
+        // Pengeluaran yang disetujui dalam periode settlement
         $approvedExpense = Expense::where('user_id', $collector->id)
-            ->where('expense_date', '>=', $monthStart->toDateString())
+            ->where('expense_date', '>=', $startDate->toDateString())
             ->where('expense_date', '<=', $endDate->toDateString())
             ->where('status', 'approved')
             ->sum('amount');
 
-        // Pengeluaran pending — hanya bulan ini
+        // Pengeluaran pending dalam periode settlement
         $pendingExpense = Expense::where('user_id', $collector->id)
-            ->where('expense_date', '>=', $monthStart->toDateString())
+            ->where('expense_date', '>=', $startDate->toDateString())
             ->where('expense_date', '<=', $endDate->toDateString())
             ->where('status', 'pending')
             ->sum('amount');

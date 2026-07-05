@@ -326,13 +326,16 @@ class Customer extends Model
             ->whereIn('status', ['pending', 'partial', 'overdue'])
             ->sum('remaining_amount');
 
-        // Hutang non-invoice: adjustment_add & late_fee tanpa invoice
+        // Hutang non-invoice: adjustment_add & late_fee yang diinput user
+        // Exclude: artefak sync otomatis dan adjustment dari pembatalan pembayaran
         $nonInvoiceAdded = (float) $this->debtHistories()
             ->whereNull('invoice_id')
+            ->whereNull('payment_id')
             ->whereIn('type', [DebtHistory::TYPE_ADJUSTMENT_ADD, DebtHistory::TYPE_LATE_FEE])
+            ->where('description', 'not like', '%sinkronisasi hutang%')
             ->sum('amount');
 
-        // Pembayaran yang dialokasi ke hutang non-invoice
+        // Pembayaran verified yang dialokasi ke hutang non-invoice
         $nonInvoiceReduced = (float) $this->payments()
             ->where('status', 'verified')
             ->sum('allocated_to_debt');
@@ -340,11 +343,13 @@ class Customer extends Model
         // Pengurangan manual (writeoff, diskon, adjustment_subtract) tanpa invoice
         $nonInvoiceSubtracted = (float) $this->debtHistories()
             ->whereNull('invoice_id')
+            ->whereNull('payment_id')
             ->whereIn('type', [
                 DebtHistory::TYPE_ADJUSTMENT_SUBTRACT,
                 DebtHistory::TYPE_WRITEOFF,
                 DebtHistory::TYPE_DISCOUNT,
             ])
+            ->where('description', 'not like', '%sinkronisasi hutang%')
             ->sum('amount');
 
         $nonInvoiceDebt = max(0, $nonInvoiceAdded - $nonInvoiceReduced - $nonInvoiceSubtracted);

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Customer;
 use App\Services\Billing\DebtService;
 use Illuminate\Console\Command;
 
@@ -22,14 +23,18 @@ class SyncCustomerDebt extends Command
 
         $this->info('Memeriksa sinkronisasi total_debt semua pelanggan aktif & isolir...');
 
-        $result = $debtService->bulkRecalculateDebt(createAdjustments: !$isDryRun);
+        if ($isDryRun) {
+            $result = $this->dryRunCheck();
+        } else {
+            $result = $debtService->bulkRecalculateDebt(createAdjustments: true);
+        }
 
         $this->newLine();
         $this->table(
             ['Metrik', 'Jumlah'],
             [
                 ['Total pelanggan diperiksa', $result['total']],
-                ['Tidak sinkron (diperbaiki)', $result['adjusted']],
+                [$isDryRun ? 'Tidak sinkron' : 'Tidak sinkron (diperbaiki)', $result['adjusted']],
                 ['Sudah benar', $result['unchanged']],
             ]
         );
@@ -64,5 +69,40 @@ class SyncCustomerDebt extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    private function dryRunCheck(): array
+    {
+        $customers = Customer::whereIn('status', ['active', 'isolated'])->get();
+        $results = [
+            'total' => $customers->count(),
+            'adjusted' => 0,
+            'unchanged' => 0,
+            'details' => [],
+        ];
+
+        foreach ($customers as $customer) {
+            $calculatedDebt = $customer->invoices()
+                ->whereIn('status', ['pending', 'partial', 'overdue'])
+                ->sum('remaining_amount');
+
+            $currentDebt = (float) $customer->total_debt;
+            $difference = $calculatedDebt - $currentDebt;
+
+            if (abs($difference) > 0.01) {
+                $results['adjusted']++;
+                $results['details'][] = [
+                    'customer_id' => $customer->customer_id,
+                    'name' => $customer->name,
+                    'previous' => $currentDebt,
+                    'new' => $calculatedDebt,
+                    'difference' => $difference,
+                ];
+            } else {
+                $results['unchanged']++;
+            }
+        }
+
+        return $results;
     }
 }

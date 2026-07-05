@@ -355,10 +355,7 @@ class DebtService
     public function recalculateDebt(Customer $customer, bool $createAdjustment = true): array
     {
         return DB::transaction(function () use ($customer, $createAdjustment) {
-            $calculatedDebt = $customer->invoices()
-                ->whereIn('status', ['pending', 'partial', 'overdue'])
-                ->lockForUpdate()
-                ->sum('remaining_amount');
+            $calculatedDebt = $customer->calculateActualDebt();
 
             $currentDebt = $customer->total_debt;
             $difference = $calculatedDebt - $currentDebt;

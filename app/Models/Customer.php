@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\DebtHistory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -317,14 +318,45 @@ class Customer extends Model
     }
 
     /**
-     * Update total hutang dari invoice
+     * Hitung total hutang aktual (invoice + hutang non-invoice)
      */
-    public function recalculateTotalDebt(): void
+    public function calculateActualDebt(): float
     {
-        $totalDebt = $this->invoices()
+        $invoiceDebt = $this->invoices()
             ->whereIn('status', ['pending', 'partial', 'overdue'])
             ->sum('remaining_amount');
 
-        $this->update(['total_debt' => $totalDebt]);
+        // Hutang non-invoice: adjustment_add & late_fee tanpa invoice
+        $nonInvoiceAdded = (float) $this->debtHistories()
+            ->whereNull('invoice_id')
+            ->whereIn('type', [DebtHistory::TYPE_ADJUSTMENT_ADD, DebtHistory::TYPE_LATE_FEE])
+            ->sum('amount');
+
+        // Pembayaran yang dialokasi ke hutang non-invoice
+        $nonInvoiceReduced = (float) $this->payments()
+            ->where('status', 'verified')
+            ->sum('allocated_to_debt');
+
+        // Pengurangan manual (writeoff, diskon, adjustment_subtract) tanpa invoice
+        $nonInvoiceSubtracted = (float) $this->debtHistories()
+            ->whereNull('invoice_id')
+            ->whereIn('type', [
+                DebtHistory::TYPE_ADJUSTMENT_SUBTRACT,
+                DebtHistory::TYPE_WRITEOFF,
+                DebtHistory::TYPE_DISCOUNT,
+            ])
+            ->sum('amount');
+
+        $nonInvoiceDebt = max(0, $nonInvoiceAdded - $nonInvoiceReduced - $nonInvoiceSubtracted);
+
+        return (float) $invoiceDebt + $nonInvoiceDebt;
+    }
+
+    /**
+     * Update total hutang dari invoice + hutang non-invoice
+     */
+    public function recalculateTotalDebt(): void
+    {
+        $this->update(['total_debt' => $this->calculateActualDebt()]);
     }
 }

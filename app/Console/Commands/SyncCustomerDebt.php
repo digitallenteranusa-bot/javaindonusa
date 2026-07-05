@@ -82,10 +82,7 @@ class SyncCustomerDebt extends Command
         ];
 
         foreach ($customers as $customer) {
-            $calculatedDebt = $customer->invoices()
-                ->whereIn('status', ['pending', 'partial', 'overdue'])
-                ->sum('remaining_amount');
-
+            $calculatedDebt = $customer->calculateActualDebt();
             $currentDebt = (float) $customer->total_debt;
             $difference = $calculatedDebt - $currentDebt;
 

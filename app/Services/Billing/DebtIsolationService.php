@@ -6,6 +6,7 @@ use App\Events\CustomerIsolated;
 use App\Events\CustomerReopened;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\DebtHistory;
 use App\Models\Setting;
 use App\Models\BillingLog;
@@ -149,7 +150,13 @@ class DebtIsolationService
                 $ppn = round($subtotal * 0.11, 2);
             }
 
-            $amount = $subtotal + $ppn;
+            // Hitung BHP USO 2% jika pelanggan dikenakan
+            $bhpUso = 0;
+            if ($customer->is_bhp_uso) {
+                $bhpUso = round($subtotal * 0.02, 2);
+            }
+
+            $amount = $subtotal + $ppn + $bhpUso;
 
             // Hitung periode
             $periodStart = Carbon::create($periodYear, $periodMonth, 1)->startOfMonth();
@@ -167,7 +174,7 @@ class DebtIsolationService
                 'period_year' => $periodYear,
                 'package_name' => $package->name,
                 'package_price' => $packagePrice,
-                'additional_charges' => $ppn,
+                'additional_charges' => $ppn + $bhpUso,
                 'discount' => $discount,
                 'discount_reason' => $discountReason,
                 'total_amount' => $amount,
@@ -176,6 +183,46 @@ class DebtIsolationService
                 'status' => 'pending',
                 'due_date' => $dueDate,
             ]);
+
+            // Create invoice line items
+            $sortOrder = 0;
+            InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'description' => "Paket {$package->name}",
+                'type' => InvoiceItem::TYPE_PACKAGE,
+                'amount' => $packagePrice,
+                'sort_order' => ++$sortOrder,
+            ]);
+
+            if ($discount > 0) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => $discountReason ?? 'Diskon',
+                    'type' => InvoiceItem::TYPE_DISCOUNT,
+                    'amount' => -$discount,
+                    'sort_order' => ++$sortOrder,
+                ]);
+            }
+
+            if ($ppn > 0) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => 'PPN 11%',
+                    'type' => InvoiceItem::TYPE_TAX,
+                    'amount' => $ppn,
+                    'sort_order' => ++$sortOrder,
+                ]);
+            }
+
+            if ($bhpUso > 0) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => 'BHP USO 2%',
+                    'type' => InvoiceItem::TYPE_BHP_USO,
+                    'amount' => $bhpUso,
+                    'sort_order' => ++$sortOrder,
+                ]);
+            }
 
             // Tambahkan ke total hutang pelanggan
             $this->debtService->addDebt(

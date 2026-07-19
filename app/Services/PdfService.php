@@ -14,7 +14,7 @@ class PdfService
      */
     public function generateInvoicePdf(Invoice $invoice)
     {
-        $invoice->load(['customer', 'customer.area', 'customer.package']);
+        $invoice->load(['customer', 'customer.area', 'customer.package', 'items']);
 
         // Create a dummy customer object if customer doesn't exist
         if (!$invoice->customer) {
@@ -62,7 +62,7 @@ class PdfService
      */
     public function generateBulkInvoicesPdf(array $invoiceIds)
     {
-        $invoices = Invoice::with(['customer', 'customer.area'])
+        $invoices = Invoice::with(['customer', 'customer.area', 'items'])
             ->whereIn('id', $invoiceIds)
             ->get();
 

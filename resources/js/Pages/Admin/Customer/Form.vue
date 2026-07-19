@@ -90,6 +90,7 @@ const form = useForm({
     discount_value: props.customer?.discount_value || 0,
     discount_reason: props.customer?.discount_reason || '',
     is_taxed: props.customer?.is_taxed || false,
+    is_bhp_uso: props.customer?.is_bhp_uso || false,
     notes: props.customer?.notes || '',
     latitude: props.customer?.latitude || '',
     longitude: props.customer?.longitude || '',
@@ -819,6 +820,18 @@ const submit = () => {
                             <span class="text-sm font-medium text-gray-700">Dikenakan PPN 11%</span>
                         </label>
                         <p class="text-xs text-gray-500 mt-1 ml-8">Jika dicentang, PPN 11% akan ditambahkan ke invoice setelah diskon</p>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-3">
+                            <input
+                                v-model="form.is_bhp_uso"
+                                type="checkbox"
+                                class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            >
+                            <span class="text-sm font-medium text-gray-700">Dikenakan BHP USO 2%</span>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1 ml-8">Jika dicentang, BHP USO 2% akan ditambahkan ke invoice setelah diskon</p>
                     </div>
                 </div>
             </div>

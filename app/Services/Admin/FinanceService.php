@@ -3,6 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Models\Expense;
+use App\Models\InvoiceItem;
 use App\Models\OperationalExpense;
 use App\Models\Payment;
 use Carbon\Carbon;
@@ -101,6 +102,53 @@ class FinanceService
         }
 
         return $months;
+    }
+
+    // ================================================================
+    // TAX SUMMARY (PPN & BHP USO)
+    // ================================================================
+
+    public function getTaxSummary(int $month, int $year): array
+    {
+        $ppn = (float) InvoiceItem::where('type', InvoiceItem::TYPE_TAX)
+            ->whereHas('invoice', function ($q) use ($month, $year) {
+                $q->where('period_month', $month)
+                  ->where('period_year', $year)
+                  ->where('status', '!=', 'cancelled');
+            })
+            ->sum('amount');
+
+        $bhpUso = (float) InvoiceItem::where('type', InvoiceItem::TYPE_BHP_USO)
+            ->whereHas('invoice', function ($q) use ($month, $year) {
+                $q->where('period_month', $month)
+                  ->where('period_year', $year)
+                  ->where('status', '!=', 'cancelled');
+            })
+            ->sum('amount');
+
+        $ppnCustomerCount = InvoiceItem::where('type', InvoiceItem::TYPE_TAX)
+            ->whereHas('invoice', function ($q) use ($month, $year) {
+                $q->where('period_month', $month)
+                  ->where('period_year', $year)
+                  ->where('status', '!=', 'cancelled');
+            })
+            ->count();
+
+        $bhpUsoCustomerCount = InvoiceItem::where('type', InvoiceItem::TYPE_BHP_USO)
+            ->whereHas('invoice', function ($q) use ($month, $year) {
+                $q->where('period_month', $month)
+                  ->where('period_year', $year)
+                  ->where('status', '!=', 'cancelled');
+            })
+            ->count();
+
+        return [
+            'ppn_total' => $ppn,
+            'ppn_count' => $ppnCustomerCount,
+            'bhp_uso_total' => $bhpUso,
+            'bhp_uso_count' => $bhpUsoCustomerCount,
+            'total' => $ppn + $bhpUso,
+        ];
     }
 
     // ================================================================

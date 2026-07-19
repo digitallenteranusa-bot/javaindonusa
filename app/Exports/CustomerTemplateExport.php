@@ -41,6 +41,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
                 'none',                 // diskon_tipe (none/nominal/percentage)
                 '0',                    // diskon_nilai (Rp atau %, sesuai tipe)
                 'tidak',                // ppn (ya/tidak)
+                'tidak',                // bhp_uso (ya/tidak)
             ],
         ];
     }
@@ -72,6 +73,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
             'diskon_tipe',
             'diskon_nilai',
             'ppn',
+            'bhp_uso',
         ];
     }
 
@@ -80,8 +82,8 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
      */
     public function styles(Worksheet $sheet)
     {
-        // Style header row (A-U = 21 columns)
-        $sheet->getStyle('A1:U1')->applyFromArray([
+        // Style header row (A-V = 22 columns)
+        $sheet->getStyle('A1:V1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -98,7 +100,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
         ]);
 
         // Style data row (sample)
-        $sheet->getStyle('A2:U2')->applyFromArray([
+        $sheet->getStyle('A2:V2')->applyFromArray([
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
                 'startColor' => ['rgb' => 'FEF3C7'],
@@ -129,6 +131,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
         $sheet->getComment('S1')->getText()->createTextRun('none = tanpa diskon, nominal = Rp, percentage = %');
         $sheet->getComment('T1')->getText()->createTextRun('Nilai diskon (Rp atau %) sesuai tipe diskon');
         $sheet->getComment('U1')->getText()->createTextRun('ya = dikenakan PPN 11%, tidak = tanpa PPN');
+        $sheet->getComment('V1')->getText()->createTextRun('ya = dikenakan BHP USO 2%, tidak = tanpa BHP USO');
 
         return [];
     }
@@ -160,6 +163,7 @@ class CustomerTemplateExport implements FromArray, WithHeadings, WithStyles, Wit
             'S' => 15,  // diskon_tipe
             'T' => 15,  // diskon_nilai
             'U' => 10,  // ppn
+            'V' => 12,  // bhp_uso
         ];
     }
 

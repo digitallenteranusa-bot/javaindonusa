@@ -32,6 +32,7 @@ const props = defineProps({
     stats: Object,
     trend: Array,
     breakdown: Array,
+    taxSummary: Object,
     filters: Object,
 })
 
@@ -298,6 +299,60 @@ const breakdownChartOptions = {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pajak & BHP USO -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-8">
+            <div class="px-6 py-4 border-b bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-900">Pajak & BHP USO Terkumpul</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x">
+                <!-- PPN -->
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">PPN 11%</p>
+                            <p class="text-xl font-bold text-amber-600">{{ formatCurrency(taxSummary?.ppn_total) }}</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Dari {{ taxSummary?.ppn_count || 0 }} invoice</p>
+                </div>
+                <!-- BHP USO -->
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">BHP USO 2%</p>
+                            <p class="text-xl font-bold text-indigo-600">{{ formatCurrency(taxSummary?.bhp_uso_total) }}</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Dari {{ taxSummary?.bhp_uso_count || 0 }} invoice</p>
+                </div>
+                <!-- Total Pajak -->
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Total Pajak + BHP USO</p>
+                            <p class="text-xl font-bold text-gray-700">{{ formatCurrency(taxSummary?.total) }}</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Yang harus disetorkan bulan ini</p>
                 </div>
             </div>
         </div>

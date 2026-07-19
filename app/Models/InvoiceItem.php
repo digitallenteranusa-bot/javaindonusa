@@ -26,6 +26,7 @@ class InvoiceItem extends Model
     const TYPE_PACKAGE = 'package';
     const TYPE_TAX = 'tax';
     const TYPE_DISCOUNT = 'discount';
+    const TYPE_BHP_USO = 'bhp_uso';
     const TYPE_ADJUSTMENT = 'adjustment';
     const TYPE_OTHER = 'other';
 

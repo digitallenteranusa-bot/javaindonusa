@@ -121,7 +121,13 @@ class InvoiceService
                 $ppn = round($subtotal * 0.11, 2);
             }
 
-            $totalAmount = $subtotal + $ppn;
+            // Hitung BHP USO 2% jika pelanggan dikenakan
+            $bhpUso = 0;
+            if ($customer->is_bhp_uso) {
+                $bhpUso = round($subtotal * 0.02, 2);
+            }
+
+            $totalAmount = $subtotal + $ppn + $bhpUso;
 
             $invoice = Invoice::create([
                 'customer_id' => $customer->id,
@@ -130,7 +136,7 @@ class InvoiceService
                 'period_year' => $year,
                 'package_name' => $package->name,
                 'package_price' => $packagePrice,
-                'additional_charges' => $ppn,
+                'additional_charges' => $ppn + $bhpUso,
                 'discount' => $discount,
                 'discount_reason' => $discountReason,
                 'total_amount' => $totalAmount,
@@ -166,6 +172,16 @@ class InvoiceService
                     'description' => 'PPN 11%',
                     'type' => InvoiceItem::TYPE_TAX,
                     'amount' => $ppn,
+                    'sort_order' => ++$sortOrder,
+                ]);
+            }
+
+            if ($bhpUso > 0) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => 'BHP USO 2%',
+                    'type' => InvoiceItem::TYPE_BHP_USO,
+                    'amount' => $bhpUso,
                     'sort_order' => ++$sortOrder,
                 ]);
             }

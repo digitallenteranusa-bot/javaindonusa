@@ -241,6 +241,7 @@ class CustomerImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'discount_type' => $row['diskon_tipe'] ?? 'none',
             'discount_value' => (float) ($row['diskon_nilai'] ?? 0),
             'is_taxed' => $this->parseBooleanValue($row['ppn'] ?? null),
+            'is_bhp_uso' => $this->parseBooleanValue($row['bhp_uso'] ?? null),
         ]);
     }
 

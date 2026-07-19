@@ -58,6 +58,7 @@ class UpdateCustomerRequest extends FormRequest
             'discount_value' => 'nullable|numeric|min:0',
             'discount_reason' => 'nullable|string|max:255',
             'is_taxed' => 'boolean',
+            'is_bhp_uso' => 'boolean',
             'notes' => 'nullable|string|max:1000',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',

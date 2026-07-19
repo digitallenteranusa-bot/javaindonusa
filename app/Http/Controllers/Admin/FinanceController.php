@@ -31,11 +31,13 @@ class FinanceController extends Controller
         $stats = $this->financeService->getDashboardStats($month, $year);
         $trend = $this->financeService->getMonthlyTrend($year);
         $breakdown = $this->financeService->getExpenseBreakdown($month, $year);
+        $taxSummary = $this->financeService->getTaxSummary($month, $year);
 
         return Inertia::render('Admin/Finance/Dashboard', [
             'stats' => $stats,
             'trend' => $trend,
             'breakdown' => $breakdown,
+            'taxSummary' => $taxSummary,
             'filters' => [
                 'month' => $month,
                 'year' => $year,

@@ -97,6 +97,7 @@ class CustomerExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             'Diskon Tipe',
             'Diskon Nilai',
             'PPN',
+            'BHP USO',
             'Catatan',
         ];
     }
@@ -137,6 +138,7 @@ class CustomerExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             $customer->discount_type,
             $customer->discount_value,
             $customer->is_taxed ? 'Ya' : 'Tidak',
+            $customer->is_bhp_uso ? 'Ya' : 'Tidak',
             $customer->notes,
         ];
     }

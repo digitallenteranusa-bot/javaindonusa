@@ -235,24 +235,46 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>
-                        <strong>{{ $invoice->package_name }}</strong>
-                        <span style="color: #666;"> - Layanan Internet Periode {{ $invoice->period_month }}/{{ $invoice->period_year }}</span>
-                    </td>
-                    <td class="text-right">Rp {{ number_format($invoice->package_price, 0, ',', '.') }}</td>
-                </tr>
-                @if($invoice->additional_charges > 0)
-                <tr>
-                    <td>Biaya Tambahan</td>
-                    <td class="text-right">Rp {{ number_format($invoice->additional_charges, 0, ',', '.') }}</td>
-                </tr>
-                @endif
-                @if($invoice->discount > 0)
-                <tr>
-                    <td>Diskon</td>
-                    <td class="text-right" style="color: #16a34a;">- Rp {{ number_format($invoice->discount, 0, ',', '.') }}</td>
-                </tr>
+                @if($invoice->items && $invoice->items->count() > 0)
+                    @foreach($invoice->items->sortBy('sort_order') as $item)
+                    <tr>
+                        <td>
+                            @if($item->type === 'package')
+                                <strong>{{ $item->description }}</strong>
+                                <span style="color: #666;"> - Layanan Internet Periode {{ $invoice->period_month }}/{{ $invoice->period_year }}</span>
+                            @else
+                                {{ $item->description }}
+                            @endif
+                        </td>
+                        <td class="text-right" @if($item->amount < 0) style="color: #16a34a;" @endif>
+                            @if($item->amount < 0)
+                                - Rp {{ number_format(abs($item->amount), 0, ',', '.') }}
+                            @else
+                                Rp {{ number_format($item->amount, 0, ',', '.') }}
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                @else
+                    <tr>
+                        <td>
+                            <strong>{{ $invoice->package_name }}</strong>
+                            <span style="color: #666;"> - Layanan Internet Periode {{ $invoice->period_month }}/{{ $invoice->period_year }}</span>
+                        </td>
+                        <td class="text-right">Rp {{ number_format($invoice->package_price, 0, ',', '.') }}</td>
+                    </tr>
+                    @if($invoice->additional_charges > 0)
+                    <tr>
+                        <td>Biaya Tambahan</td>
+                        <td class="text-right">Rp {{ number_format($invoice->additional_charges, 0, ',', '.') }}</td>
+                    </tr>
+                    @endif
+                    @if($invoice->discount > 0)
+                    <tr>
+                        <td>Diskon</td>
+                        <td class="text-right" style="color: #16a34a;">- Rp {{ number_format($invoice->discount, 0, ',', '.') }}</td>
+                    </tr>
+                    @endif
                 @endif
             </tbody>
         </table>

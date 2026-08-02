@@ -43,13 +43,10 @@ Schedule::command('billing:check-overdue')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler.log'));
 
-// Process isolation at end of month 23:50 (before new invoices on 1st at 00:01)
+// Process isolation on 1st of each month at 02:00 (after invoices generated at 00:01)
 Schedule::command('billing:process-isolation --force')
-    ->cron('50 23 28-31 * *')
+    ->monthlyOn(1, '02:00')
     ->timezone('Asia/Jakarta')
-    ->when(function () {
-        return \Carbon\Carbon::now('Asia/Jakarta')->isLastOfMonth();
-    })
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler.log'));
 

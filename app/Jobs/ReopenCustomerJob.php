@@ -86,10 +86,7 @@ class ReopenCustomerJob implements ShouldQueue
                     'customer_name' => $customer->name,
                 ]);
 
-                // Send notification
-                if ($this->sendNotification) {
-                    $notificationService->sendAccessOpenedNotice($customer);
-                }
+                // Notification handled by SendReopenNotification event listener
             } else {
                 Log::warning('Customer reopen failed', [
                     'customer_id' => $customer->id,

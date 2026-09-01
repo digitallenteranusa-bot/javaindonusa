@@ -625,7 +625,7 @@ class CollectorService
 
             $delaySeconds = config('notification.whatsapp.rate_limit.bulk_delay_seconds', 60);
             $payment = $paymentResult['payment'];
-            $messageCount = ($paymentResult['access_opened'] ?? false) ? 2 : 1;
+            $messageCount = 1;
 
             // Atomic: hitung delay dan reserve slot (mencegah race condition antar penagih)
             $delay = Cache::lock('wa_queue_lock', 5)->block(5, function () use ($delaySeconds, $messageCount) {
@@ -648,16 +648,7 @@ class CollectorService
                 ['notification_type' => 'payment']
             )->delay(now()->addSeconds($delay));
 
-            // Jika akses dibuka, kirim notifikasi tambahan dengan delay berikutnya
-            if ($paymentResult['access_opened'] ?? false) {
-                SendNotificationJob::dispatch(
-                    'whatsapp',
-                    $customer->phone,
-                    $this->notificationService->buildAccessOpenedMessage($customer),
-                    null,
-                    ['notification_type' => 'access_opened']
-                )->delay(now()->addSeconds($delay + $delaySeconds));
-            }
+            // Reopen notification handled by CustomerReopened event listener
 
             try {
                 Log::info('Payment notification queued', [
